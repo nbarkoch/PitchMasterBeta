@@ -6,6 +6,6 @@ import java.sql.Timestamp
 @Immutable
 data class LyricsSegment(
     val text: String,
-    val start: String,
-    val end: String
+    val start: Double,
+    val end: Double
 )

@@ -8,16 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
@@ -31,7 +26,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pitchmasterbeta.model.LyricsSegment
 import kotlin.math.abs
 
 @Composable
@@ -39,8 +33,8 @@ fun LyricsLazyColumn(modifier: Modifier = Modifier,
                      viewModel: WorkspaceViewModel) {
     // Observe changes in scrollToPosition and trigger smooth scroll when it changes
     val listState = rememberLazyListState()
-    val scrollToPosition by rememberUpdatedState(viewModel.scrollToPosition.collectAsState())
-    val segments by viewModel.yourItemsList.collectAsState()
+    val scrollToPosition by rememberUpdatedState(viewModel.lyricsScrollToPosition.collectAsState())
+    val segments by viewModel.lyricsSegments.collectAsState()
 
 
     // Create element height in pixel state

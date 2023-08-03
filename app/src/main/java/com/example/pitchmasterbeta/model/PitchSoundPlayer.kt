@@ -75,6 +75,8 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
             return j
         }
 
+        const val OCTAVE_SIZE = 12
+
         val sortedPlayerFrequencies = floatArrayOf( /* nothing */
             0.0f,  /*C4*/
             261.63f,  //131.87

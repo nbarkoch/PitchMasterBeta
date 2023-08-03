@@ -1,6 +1,5 @@
 package com.example.pitchmasterbeta.model
 
-import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import be.tarsos.dsp.AudioEvent
@@ -38,25 +37,27 @@ class AudioProcessor {
     var volumeFactor: Float = 0f
     var computeAndPlaySingerSoundMode: Boolean = false
     var computeAndPlayRecordedSoundMode: Boolean = false
-    var generatedSingerByteSound: ByteArray = byteArrayOf()
-    var generatedRecordByteSound: ByteArray = byteArrayOf()
+    private var generatedSingerByteSound: ByteArray = byteArrayOf()
+    private var generatedRecordByteSound: ByteArray = byteArrayOf()
 
     private val playSound: PitchSoundPlayer
 
-    var micTimeStamp = 0.0
-    var songTimeStamp = 0.0
-    var timeStampDuration = 0.0
+    private var singNoteI = 0
+    private var micNoteI = 0
 
-    var singNoteI = 0
-    var micNoteI = 0
-    var singVolume = 0
-    var micVolume = 0
-
-    var singerCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
-    var micCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    private var singerCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    private var micCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     companion object {
-        const val SAMPLE_THRESHOLD = 255.toByte()
+        private const val SAMPLE_THRESHOLD = 255.toByte()
+
+        fun shrinkVolume(volume: Int): Int {
+            return (volume / 17f).coerceAtMost(1f).toInt()
+        }
+
+        fun rangeIndex(noteI: Int): Float {
+            return ((noteI - 1) % PitchSoundPlayer.OCTAVE_SIZE + 1).toFloat() / PitchSoundPlayer.sortedPlayerFrequencies.size
+        }
 
         fun soundVolume(audioBuffer: FloatArray): Int {
             var sumOfSquares = 0.0
@@ -71,7 +72,7 @@ class AudioProcessor {
             var maxVal = -2
             for (singerHZ in singerHZs) {
                 for (speakerHZ in speakerHZs) {
-                    if (maxVal < 0 && (singerHZ == 0 || speakerHZ == 0 || singerHZ == PitchSoundPlayer.sortedNotes.size - 1 || speakerHZ == PitchSoundPlayer.sortedNotes.size - 1)) {
+                    if (maxVal < 0 && (singerHZ == 0 || speakerHZ == 0 || singerHZ == sortedNotes.size - 1 || speakerHZ == sortedNotes.size - 1)) {
                         return NotesSimilarity.Idle
                     } else {
                         if (Math.abs(speakerHZ - singerHZ) % 12 == 0) {
@@ -128,23 +129,21 @@ class AudioProcessor {
     }
 
 
-    suspend fun buildMicrophoneAudioDispatcher(pitchHandler: (timestamp: Double, noteI: Int, sim: NotesSimilarity) -> Unit)
+    suspend fun buildMicrophoneAudioDispatcher(pitchHandler: (timestamp: Double, noteI: Int, volume: Int, sim: NotesSimilarity) -> Unit)
        = withContext(Dispatchers.Default) {
 
         val pitchDetectionHandler =
             PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
                 val newTimeStamp = audioEvent.timeStamp
                 micNoteI = processPitchHeavy(pitchDetectionResult.pitch)
-                micVolume = soundVolume(audioEvent.floatBuffer)
+                val micVolume = soundVolume(audioEvent.floatBuffer)
                 if (micNoteI != sortedNotes.size - 1) {
                     shiftArrayRight(micCurrentPitches, micNoteI)
                 }
                 generatedRecordByteSound = playSound.generatedSnd[if (micNoteI == 0) 0 else (micNoteI - 1) % 12 + 1]
                 val similarity = compareHeavy(singerCurrentPitches.copyOfRange(6, 9), micCurrentPitches.copyOfRange(0, 5))
 
-                micTimeStamp = newTimeStamp
-
-                pitchHandler(micTimeStamp, micNoteI, similarity)
+                pitchHandler(newTimeStamp, micNoteI, micVolume, similarity)
             }
 
         val overlap = mediaInfo.overlap
@@ -165,7 +164,7 @@ class AudioProcessor {
 
 
     suspend fun buildMusicAudioDispatcher(
-        pitchHandler: (timestamp: Double, noteI: Int) -> Unit,
+        pitchHandler: (timestamp: Double, noteI: Int, volume: Int) -> Unit,
         onCompletion: () -> Unit
     ) = withContext(Dispatchers.Default) {
         val overlap = mediaInfo.overlap
@@ -192,13 +191,13 @@ class AudioProcessor {
             PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
                 val sTimeStamp = audioEvent.timeStamp
                 singNoteI = processPitchHeavy(pitchDetectionResult.pitch)
-                singVolume = soundVolume(audioEvent.floatBuffer)
+                val singVolume = soundVolume(audioEvent.floatBuffer)
                 if (singNoteI != sortedNotes.size - 1) {
                     shiftArrayRight(singerCurrentPitches, singNoteI)
                 }
                 generatedSingerByteSound =
                     playSound.generatedSnd[if (singNoteI == 0) 0 else (singNoteI - 1) % 12 + 1]
-                pitchHandler(sTimeStamp, singNoteI)
+                pitchHandler(sTimeStamp, singNoteI, singVolume)
             }
 
         val p = PitchProcessor(
@@ -208,14 +207,14 @@ class AudioProcessor {
             pitchDetectionHandler
         )
 
-        val bufferSizeInBytes = floatBuffer * tarsosDSPAudioFormat.getSampleSizeInBits() / 8
+        val bufferSizeInBytes = floatBuffer * tarsosDSPAudioFormat.sampleSizeInBits / 8
         mainAudioTrack = AudioTrack(
             AudioManager.STREAM_MUSIC,
-            tarsosDSPAudioFormat.getSampleRate().toInt(),
-            AudioFormat.CHANNEL_OUT_STEREO,
-            AudioFormat.ENCODING_PCM_16BIT,
+            tarsosDSPAudioFormat.sampleRate.toInt(),
+            4,
+            2,
             bufferSizeInBytes * 2,
-            AudioTrack.MODE_STREAM
+            1
         )
         mainAudioTrack?.play()
         val bytesToRead = (floatBuffer - overlap) * 2

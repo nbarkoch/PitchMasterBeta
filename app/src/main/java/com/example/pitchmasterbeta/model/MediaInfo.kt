@@ -17,12 +17,12 @@ data class MediaInfo(
     var voiceSampleRate: Int = 41000,
     var audioFloatBuffer: Int = 1024 * 2,
     var overlap: Int = 0,
-    var duration: Int = 0,
+    var timeStampDuration: Double = 0.0,
     var singerInputStream: BufferedInputStream? = null,
     var bgMusicInputStream: BufferedInputStream? = null,
 ) {
     companion object {
-        val DEFAULT_WAV_BITRATE = 1411
+        const val DEFAULT_WAV_BITRATE = 1411
     }
 
 
@@ -37,20 +37,26 @@ data class MediaInfo(
                 }
 
                 val mf = mex.getTrackFormat(0)
-                MediaMetadataRetriever().use { mmr ->
-                    try {
-                        mmr.setDataSource(context, uri)
-                        duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toIntOrNull()
-                            ?: 2000000
-                        overlap = (mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toIntOrNull() ?: DEFAULT_WAV_BITRATE) / 512
-                    } catch (e: NumberFormatException) {
-                        duration = 2000000
-                        overlap = DEFAULT_WAV_BITRATE / 512
-                    }
+                val mmr = MediaMetadataRetriever()
+                var duration = 2000000
+                overlap = DEFAULT_WAV_BITRATE / 512
+                try {
+                    mmr.setDataSource(context, uri)
+                    duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toIntOrNull()
+                        ?: 2000000
+                    overlap = (mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toIntOrNull()
+                        ?: DEFAULT_WAV_BITRATE) / 512
+                } catch (_: NumberFormatException) {
+                } finally {
+                    val minutes = duration % (1000 * 60 * 60) / (1000 * 60)
+                    val seconds = duration % (1000 * 60 * 60) % (1000 * 60) / 1000
+                    timeStampDuration = minutes * 60.0 + seconds
+                    mmr.release()
                 }
 
+
                 voiceSampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE) * 2
-                audioFloatBuffer = AudioRecord.getMinBufferSize(voiceSampleRate, AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_FLOAT)
+                audioFloatBuffer = AudioRecord.getMinBufferSize(voiceSampleRate, 16, 2)
                 // Init your pitch sounds here or do other actions with the extracted data
             }
         }
