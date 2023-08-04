@@ -51,8 +51,8 @@ class AudioProcessor {
     companion object {
         private const val SAMPLE_THRESHOLD = 255.toByte()
 
-        fun shrinkVolume(volume: Int): Int {
-            return (volume / 17f).coerceAtMost(1f).toInt()
+        fun shrinkVolume(volume: Int): Float {
+            return (volume / 17f).coerceAtMost(1f)
         }
 
         fun rangeIndex(noteI: Int): Float {
@@ -170,6 +170,17 @@ class AudioProcessor {
         val overlap = mediaInfo.overlap
         val sampleRate = mediaInfo.voiceSampleRate.toFloat()
         val floatBuffer = mediaInfo.audioFloatBuffer
+
+        mediaInfo.run {
+            bgMusicInputStream?.takeIf { it.markSupported() }?.apply {
+                mark(Int.MAX_VALUE)
+                bgMusicInputStream = this
+            }
+            singerInputStream?.takeIf { it.markSupported() }?.apply {
+                mark(Int.MAX_VALUE)
+                singerInputStream = this
+            }
+        }
 
         val tarsosDSPAudioFormat = TarsosDSPAudioFormat(
             TarsosDSPAudioFormat.Encoding.PCM_SIGNED,

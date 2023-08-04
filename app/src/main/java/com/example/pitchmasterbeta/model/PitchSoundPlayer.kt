@@ -1,5 +1,7 @@
 package com.example.pitchmasterbeta.model
 
+import kotlin.math.floor
+
 
 class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
     private val numSamples: Int
@@ -63,7 +65,7 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
             var i = 0
             var j = sortedFrequencies.size - 1
             while (i <= j) {
-                val m = Math.floor(((i + j) / 2f).toDouble()).toInt()
+                val m = floor(((i + j) / 2f).toDouble()).toInt()
                 if (pitchInHz > sortedFrequencies[m]) {
                     i = m + 1
                 } else if (pitchInHz < sortedFrequencies[m]) {

@@ -26,9 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -144,13 +142,15 @@ fun SimpleCircleButton(size: Dp, resource: Int, onClick: () -> Unit, contentDesc
         .clip(CircleShape)) {
         IconButton(
             onClick = onClick,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(8.dp),
+            enabled = active
         ) {
             Image(
                 painterResource(id = resource),
                 contentDescription = contentDesc,
                 modifier = Modifier.size(size - 15.dp),
-                colorFilter = ColorFilter.tint(Color(0xFFDF2FA4))
+                colorFilter = if (active) ColorFilter.tint(Color(0xFFDF2FA4)) else
+                                ColorFilter.tint(Color(0xFF343435))
             )
         }
     }
@@ -218,29 +218,40 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
         contract = ActivityResultContracts.RequestPermission()
     ) {}
 
-    val progress by remember(viewModel.currentTime, viewModel.durationTime) {
-        derivedStateOf {
-            (if (viewModel.currentTimestamp.value == 0.0) 0.0 else
-            viewModel.currentTimestamp.value / viewModel.durationTimestamp.value).toFloat()
-        }
-    }
+    val progress = viewModel.progress.collectAsState()
+    val playState = viewModel.playingState.collectAsState()
 
     SimpleCircleButton(65.dp, R.drawable.filters_1_svgrepo_com, onClick = {
     }, contentDesc = "singer voice volume")
 
     Box(  contentAlignment = Alignment.Center) {
-        ComplexCircleButton(70.dp, R.drawable.baseline_play_arrow_24, onClick = {
-            val recordPermissionGranted = ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
-            if (recordPermissionGranted) {
-                viewModel.startAudioDispatchers()
-            } else {
-                requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+        ComplexCircleButton(70.dp,
+            when (playState.value) {
+                WorkspaceViewModel.PlayerState.IDLE,
+                WorkspaceViewModel.PlayerState.PAUSE -> R.drawable.baseline_play_arrow_24
+                WorkspaceViewModel.PlayerState.PLAYING -> R.drawable.ic_baseline_pause_24
+            }, onClick = {
+            when (playState.value) {
+                WorkspaceViewModel.PlayerState.IDLE -> {
+                    val recordPermissionGranted = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (recordPermissionGranted) {
+                        viewModel.startAudioDispatchers()
+                    } else {
+                        requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                    }
+                }
+                WorkspaceViewModel.PlayerState.PLAYING -> {
+                    viewModel.pauseAudioDispatchers()
+                }
+                WorkspaceViewModel.PlayerState.PAUSE -> {
+                    viewModel.continueAudioDispatchers()
+                }
             }
         }, "start karaoke", active = true)
-        CircleProgressbar(Modifier.size(65.dp), progress)
+        CircleProgressbar(Modifier.size(65.dp), progress = progress.value)
     }
 
     SimpleCircleButton(65.dp, R.drawable.noun_singing_mic_3242509, onClick = {

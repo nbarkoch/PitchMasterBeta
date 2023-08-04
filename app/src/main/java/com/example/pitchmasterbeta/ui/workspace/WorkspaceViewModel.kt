@@ -15,9 +15,11 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.lang.reflect.Type
@@ -32,11 +34,6 @@ class WorkspaceViewModel : ViewModel() {
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
-
-    // Function to trigger the smooth scroll from your ViewModel
-    fun lyricsScrollToPosition(position: Int) {
-        _lyricsScrollToPosition.value = position
-    }
 
     // MutableState for storing your list of items obtained from the server
     private val _lyricsSegments = MutableStateFlow<List<LyricsSegment>>(emptyList())
@@ -89,22 +86,26 @@ class WorkspaceViewModel : ViewModel() {
         uri?.let {
             if (devTestMode) {
                 contentResolver?.let {
-                    val startProgress = ((mediaInfo.bgMusicInputStream == null && mediaInfo.singerInputStream == null) ||
-                            (mediaInfo.bgMusicInputStream != null && mediaInfo.singerInputStream != null))
-                    if (startProgress) {
-                        mediaInfo.bgMusicInputStream = BufferedInputStream(contentResolver.openInputStream(uri))
+                    // resetting the streams because we are starting a new work
+                    if  (mediaInfo.bgMusicInputStream != null && mediaInfo.singerInputStream != null) {
+                        mediaInfo.bgMusicInputStream?.close()
+                        mediaInfo.singerInputStream?.close()
+                        mediaInfo.bgMusicInputStream = null
                         mediaInfo.singerInputStream = null
+                    }
+
+                    if (mediaInfo.bgMusicInputStream == null && mediaInfo.singerInputStream == null) {
+                        mediaInfo.bgMusicInputStream = BufferedInputStream(contentResolver.openInputStream(uri))
+                        setWorkspaceState(WorkspaceState.PICK)
                     } else {
                         mediaInfo.singerInputStream = BufferedInputStream(contentResolver.openInputStream(uri))
-                    }
-                    mediaInfo.max(context, uri) //223000 //2756 (sr: 88200, fb: 7104)
-                    if (!startProgress) { //223000 //2756 (sr: 88200, fb: 7104)
+                        mediaInfo.max(context, uri)
                         audioProcessor = AudioProcessor(mediaInfo)
                         val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
                         val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
                         _durationTime.value = "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
-                        _durationTimestamp.value = mediaInfo.timeStampDuration
                         setWorkspaceState(WorkspaceState.IDLE)
+                        resetAudio()
                     }
                 }
             } else {
@@ -119,7 +120,6 @@ class WorkspaceViewModel : ViewModel() {
 
     }
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
     private var musicAudioDispatcher: SongAudioDispatcher? = null
     private var lastWindowPosition: Int = 0
@@ -127,43 +127,45 @@ class WorkspaceViewModel : ViewModel() {
     private var _score = MutableStateFlow(0)
     val score: StateFlow<Int> = _score
 
-    private val _micNoteI = MutableStateFlow(0f)
-    val micNoteI: StateFlow<Float> = _micNoteI
-    private val _micActive = MutableStateFlow(false)
-    val micActive: StateFlow<Boolean> = _micActive
-    private val _micVolume = MutableStateFlow(0)
-    val micVolume: StateFlow<Int> = _micVolume
-    private val _sinNoteI = MutableStateFlow(0f)
-    val sinNoteI: StateFlow<Float> = _sinNoteI
-    private val _sinActive = MutableStateFlow(false)
-    val sinActive: StateFlow<Boolean> = _sinActive
-    private val _sinVolume = MutableStateFlow(0)
-    val sinVolume : StateFlow<Int> = _sinVolume
+
+    data class NoteState(var noteF: Float, val volume: Float)
+
+    private val _micNote = MutableStateFlow(NoteState(0f,0f))
+    private val _micNoteActive = MutableStateFlow(false)
+    val micNoteActive: StateFlow<Boolean> = _micNoteActive
+    val micNote: StateFlow<NoteState> = _micNote
+
+    private val _sinNote = MutableStateFlow(NoteState(0f,0f))
+    private val _sinNoteActive = MutableStateFlow(false)
+    val sinNoteActive: StateFlow<Boolean> = _sinNoteActive
+    val sinNote: StateFlow<NoteState> = _sinNote
 
     private val _currentTime = MutableStateFlow("00:00")
     val currentTime: StateFlow<String> = _currentTime
     private val _durationTime = MutableStateFlow("00:00")
     val durationTime: StateFlow<String> = _durationTime
-    private val _currentTimestamp = MutableStateFlow(0.0)
-    val currentTimestamp: StateFlow<Double> = _currentTimestamp
-    private val _durationTimestamp = MutableStateFlow(0.0)
-    val durationTimestamp: StateFlow<Double> = _durationTimestamp
+    private val _progress = MutableStateFlow(0.0f)
+    val progress: StateFlow<Float> = _progress
+
+    private var musicJob: Job? = null
+    private var micJob: Job? = null
+
 
     fun startAudioDispatchers() {
         // Start the microphone audio dispatcher
-        coroutineScope.launch {
+        micJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int, AudioProcessor.NotesSimilarity) -> Unit =
                 { _, noteI, volume, similarity ->
                     if (noteI > 0) {
-                        _micActive.value = true
-                        _micNoteI.value = AudioProcessor.rangeIndex(noteI)
-                        _micVolume.value = AudioProcessor.shrinkVolume(volume)
                         if (similarity == AudioProcessor.NotesSimilarity.Equal || similarity == AudioProcessor.NotesSimilarity.Close) {
                             goodForThisWindowWatch = true
-                            _sinNoteI.value = _micNoteI.value
+                            _micNote.value = _sinNote.value
+                        } else {
+                            _micNote.value = NoteState(AudioProcessor.rangeIndex(noteI), AudioProcessor.shrinkVolume(volume))
                         }
+                        _micNoteActive.value = true
                     } else {
-                        _micActive.value = false
+                        _micNoteActive.value = false
                     }
             }
             microphoneAudioDispatcher = audioProcessor.buildMicrophoneAudioDispatcher(handlePitch)
@@ -172,10 +174,10 @@ class WorkspaceViewModel : ViewModel() {
         }
 
         // Start the music audio dispatcher
-        coroutineScope.launch {
+        musicJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int) -> Unit =
                 { musicTimeStamp, noteI, volume ->
-                    _currentTimestamp.value = musicTimeStamp
+                    _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
                     val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
                     val min: Int = (musicTimeStamp % 1000 / 60).toInt()
                     _currentTime.value = "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
@@ -187,23 +189,59 @@ class WorkspaceViewModel : ViewModel() {
                     lastWindowPosition = currentWindowPosition
 
                     if (noteI > 0) {
-                        _sinActive.value = true
-                        _sinNoteI.value = AudioProcessor.rangeIndex(noteI)
-                        _sinVolume.value = AudioProcessor.shrinkVolume(volume)
+                        _sinNote.value = NoteState(AudioProcessor.rangeIndex(noteI), AudioProcessor.shrinkVolume(volume))
+                        _sinNoteActive.value = true
                     } else {
-                        _sinActive.value = false
+                        _sinNoteActive.value = false
                     }
-                    if (_lyricsSegments.value[lyricsScrollToPosition.value].start < musicTimeStamp) {
-                        _lyricsScrollToPosition.value += ((_lyricsScrollToPosition.value + 1) % _lyricsSegments.value.size)
+
+                    if (_lyricsSegments.value[lyricsScrollToPosition.value].end < musicTimeStamp
+                        && lyricsScrollToPosition.value < _lyricsSegments.value.size - 1 ) {
+                        _lyricsScrollToPosition.value = (_lyricsScrollToPosition.value + 1) % _lyricsSegments.value.size
                     }
                 }
             val onCompletion: () -> Unit = {
-                setPlayingState(PlayerState.IDLE)
+                resetAudio()
             }
             setPlayingState(PlayerState.PLAYING)
             musicAudioDispatcher = audioProcessor.buildMusicAudioDispatcher(handlePitch, onCompletion)
             // Start the audio dispatcher
             musicAudioDispatcher?.run()
+        }
+    }
+
+    fun pauseAudioDispatchers() {
+        microphoneAudioDispatcher?.pause()
+        musicAudioDispatcher?.pause()
+        setPlayingState(PlayerState.PAUSE)
+    }
+
+    fun continueAudioDispatchers() {
+        microphoneAudioDispatcher?.resume()
+        musicAudioDispatcher?.resume()
+        setPlayingState(PlayerState.PLAYING)
+    }
+
+    private fun resetAudio() {
+        setPlayingState(PlayerState.IDLE)
+        _lyricsScrollToPosition.value = 0
+        _progress.value = 0f
+        _score.value = 0
+        _currentTime.value = "00:00"
+        goodForThisWindowWatch = false
+        _micNote.value = NoteState(0f, 0f)
+        _sinNote.value = NoteState(0f, 0f)
+        _micNoteActive.value = false
+        _sinNoteActive.value = false
+        try {
+            mediaInfo.singerInputStream?.reset()
+            mediaInfo.bgMusicInputStream?.reset()
+            runBlocking {
+                musicJob?.join()
+                micJob?.join()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

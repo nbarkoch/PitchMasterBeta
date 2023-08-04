@@ -21,10 +21,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 
 @Composable
@@ -57,13 +60,18 @@ fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
                           direction: Int,
                           maxChordWidth: Dp, items: List<Int>, chordHeight: Dp) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
-    val modifier = if (direction > 0) Modifier
-        .fillMaxHeight()
-        .width(maxChordWidth) else Modifier
-        .fillMaxHeight()
-        .width(maxChordWidth)
-        .offset(x = screenWidthDp.dp - maxChordWidth)
-        .scale(scaleX = -1f, scaleY = 1f)
+    val gradientBrush = Brush.horizontalGradient(
+        colors = listOf(
+            Color.Transparent,
+            Color(0x2DE96ADC),
+        ),
+    )
+    val modifier = Modifier.fillMaxHeight().width(maxChordWidth).run {
+        (if (direction < 0) {
+            this.offset(x = screenWidthDp.dp - maxChordWidth).scale(scaleX = -1f, scaleY = 1f)
+        } else this).background(brush = gradientBrush)
+    }
+
     Box(modifier = modifier) {
         LazyColumn(
             modifier = Modifier.fillMaxSize()
@@ -87,63 +95,58 @@ fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
 fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeight: Dp, items: List<Any>) {
     val localDensity = LocalDensity.current
     val scrollState = rememberLazyListState()
+    val currentMidpoint = with(localDensity) { chordHeight.toPx() } * 2.5f
     val note by rememberUpdatedState(
-        if (direction > 0)
-            viewModel.sinNoteI.collectAsState()
-        else
-            viewModel.micNoteI.collectAsState()
+        if (direction < 0) viewModel.sinNote.collectAsState()
+        else viewModel.micNote.collectAsState()
     )
-    val volume by rememberUpdatedState(
-        if (direction > 0)
-            viewModel.sinVolume.collectAsState()
-        else
-            viewModel.micVolume.collectAsState()
+    val noteActive by rememberUpdatedState(
+        if (direction < 0) viewModel.sinNoteActive.collectAsState()
+        else viewModel.micNoteActive.collectAsState()
     )
-    val active by rememberUpdatedState(
-        if (direction > 0)
-            viewModel.sinActive.collectAsState()
-        else
-            viewModel.micActive.collectAsState()
-    )
+
     val offset = remember(scrollState) {
         derivedStateOf {
             chordHeight *
             scrollState.firstVisibleItemIndex +
-            with(localDensity)
-            { scrollState.firstVisibleItemScrollOffset.toDp() }
+            with(localDensity) { scrollState.firstVisibleItemScrollOffset.toDp() }
         }
     }
 
     LazyColumn(
         modifier = Modifier
             .height(chordHeight * 5)
-            .offset(y = offset.value).alpha(if (active.value) 1f else 0.3f),
+            .offset(y = offset.value)
+            .alpha(if (noteActive.value) 1f else 0.2f)
+        ,
         state = scrollState
     ) {
         itemsIndexed(items) { i, _ ->
-            val scaleX by remember {
+            val scaleX by remember(scrollState) {
                 derivedStateOf {
                     val currentItemInfo = scrollState.layoutInfo.visibleItemsInfo
                         .firstOrNull { it.index == i }
-                        ?: return@derivedStateOf 0f
-                    val itemHalfSize = currentItemInfo.size / 2
-                    val currentMidpoint = with(localDensity) { chordHeight.toPx() } * 2.5f
-                    val scalingFactor = (1f - minOf(1f, abs(currentItemInfo.offset + itemHalfSize - currentMidpoint) / currentMidpoint) * 0.75f)
-                    scalingFactor * 4f
+                    if (currentItemInfo != null) {
+                        val offsetFromMidpoint = currentItemInfo.offset + (currentItemInfo.size / 2) - currentMidpoint
+                        val scalingFactor = (1f - minOf(1f, abs(offsetFromMidpoint) / currentMidpoint) * 0.75f)
+                        scalingFactor * 3f * note.value.volume
+                    } else {
+                        0f
+                    }
                 }
             }
             PitchItem(
                 modifier = Modifier
-                    .width((scaleX * volume.value) * 10.dp)
+                    .width(scaleX * 10.dp)
                     .padding(0.dp, 3.dp),
                 color = interpolateColor(i, items.size),
                 chordHeight = chordHeight - 6.dp
             )
         }
     }
-    LaunchedEffect(note) {
-        val chordIndex = (note.value * items.size).toInt()
-        scrollState.animateScrollToItem(chordIndex)
+    LaunchedEffect(note.value.noteF) {
+        snapshotFlow { note.value.noteF }
+            .collectLatest { scrollState.animateScrollToItem((it * items.size).toInt()) }
     }
 }
 
