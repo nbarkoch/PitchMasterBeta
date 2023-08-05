@@ -147,6 +147,23 @@ class WorkspaceViewModel : ViewModel() {
     private val _progress = MutableStateFlow(0.0f)
     val progress: StateFlow<Float> = _progress
 
+    private val _displaySingerVolume = MutableStateFlow(false)
+    val displaySingerVolume: StateFlow<Boolean> = _displaySingerVolume
+    fun displaySingerVolume(b: Boolean) {
+        _displaySingerVolume.value = b
+    }
+
+    fun setSingerVolume(volume: Float) {
+        if (volume > 0.06f) {
+            audioProcessor.volumeFactor = volume
+        } else {
+            audioProcessor.volumeFactor = 0f
+        }
+    }
+    fun getSingerVolume(): Float {
+        return audioProcessor.volumeFactor
+    }
+
     private var musicJob: Job? = null
     private var micJob: Job? = null
 
@@ -236,6 +253,8 @@ class WorkspaceViewModel : ViewModel() {
         try {
             mediaInfo.singerInputStream?.reset()
             mediaInfo.bgMusicInputStream?.reset()
+            musicAudioDispatcher?.stop()
+            microphoneAudioDispatcher?.stop()
             runBlocking {
                 musicJob?.join()
                 micJob?.join()

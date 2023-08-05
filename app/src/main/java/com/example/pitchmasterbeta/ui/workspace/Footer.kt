@@ -7,6 +7,7 @@ import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,8 +17,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -76,50 +80,50 @@ fun WorkspaceFooter(modifier: Modifier = Modifier,
             }
         }
     }
-
-    Column( modifier = modifier.background(gradientBrush),
-        horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically,
-
-        ) {
-
-            when (workspaceState.value) {
-                WorkspaceViewModel.WorkspaceState.IDLE -> {
-                    PlaygroundFooter(context, viewModel)
-                }
-
-                WorkspaceViewModel.WorkspaceState.PICK -> {
-                    ComplexCircleButton(70.dp, R.drawable.baseline_library_music_24, onClick = {
-                        val intent =
-                            Intent(Intent.ACTION_PICK, MediaStore.Audio.Media.EXTERNAL_CONTENT_URI)
-                        loadMusicFromGalleryResultLauncher.launch(intent)
-                    }, "pick a song from gallery", active = true)
-                }
-
-                else -> Box{}
-            }
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally)  {
+        if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE){
+            ControlsRow(viewModel = viewModel)
         }
-        if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
-            val current = viewModel.currentTime.collectAsState()
-            val duration = viewModel.durationTime.collectAsState()
-            Box(contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(vertical = 5.dp)) {
-                Text(color = Color.White,
-                    text = "${current.value}/${duration.value}",
-                    textAlign = TextAlign.Center,
-                    fontSize = 14.sp)
+
+        Column( modifier = modifier.background(gradientBrush),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically,
+
+                ) {
+
+                when (workspaceState.value) {
+                    WorkspaceViewModel.WorkspaceState.IDLE -> {
+                        PlaygroundFooter(context, viewModel)
+                    }
+
+                    WorkspaceViewModel.WorkspaceState.PICK -> {
+                        ComplexCircleButton(70.dp, R.drawable.baseline_library_music_24, onClick = {
+                            val intent =
+                                Intent(Intent.ACTION_PICK, MediaStore.Audio.Media.EXTERNAL_CONTENT_URI)
+                            loadMusicFromGalleryResultLauncher.launch(intent)
+                        }, "pick a song from gallery", active = true)
+                    }
+
+                    else -> Box{}
+                }
+            }
+            if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
+                DurationRow(viewModel = viewModel)
             }
         }
     }
 
 
+
 }
 
 @Composable
-fun SimpleCircleButton(size: Dp, resource: Int, onClick: () -> Unit, contentDesc: String, active: Boolean = false) {
+fun SimpleCircleButton(size: Dp, resource: Int, onClick: () -> Unit, contentDesc: String, active: Boolean = true) {
     val boxSize = with(LocalDensity.current) { size.toPx() }
     val gradientBrush = Brush.radialGradient(
         colors = listOf(
@@ -254,10 +258,43 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
         CircleProgressbar(Modifier.size(65.dp), progress = progress.value)
     }
 
-    SimpleCircleButton(65.dp, R.drawable.noun_singing_mic_3242509, onClick = {
-    }, contentDesc = "singer voice volume")
+    SimpleCircleButton(65.dp, R.drawable.noun_singing_mic_3242509,
+        onClick = { viewModel.displaySingerVolume(!viewModel.displaySingerVolume.value) }, contentDesc = "singer voice volume")
 }
 
+
+@Composable
+fun DurationRow(viewModel: WorkspaceViewModel) {
+    val current = viewModel.currentTime.collectAsState()
+    val duration = viewModel.durationTime.collectAsState()
+    Box(contentAlignment = Alignment.Center,
+        modifier = Modifier.padding(vertical = 5.dp)) {
+        Text(color = Color.White,
+            text = "${current.value}/${duration.value}",
+            textAlign = TextAlign.Center,
+            fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun ControlsRow(viewModel: WorkspaceViewModel) {
+    val displaySingerVolume by rememberUpdatedState(viewModel.displaySingerVolume.collectAsState())
+    val scale by animateFloatAsState(targetValue = if (displaySingerVolume.value) 1f else 0f,
+        label = ""
+    )
+    Row(
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically,
+    ){
+        Box(Modifier.width(150.dp)) {}
+        VerticalSeekBar(modifier = Modifier
+            .height(100.dp).width(35.dp)
+            .graphicsLayer(scaleX = scale, alpha = scale, scaleY = scale),
+            onProgressChanged = {
+                viewModel.setSingerVolume(it)
+            }, initialOffsetPercent = viewModel.getSingerVolume())
+    }
+}
 
 @Preview
 @Composable
