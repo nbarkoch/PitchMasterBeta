@@ -153,6 +153,12 @@ class WorkspaceViewModel : ViewModel() {
         _displaySingerVolume.value = b
     }
 
+    private val _displayPitchControls = MutableStateFlow(false)
+    val displayPitchControls: StateFlow<Boolean> = _displayPitchControls
+    fun displayPitchControls(b: Boolean) {
+        _displayPitchControls.value = b
+    }
+
     fun setSingerVolume(volume: Float) {
         if (volume > 0.06f) {
             audioProcessor.volumeFactor = volume
@@ -162,6 +168,20 @@ class WorkspaceViewModel : ViewModel() {
     }
     fun getSingerVolume(): Float {
         return audioProcessor.volumeFactor
+    }
+
+    private val _isComputingPitchSinger = MutableStateFlow(false)
+    val isComputingPitchSinger: StateFlow<Boolean> = _isComputingPitchSinger
+    fun isComputingPitchSinger(b: Boolean) {
+        audioProcessor.computeAndPlaySingerSoundMode = b
+        _isComputingPitchSinger.value = b
+    }
+
+    private val _isComputingPitchMic = MutableStateFlow(false)
+    val isComputingPitchMic: StateFlow<Boolean> = _isComputingPitchMic
+    fun isComputingPitchMic(b: Boolean) {
+        audioProcessor.computeAndPlayRecordedSoundMode = b
+        _isComputingPitchMic.value = b
     }
 
     private var musicJob: Job? = null

@@ -18,14 +18,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -54,6 +57,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 
@@ -225,8 +229,9 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
     val progress = viewModel.progress.collectAsState()
     val playState = viewModel.playingState.collectAsState()
 
-    SimpleCircleButton(65.dp, R.drawable.filters_1_svgrepo_com, onClick = {
-    }, contentDesc = "singer voice volume")
+    SimpleCircleButton(65.dp, R.drawable.filters_1_svgrepo_com,
+        onClick = { viewModel.displayPitchControls(!viewModel.displayPitchControls.value) },
+        contentDesc = "singer voice volume")
 
     Box(  contentAlignment = Alignment.Center) {
         ComplexCircleButton(70.dp,
@@ -279,20 +284,70 @@ fun DurationRow(viewModel: WorkspaceViewModel) {
 @Composable
 fun ControlsRow(viewModel: WorkspaceViewModel) {
     val displaySingerVolume by rememberUpdatedState(viewModel.displaySingerVolume.collectAsState())
-    val scale by animateFloatAsState(targetValue = if (displaySingerVolume.value) 1f else 0f,
+    val displayPitchControls by rememberUpdatedState(viewModel.displayPitchControls.collectAsState())
+    val volumeScale by animateFloatAsState(targetValue = if (displaySingerVolume.value) 1f else 0f,
+        label = ""
+    )
+    val pitchesControlsScale by animateFloatAsState(targetValue = if (displayPitchControls.value) 1f else 0f,
         label = ""
     )
     Row(
-        horizontalArrangement = Arrangement.SpaceAround,
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ){
-        Box(Modifier.width(150.dp)) {}
+        Box(
+            Modifier
+                .padding(horizontal = 10.dp)
+                .offset(x = (-50).dp)
+                .graphicsLayer(
+                    scaleX = pitchesControlsScale, scaleY = pitchesControlsScale,
+                    alpha = pitchesControlsScale
+                )) {
+            PitchControls(
+                Modifier
+                    .background(
+                        color = Color.White,
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .padding(10.dp), viewModel = viewModel)
+        }
         VerticalSeekBar(modifier = Modifier
-            .height(100.dp).width(35.dp)
-            .graphicsLayer(scaleX = scale, alpha = scale, scaleY = scale),
+            .height(100.dp)
+            .width(35.dp)
+            .offset(x = (-5).dp)
+            .graphicsLayer(scaleX = volumeScale, alpha = volumeScale, scaleY = volumeScale),
             onProgressChanged = {
                 viewModel.setSingerVolume(it)
             }, initialOffsetPercent = viewModel.getSingerVolume())
+    }
+}
+
+@Composable
+fun PitchControls(modifier: Modifier, viewModel: WorkspaceViewModel) {
+    val isComputingPitchMic by rememberUpdatedState(viewModel.isComputingPitchMic.collectAsState())
+    val isComputingPitchSinger by rememberUpdatedState(viewModel.isComputingPitchSinger.collectAsState())
+
+    Column(modifier = modifier) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+
+        ) {
+            Text(text = "Singer", Modifier.padding(horizontal = 10.dp))
+            Switch(checked = isComputingPitchSinger.value, onCheckedChange = {
+                viewModel.isComputingPitchSinger(it)
+            })
+        }
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "Mic", Modifier.padding(horizontal = 10.dp))
+            Switch(checked = isComputingPitchMic.value, onCheckedChange = {
+                viewModel.isComputingPitchMic(it)
+            })
+        }
     }
 }
 
