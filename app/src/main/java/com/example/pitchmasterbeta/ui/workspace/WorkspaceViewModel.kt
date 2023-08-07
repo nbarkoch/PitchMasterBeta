@@ -3,6 +3,7 @@ package com.example.pitchmasterbeta.ui.workspace
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.model.AudioProcessor
@@ -10,6 +11,7 @@ import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.MediaInfo
 import com.example.pitchmasterbeta.model.SongAudioDispatcher
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
+import com.example.pitchmasterbeta.model.getColor
 import com.example.pitchmasterbeta.utils.network.LyricsApi
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -28,7 +30,7 @@ import java.lang.reflect.Type
 class WorkspaceViewModel : ViewModel() {
 
     private var mediaInfo = MediaInfo()
-    private lateinit var audioProcessor: AudioProcessor
+    private var audioProcessor: AudioProcessor? = null
 
     private val devTestMode: Boolean = true
 
@@ -67,7 +69,8 @@ class WorkspaceViewModel : ViewModel() {
     enum class PlayerState {
         IDLE,
         PLAYING,
-        PAUSE
+        PAUSE,
+        END
     }
 
     private val _workspaceState = MutableStateFlow(WorkspaceState.PICK)
@@ -78,7 +81,7 @@ class WorkspaceViewModel : ViewModel() {
 
     private val _playingState = MutableStateFlow(PlayerState.IDLE)
     val playingState: StateFlow<PlayerState> = _playingState
-    private fun setPlayingState(state: PlayerState) {
+    fun setPlayingState(state: PlayerState) {
         _playingState.value = state
     }
 
@@ -147,6 +150,9 @@ class WorkspaceViewModel : ViewModel() {
     private val _progress = MutableStateFlow(0.0f)
     val progress: StateFlow<Float> = _progress
 
+    private val _similarityColor = MutableStateFlow(Color(0xFFFFFFFF))
+    val similarityColor: StateFlow<Color> = _similarityColor
+
     private val _displaySingerVolume = MutableStateFlow(false)
     val displaySingerVolume: StateFlow<Boolean> = _displaySingerVolume
     fun displaySingerVolume(b: Boolean) {
@@ -161,26 +167,26 @@ class WorkspaceViewModel : ViewModel() {
 
     fun setSingerVolume(volume: Float) {
         if (volume > 0.06f) {
-            audioProcessor.volumeFactor = volume
+            audioProcessor?.volumeFactor = volume
         } else {
-            audioProcessor.volumeFactor = 0f
+            audioProcessor?.volumeFactor = 0f
         }
     }
     fun getSingerVolume(): Float {
-        return audioProcessor.volumeFactor
+        return audioProcessor?.volumeFactor ?: 0f
     }
 
     private val _isComputingPitchSinger = MutableStateFlow(false)
     val isComputingPitchSinger: StateFlow<Boolean> = _isComputingPitchSinger
     fun isComputingPitchSinger(b: Boolean) {
-        audioProcessor.computeAndPlaySingerSoundMode = b
+        audioProcessor?.computeAndPlaySingerSoundMode = b
         _isComputingPitchSinger.value = b
     }
 
     private val _isComputingPitchMic = MutableStateFlow(false)
     val isComputingPitchMic: StateFlow<Boolean> = _isComputingPitchMic
     fun isComputingPitchMic(b: Boolean) {
-        audioProcessor.computeAndPlayRecordedSoundMode = b
+        audioProcessor?.computeAndPlayRecordedSoundMode = b
         _isComputingPitchMic.value = b
     }
 
@@ -193,6 +199,7 @@ class WorkspaceViewModel : ViewModel() {
         micJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int, AudioProcessor.NotesSimilarity) -> Unit =
                 { _, noteI, volume, similarity ->
+                    _similarityColor.value = getColor(similarity)
                     if (noteI > 0) {
                         if (similarity == AudioProcessor.NotesSimilarity.Equal || similarity == AudioProcessor.NotesSimilarity.Close) {
                             goodForThisWindowWatch = true
@@ -205,7 +212,7 @@ class WorkspaceViewModel : ViewModel() {
                         _micNoteActive.value = false
                     }
             }
-            microphoneAudioDispatcher = audioProcessor.buildMicrophoneAudioDispatcher(handlePitch)
+            microphoneAudioDispatcher = audioProcessor?.buildMicrophoneAudioDispatcher(handlePitch)
             // Start the audio dispatcher
             microphoneAudioDispatcher?.run()
         }
@@ -238,10 +245,11 @@ class WorkspaceViewModel : ViewModel() {
                     }
                 }
             val onCompletion: () -> Unit = {
+                setPlayingState(PlayerState.END)
                 resetAudio()
             }
             setPlayingState(PlayerState.PLAYING)
-            musicAudioDispatcher = audioProcessor.buildMusicAudioDispatcher(handlePitch, onCompletion)
+            musicAudioDispatcher = audioProcessor?.buildMusicAudioDispatcher(handlePitch, onCompletion)
             // Start the audio dispatcher
             musicAudioDispatcher?.run()
         }
@@ -260,10 +268,8 @@ class WorkspaceViewModel : ViewModel() {
     }
 
     private fun resetAudio() {
-        setPlayingState(PlayerState.IDLE)
         _lyricsScrollToPosition.value = 0
         _progress.value = 0f
-        _score.value = 0
         _currentTime.value = "00:00"
         goodForThisWindowWatch = false
         _micNote.value = NoteState(0f, 0f)
@@ -271,10 +277,10 @@ class WorkspaceViewModel : ViewModel() {
         _micNoteActive.value = false
         _sinNoteActive.value = false
         try {
+            musicAudioDispatcher?.run { if(!this.isStopped) { this.stop() } }
+            microphoneAudioDispatcher?.run { if(!this.isStopped) { this.stop() } }
             mediaInfo.singerInputStream?.reset()
             mediaInfo.bgMusicInputStream?.reset()
-            musicAudioDispatcher?.stop()
-            microphoneAudioDispatcher?.stop()
             runBlocking {
                 musicJob?.join()
                 micJob?.join()
@@ -282,6 +288,11 @@ class WorkspaceViewModel : ViewModel() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    fun resetScoreAndWorkspaceState() {
+        setPlayingState(PlayerState.IDLE)
+        _score.value = 0
     }
 
 }

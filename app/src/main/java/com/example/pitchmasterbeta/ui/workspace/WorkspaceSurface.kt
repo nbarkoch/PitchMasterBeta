@@ -55,6 +55,10 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
             Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter), viewModel = viewModel)
+        WorkspaceHeader(
+            Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter), viewModel = viewModel)
         PitchDecorations(viewModel = viewModel)
     }
 }

@@ -57,7 +57,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 
@@ -237,6 +236,7 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
         ComplexCircleButton(70.dp,
             when (playState.value) {
                 WorkspaceViewModel.PlayerState.IDLE,
+                WorkspaceViewModel.PlayerState.END,
                 WorkspaceViewModel.PlayerState.PAUSE -> R.drawable.baseline_play_arrow_24
                 WorkspaceViewModel.PlayerState.PLAYING -> R.drawable.ic_baseline_pause_24
             }, onClick = {
@@ -258,6 +258,7 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
                 WorkspaceViewModel.PlayerState.PAUSE -> {
                     viewModel.continueAudioDispatchers()
                 }
+                else -> {}
             }
         }, "start karaoke", active = true)
         CircleProgressbar(Modifier.size(65.dp), progress = progress.value)
