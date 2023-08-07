@@ -1,7 +1,6 @@
 package com.example.pitchmasterbeta.model
 
 import android.content.Context
-import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaExtractor
 import android.media.MediaFormat
@@ -62,7 +61,20 @@ data class MediaInfo(
         }
     }
 
-
+    fun getSongInfo(context: Context, uri: Uri): Array<String> {
+        val mmr = MediaMetadataRetriever()
+        return try {
+            mmr.setDataSource(context, uri)
+            val sponsorArtist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: ""
+            val sponsorTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: ""
+            arrayOf(sponsorArtist, sponsorTitle)
+        } catch (e: java.lang.NumberFormatException) {
+            val path = uri.path
+            val fileName = path!!.substring(path.lastIndexOf('/') + 1)
+            val fileNameWithoutExtension = fileName.replaceFirst("[.][^.]+$".toRegex(), "")
+            arrayOf(fileNameWithoutExtension, "")
+        }
+    }
 
 
 }

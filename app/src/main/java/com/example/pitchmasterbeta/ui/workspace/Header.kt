@@ -2,22 +2,35 @@ package com.example.pitchmasterbeta.ui.workspace
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.InfiniteRepeatableSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.RepeatableSpec
+import androidx.compose.animation.core.TwoWayConverter
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateValue
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -25,10 +38,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,8 +56,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun WorkspaceHeader(modifier: Modifier = Modifier,
@@ -53,6 +73,7 @@ fun WorkspaceHeader(modifier: Modifier = Modifier,
     val colorState = viewModel.similarityColor.collectAsState()
     val color = animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
     val score by rememberUpdatedState(viewModel.score.collectAsState())
+    val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
 
 
@@ -93,63 +114,117 @@ fun WorkspaceHeader(modifier: Modifier = Modifier,
         .fillMaxSize()
         .alpha(alpha)
         .background(color = Color.Black))
-    Box(modifier = modifier
-        .background(brush = gradientBrush)
-        .padding(20.dp)
-        .graphicsLayer {
-            translationY = translateY
-            scaleY = scale
-            scaleX = scale
-        },
-        contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier
-                    .border(color = color.value, shape = CircleShape, width = 3.dp)
-                    .padding(7.5.dp)
-                    .widthIn(50.dp, 300.dp)
-                    .heightIn(50.dp, 300.dp),
+    Column(modifier = modifier.background(brush = gradientBrush),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
+            MarqueeText(
+                "song name long long long long song name long long long long long")
+            Box(modifier = Modifier
+                .padding(20.dp)
+                .graphicsLayer {
+                    translationY = translateY
+                    scaleY = scale
+                    scaleX = scale
+                },
                 contentAlignment = Alignment.Center) {
-                Text(text = "${score.value}",
-                    color = Color.White,
-                    fontSize = 30.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.W500)
-            }
-
-            AnimatedVisibility(
-                visible = playState.value == WorkspaceViewModel.PlayerState.END,
-                enter = fadeIn(
-                    animationSpec = tween(durationMillis = 200, delayMillis = 1000)
-                ),
-            ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Well Done!", color = Color.White,
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.W400,
-                        modifier = Modifier.padding(10.dp)
-                    )
-                    Button(colors = ButtonDefaults.buttonColors(Color.White), onClick = {
-                        viewModel.resetScoreAndWorkspaceState()
-                    }) {
-                        Text(text = "cancel", color = Color.Black,
-                            fontSize = 18.sp,
-                            textAlign = TextAlign.Center,)
+                    Box(
+                        Modifier
+                            .border(color = color.value, shape = CircleShape, width = 3.dp)
+                            .padding(7.5.dp)
+                            .widthIn(50.dp, 300.dp)
+                            .heightIn(50.dp, 300.dp),
+                        contentAlignment = Alignment.Center) {
+                        Text(text = "${score.value}",
+                            color = Color.White,
+                            fontSize = 30.sp,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.W500)
+                    }
+
+                    AnimatedVisibility(
+                        visible = playState.value == WorkspaceViewModel.PlayerState.END,
+                        enter = fadeIn(
+                            animationSpec = tween(durationMillis = 200, delayMillis = 1000)
+                        ),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Well Done!", color = Color.White,
+                                fontSize = 18.sp,
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.W400,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                            Button(colors = ButtonDefaults.buttonColors(Color.White),
+                                modifier = Modifier.defaultMinSize(
+                                    minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                onClick = {
+                                    viewModel.resetScoreAndWorkspaceState()
+                                }) {
+                                Text(text = "Cancel", color = Color.Black,
+                                    fontSize = 14.sp,
+                                    textAlign = TextAlign.Center,)
+                            }
+                        }
                     }
                 }
-                }
             }
+        }
     }
+
 }
 
+@Composable
+fun MarqueeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    scrollSpeed: Int = 250, // Adjust the speed as needed
+) {
+    val textState = rememberScrollState()
 
+
+    suspend fun animateScrollTo(value: Int) {
+        withContext(Dispatchers.Main) {
+            textState.animateScrollTo(
+                value = value,
+                animationSpec = tween(durationMillis = (scrollSpeed * text.length), easing = LinearEasing)
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        launch {
+            while(true) {
+                animateScrollTo(textState.maxValue)
+                delay(scrollSpeed * text.length + scrollSpeed.toLong())
+                animateScrollTo(0)
+                delay(scrollSpeed * text.length + scrollSpeed.toLong())
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .horizontalScroll(state = textState)
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(text = text,
+            color = Color.White,
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.W400,
+            modifier = Modifier.padding(horizontal = 40.dp))
+    }
+}
 @Preview
 @Composable
 fun WorkspaceHeaderPreview() {
     val viewModel = WorkspaceViewModel()
     viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.IDLE)
+    viewModel.setPlayingState(WorkspaceViewModel.PlayerState.IDLE)
     MaterialTheme {
         WorkspaceHeader(modifier = Modifier.fillMaxWidth(), viewModel = viewModel)
     }

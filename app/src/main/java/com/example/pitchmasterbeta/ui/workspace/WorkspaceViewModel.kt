@@ -2,6 +2,7 @@ package com.example.pitchmasterbeta.ui.workspace
 
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
@@ -12,6 +13,7 @@ import com.example.pitchmasterbeta.model.MediaInfo
 import com.example.pitchmasterbeta.model.SongAudioDispatcher
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
 import com.example.pitchmasterbeta.model.getColor
+import com.example.pitchmasterbeta.services.SpleeterService
 import com.example.pitchmasterbeta.utils.network.LyricsApi
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -85,10 +87,14 @@ class WorkspaceViewModel : ViewModel() {
         _playingState.value = state
     }
 
+    private val _songFullName = MutableStateFlow("")
+    val songFullName: StateFlow<String> = _songFullName
+
     suspend fun handleResultUriForAudioIntent(context: Context, contentResolver: ContentResolver?, uri: Uri?) {
         uri?.let {
-            if (devTestMode) {
-                contentResolver?.let {
+            contentResolver?.let {
+                if (devTestMode) {
+
                     // resetting the streams because we are starting a new work
                     if  (mediaInfo.bgMusicInputStream != null && mediaInfo.singerInputStream != null) {
                         mediaInfo.bgMusicInputStream?.close()
@@ -110,17 +116,28 @@ class WorkspaceViewModel : ViewModel() {
                         setWorkspaceState(WorkspaceState.IDLE)
                         resetAudio()
                     }
+                } else {
+                    val songBaseInfo = mediaInfo.getSongInfo(context, uri)
+                    _songFullName.value = "${songBaseInfo[0]} ${songBaseInfo[1]}"
+                    beginGenerateKaraoke(context, uri)
+                    setWorkspaceState(WorkspaceState.WAITING)
                 }
-            } else {
-                beginGenerateKaraoke(uri)
-                setWorkspaceState(WorkspaceState.WAITING)
             }
         }
 
     }
 
-    private fun beginGenerateKaraoke(uri: Uri) {
-
+    private fun beginGenerateKaraoke(context: Context, fileUri: Uri) {
+        try {
+            val serviceSpleetIntent = Intent(context, SpleeterService::class.java)
+//            serviceSpleetIntent.putExtra(EXTRA_FILE_URI, fileUri)
+//            serviceSpleetIntent.putExtra(EXTRA_OBJECT_KEY, "mashu")
+            context.startService(serviceSpleetIntent)
+//            notification.showNotification()
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+//            notification.hideNotification()
+        }
     }
 
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
