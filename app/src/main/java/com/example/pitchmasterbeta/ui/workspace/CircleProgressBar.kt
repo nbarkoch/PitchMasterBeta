@@ -85,8 +85,6 @@ private fun getRotationAngle(currentPosition: Offset, center: Offset): Double {
 @Preview
 @Composable
 fun CircleProgressbarPreview() {
-    val viewModel = WorkspaceViewModel()
-    viewModel.mockupLyrics()
     MaterialTheme {
         CircleProgressbar(Modifier.size(80.dp), progress = 0.4f)
     }

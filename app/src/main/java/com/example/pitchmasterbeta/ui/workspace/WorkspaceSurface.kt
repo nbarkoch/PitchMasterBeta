@@ -31,9 +31,7 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
     )
     // Obtain the ViewModelStore
     if (viewModelStore["workspace"] == null) {
-        val it = WorkspaceViewModel()
-        it.mockupLyrics()
-        viewModelStore.put("workspace", it)
+        viewModelStore.put("workspace", WorkspaceViewModel())
     }
     // Create or retrieve the ViewModel associated with the ViewModelStore
     val viewModel: WorkspaceViewModel = viewModelStore["workspace"] as WorkspaceViewModel

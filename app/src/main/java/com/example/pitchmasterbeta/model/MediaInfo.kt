@@ -1,5 +1,6 @@
 package com.example.pitchmasterbeta.model
 
+import android.content.ContentResolver
 import android.content.Context
 import android.media.AudioRecord
 import android.media.MediaExtractor
@@ -10,6 +11,11 @@ import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 
 @Immutable
 data class MediaInfo(
@@ -19,6 +25,8 @@ data class MediaInfo(
     var timeStampDuration: Double = 0.0,
     var singerInputStream: BufferedInputStream? = null,
     var bgMusicInputStream: BufferedInputStream? = null,
+    var sponsorArtist: String = "",
+    var sponsorTitle: String = ""
 ) {
     companion object {
         const val DEFAULT_WAV_BITRATE = 1411
@@ -61,20 +69,65 @@ data class MediaInfo(
         }
     }
 
-    fun getSongInfo(context: Context, uri: Uri): Array<String> {
+    fun getSongInfo(context: Context, uri: Uri) {
         val mmr = MediaMetadataRetriever()
-        return try {
+        try {
             mmr.setDataSource(context, uri)
-            val sponsorArtist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: ""
-            val sponsorTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: ""
-            arrayOf(sponsorArtist, sponsorTitle)
+            sponsorArtist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: ""
+            sponsorTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: ""
         } catch (e: java.lang.NumberFormatException) {
-            val path = uri.path
-            val fileName = path!!.substring(path.lastIndexOf('/') + 1)
-            val fileNameWithoutExtension = fileName.replaceFirst("[.][^.]+$".toRegex(), "")
-            arrayOf(fileNameWithoutExtension, "")
+            uri.path?.let {
+                sponsorTitle = it.substring(it.lastIndexOf('/') + 1)
+            }
         }
     }
 
+
+    fun downloadAndExtractMedia(contextResolver: ContentResolver, url: URL, tempFile: File): BufferedInputStream? {
+        try {
+            val connection = url.openConnection() as HttpURLConnection
+            connection.connect()
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                // Create a temporary file to store the downloaded content
+                val outputStream = FileOutputStream(tempFile)
+
+                // Download the content
+                val inputStream = connection.inputStream
+                val buffer = ByteArray(4096)
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                }
+
+                // Close the streams
+                inputStream.close()
+                outputStream.close()
+
+                // Get the Uri reference to the downloaded file
+                val uri = Uri.fromFile(tempFile)
+                return BufferedInputStream(contextResolver.openInputStream(uri))
+                // Rest of your code...
+            } else {
+                // Handle the case when the connection fails
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            // Handle any errors that occur during download or extraction
+        }
+        return null
+    }
+
+    fun closeStreams() {
+        singerInputStream?.run { this.close() }
+        bgMusicInputStream?.run { this.close() }
+    }
+
+
+    fun prepareForExecution(bitRate: Int, sampleRate: Int) {
+        audioFloatBuffer = bitRate / 16
+        overlap = audioFloatBuffer / 4
+        voiceSampleRate = sampleRate * 2
+        audioFloatBuffer = AudioRecord.getMinBufferSize(voiceSampleRate, 16, 2)
+    }
 
 }

@@ -67,32 +67,12 @@ import kotlinx.coroutines.withContext
 @Composable
 fun WorkspaceHeader(modifier: Modifier = Modifier,
                     viewModel: WorkspaceViewModel) {
-    val screenHeightPx = with(LocalDensity.current) {
-        LocalConfiguration.current.screenHeightDp.dp.toPx()
-    }
-    val colorState = viewModel.similarityColor.collectAsState()
-    val color = animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
-    val score by rememberUpdatedState(viewModel.score.collectAsState())
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
-
+    val songFullName = viewModel.songFullName.collectAsState()
 
     val transition = updateTransition(targetState = playState.value == WorkspaceViewModel.PlayerState.END,
         label = ""
-    )
-    val translateY by transition.animateFloat(
-        transitionSpec = { tween(1000) },
-        label = "",
-        targetValueByState = {
-            if (it) screenHeightPx / 2.2f else 0f
-        }
-    )
-    val scale by transition.animateFloat(
-        transitionSpec = { tween(1000) },
-        label = "",
-        targetValueByState = {
-            if (it) 1.6f else 1f
-        }
     )
     val alpha by transition.animateFloat(
         transitionSpec = { tween(1000) },
@@ -117,60 +97,8 @@ fun WorkspaceHeader(modifier: Modifier = Modifier,
     Column(modifier = modifier.background(brush = gradientBrush),
         horizontalAlignment = Alignment.CenterHorizontally) {
         if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
-            MarqueeText(
-                "song name long long long long song name long long long long long")
-            Box(modifier = Modifier
-                .padding(20.dp)
-                .graphicsLayer {
-                    translationY = translateY
-                    scaleY = scale
-                    scaleX = scale
-                },
-                contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        Modifier
-                            .border(color = color.value, shape = CircleShape, width = 3.dp)
-                            .padding(7.5.dp)
-                            .widthIn(50.dp, 300.dp)
-                            .heightIn(50.dp, 300.dp),
-                        contentAlignment = Alignment.Center) {
-                        Text(text = "${score.value}",
-                            color = Color.White,
-                            fontSize = 30.sp,
-                            textAlign = TextAlign.Center,
-                            fontWeight = FontWeight.W500)
-                    }
-
-                    AnimatedVisibility(
-                        visible = playState.value == WorkspaceViewModel.PlayerState.END,
-                        enter = fadeIn(
-                            animationSpec = tween(durationMillis = 200, delayMillis = 1000)
-                        ),
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Well Done!", color = Color.White,
-                                fontSize = 18.sp,
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.W400,
-                                modifier = Modifier.padding(10.dp)
-                            )
-                            Button(colors = ButtonDefaults.buttonColors(Color.White),
-                                modifier = Modifier.defaultMinSize(
-                                    minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                onClick = {
-                                    viewModel.resetScoreAndWorkspaceState()
-                                }) {
-                                Text(text = "Cancel", color = Color.Black,
-                                    fontSize = 14.sp,
-                                    textAlign = TextAlign.Center,)
-                            }
-                        }
-                    }
-                }
-            }
+            MarqueeText(songFullName.value)
+            ScoreComposable(viewModel)
         }
     }
 
@@ -217,6 +145,89 @@ fun MarqueeText(
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.W400,
             modifier = Modifier.padding(horizontal = 40.dp))
+    }
+}
+
+@Composable
+fun ScoreComposable(viewModel: WorkspaceViewModel) {
+    val screenHeightPx = with(LocalDensity.current) {
+        LocalConfiguration.current.screenHeightDp.dp.toPx()
+    }
+    val colorState = viewModel.similarityColor.collectAsState()
+    val color = animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
+    val score by rememberUpdatedState(viewModel.score.collectAsState())
+    val playState = viewModel.playingState.collectAsState()
+
+
+    val transition = updateTransition(targetState = playState.value == WorkspaceViewModel.PlayerState.END,
+        label = ""
+    )
+    val translateY by transition.animateFloat(
+        transitionSpec = { tween(1000) },
+        label = "",
+        targetValueByState = {
+            if (it) screenHeightPx / 2.2f else 0f
+        }
+    )
+    val scale by transition.animateFloat(
+        transitionSpec = { tween(1000) },
+        label = "",
+        targetValueByState = {
+            if (it) 1.6f else 1f
+        }
+    )
+
+    Box(modifier = Modifier
+        .padding(20.dp)
+        .graphicsLayer {
+            translationY = translateY
+            scaleY = scale
+            scaleX = scale
+        },
+        contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier
+                    .border(color = color.value, shape = CircleShape, width = 3.dp)
+                    .padding(7.5.dp)
+                    .widthIn(50.dp, 300.dp)
+                    .heightIn(50.dp, 300.dp),
+                contentAlignment = Alignment.Center) {
+                Text(text = "${score.value}",
+                    color = Color.White,
+                    fontSize = 30.sp,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.W500)
+            }
+
+            AnimatedVisibility(
+                visible = playState.value == WorkspaceViewModel.PlayerState.END,
+                enter = fadeIn(
+                    animationSpec = tween(durationMillis = 200, delayMillis = 1000)
+                ),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Well Done!", color = Color.White,
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.W400,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                    Button(colors = ButtonDefaults.buttonColors(Color.White),
+                        modifier = Modifier.defaultMinSize(
+                            minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        onClick = {
+                            viewModel.resetScoreAndWorkspaceState()
+                        }) {
+                        Text(text = "Cancel", color = Color.Black,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,)
+                    }
+                }
+            }
+        }
     }
 }
 @Preview

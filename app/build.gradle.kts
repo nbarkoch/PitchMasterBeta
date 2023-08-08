@@ -61,9 +61,21 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+
+
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation(files("libs/TarsosDSP-Android-2.4.jar"))
+
+    /*Amazon S3 Libraries*/
+    implementation("com.amazonaws:aws-android-sdk-s3:2.6.31")
+    implementation("com.amazonaws:aws-android-sdk-cognito:2.16.1")
+    implementation("com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.22.2")
+    /*Amazon Lambda Libraries*/
+    implementation("com.amazonaws:aws-android-sdk-core:2.2.+")
+    implementation("com.amazonaws:aws-android-sdk-lambda:2.2.+")
+    
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

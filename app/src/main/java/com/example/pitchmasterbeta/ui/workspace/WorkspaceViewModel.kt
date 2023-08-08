@@ -7,12 +7,15 @@ import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.pitchmasterbeta.MainActivity.Companion.appContentResolver
 import com.example.pitchmasterbeta.model.AudioProcessor
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.MediaInfo
 import com.example.pitchmasterbeta.model.SongAudioDispatcher
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
 import com.example.pitchmasterbeta.model.getColor
+import com.example.pitchmasterbeta.notifications.SpleeterProgressNotification
+import com.example.pitchmasterbeta.services.LyricsProvider
 import com.example.pitchmasterbeta.services.SpleeterService
 import com.example.pitchmasterbeta.utils.network.LyricsApi
 import com.google.gson.Gson
@@ -24,17 +27,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedInputStream
+import java.io.File
 import java.lang.reflect.Type
+import java.net.URL
 
 
-class WorkspaceViewModel : ViewModel() {
+class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private var mediaInfo = MediaInfo()
     private var audioProcessor: AudioProcessor? = null
+    private var notification: SpleeterProgressNotification? = null
+    private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = true
+    private val devTestMode: Boolean = false
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
@@ -117,8 +125,11 @@ class WorkspaceViewModel : ViewModel() {
                         resetAudio()
                     }
                 } else {
-                    val songBaseInfo = mediaInfo.getSongInfo(context, uri)
-                    _songFullName.value = "${songBaseInfo[0]} ${songBaseInfo[1]}"
+                    mediaInfo.getSongInfo(context, uri)
+                    _songFullName.value = "${mediaInfo.sponsorTitle}${
+                        if (mediaInfo.sponsorArtist.isNotEmpty()) 
+                            " - ${mediaInfo.sponsorArtist}" else ""}"
+
                     beginGenerateKaraoke(context, uri)
                     setWorkspaceState(WorkspaceState.WAITING)
                 }
@@ -128,15 +139,18 @@ class WorkspaceViewModel : ViewModel() {
     }
 
     private fun beginGenerateKaraoke(context: Context, fileUri: Uri) {
-        try {
-            val serviceSpleetIntent = Intent(context, SpleeterService::class.java)
-//            serviceSpleetIntent.putExtra(EXTRA_FILE_URI, fileUri)
-//            serviceSpleetIntent.putExtra(EXTRA_OBJECT_KEY, "mashu")
-            context.startService(serviceSpleetIntent)
-//            notification.showNotification()
-        } catch (e: java.lang.Exception) {
+        try
+        {
+            lyricsProvider = LyricsProvider(context)
+            notification = SpleeterProgressNotification(context)
+            val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
+            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
+            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, _songFullName.value.ifEmpty { "mashu" })
+            context.startService(serviceSpleeterIntent)
+            notification?.showNotification()
+        } catch (e: Exception) {
             e.printStackTrace()
-//            notification.hideNotification()
+            notification?.hideNotification()
         }
     }
 
@@ -312,4 +326,104 @@ class WorkspaceViewModel : ViewModel() {
         _score.value = 0
     }
 
+    private var tempSingerFile: File? = null
+    private var tempMusicFile: File? = null
+
+    override fun notifyCompletion(
+        vocalsUrl: URL,
+        accompanimentUrl: URL,
+        bitRate: Int,
+        sampleRate: Int
+    ) {
+        appContentResolver?.let { contentResolver ->
+            viewModelScope.launch {
+                try {
+                    val singerObservable: suspend () -> BufferedInputStream?
+                    val musicObservable: suspend () -> BufferedInputStream?
+                    val lyricsObservable: suspend () -> List<LyricsSegment>?
+
+                    resetTempFiles()
+                    tempSingerFile?.let { singerFile ->
+                        tempMusicFile?.let { musicFile ->
+                            singerObservable = { mediaInfo.downloadAndExtractMedia(contentResolver, vocalsUrl, singerFile) }
+                            musicObservable = { mediaInfo.downloadAndExtractMedia(contentResolver, accompanimentUrl, musicFile) }
+
+                            val songName = _songFullName.value
+                            lyricsObservable = { lyricsProvider?.invokeLyricsLambdaFunction(songName, vocalsUrl.toString()) }
+
+                            val streamsAndLyrics = try {
+                                val singerStream = withContext(Dispatchers.IO) { singerObservable() }
+                                val musicStream = withContext(Dispatchers.IO) { musicObservable() }
+                                val lyricsList = withContext(Dispatchers.IO) { lyricsObservable() }
+                                Pair(Pair(singerStream, musicStream), lyricsList)
+                            } catch (e: Exception) {
+                                null
+                            }
+
+                            streamsAndLyrics?.let { (streams, lyrics) ->
+
+                                if (streams.first != null && streams.second != null && lyrics != null) {
+                                    mediaInfo.closeStreams()
+                                    mediaInfo.singerInputStream = streams.first
+                                    mediaInfo.bgMusicInputStream = streams.second
+                                    mediaInfo.prepareForExecution(bitRate, sampleRate)
+                                    _lyricsSegments.value = lyrics
+
+                                    audioProcessor = AudioProcessor(mediaInfo)
+                                    val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
+                                    val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
+                                    _durationTime.value = "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                                    setWorkspaceState(WorkspaceState.IDLE)
+                                    resetAudio()
+                                    notification?.hideNotification()
+                                }
+
+                            } ?: run {
+                                // Handle the case where the streams and lyrics are null
+                            }
+
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+
+
+    override fun notifyFailed() {
+        //TODO: Notify Failure
+        notification?.hideNotification()
+    }
+
+    override fun notifyProgressChanged(progress: Int, message: String) {
+        notification?.updateProgress(progress, message)
+    }
+
+    private fun resetTempFiles() {
+        closeTempFiles()
+        tempSingerFile = File.createTempFile("media", null)
+        tempMusicFile = File.createTempFile("media", null)
+    }
+
+    private fun closeTempFiles() {
+        tempSingerFile?.apply {
+            if (this.exists()) {
+                this.delete()
+            }
+        }
+        tempMusicFile?.apply {
+            if (this.exists()) {
+                this.delete()
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        mediaInfo.closeStreams()
+        closeTempFiles()
+    }
 }
