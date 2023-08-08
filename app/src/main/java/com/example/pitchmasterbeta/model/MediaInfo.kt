@@ -2,11 +2,13 @@ package com.example.pitchmasterbeta.model
 
 import android.content.ContentResolver
 import android.content.Context
+import android.database.Cursor
 import android.media.AudioRecord
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,6 +18,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+
 
 @Immutable
 data class MediaInfo(
@@ -75,6 +78,13 @@ data class MediaInfo(
             mmr.setDataSource(context, uri)
             sponsorArtist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: ""
             sponsorTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: ""
+            if (sponsorTitle.isEmpty()) {
+                val returnCursor: Cursor = context.contentResolver.query(uri, null, null, null, null)!!
+                val nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                returnCursor.moveToFirst()
+                sponsorTitle = returnCursor.getString(nameIndex)
+                returnCursor.close()
+            }
         } catch (e: java.lang.NumberFormatException) {
             uri.path?.let {
                 sponsorTitle = it.substring(it.lastIndexOf('/') + 1)
