@@ -52,11 +52,12 @@ class SpleeterService : Service() {
     private var accompanimentUrl: URL? = null
     private var bitRate = 0
     private var sampleRate = 0
+    private var duration = 0
 
     private var isActive: Boolean = false
 
     interface ServiceNotifier {
-        fun notifyCompletion(vocalsUrl: URL, accompanimentUrl: URL, bitRate: Int, sampleRate: Int)
+        fun notifyCompletion(vocalsUrl: URL, accompanimentUrl: URL, bitRate: Int, sampleRate: Int, duration: Int)
 
         fun notifyFailed()
 
@@ -144,7 +145,8 @@ class SpleeterService : Service() {
                                                 vocalsUrl,
                                                 accompanimentUrl,
                                                 bitRate,
-                                                sampleRate
+                                                sampleRate,
+                                                duration
                                             )
                                         }
                                 } ?: serviceNotifier?.notifyFailed()
@@ -187,6 +189,7 @@ class SpleeterService : Service() {
             val jsonArray = responseJson.getJSONArray("body")
             bitRate = jsonArray.getInt(0)
             sampleRate = jsonArray.getInt(1)
+            duration = jsonArray.getInt(2)
             return statusCode == 200
         } catch (e: Exception) {
             e.printStackTrace()

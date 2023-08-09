@@ -45,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -65,13 +66,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun WorkspaceHeader(modifier: Modifier = Modifier,
-                    viewModel: WorkspaceViewModel) {
+fun WorkspaceHeader(
+    modifier: Modifier = Modifier,
+    viewModel: WorkspaceViewModel
+) {
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
     val songFullName = viewModel.songFullName.collectAsState()
 
-    val transition = updateTransition(targetState = playState.value == WorkspaceViewModel.PlayerState.END,
+    val transition = updateTransition(
+        targetState = playState.value == WorkspaceViewModel.PlayerState.END,
         label = ""
     )
     val alpha by transition.animateFloat(
@@ -83,21 +87,27 @@ fun WorkspaceHeader(modifier: Modifier = Modifier,
     )
 
     val gradientBrush = Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFF132152),
-                Color(0x750E0D3A),
-                Color.Transparent
-            )
+        colors = listOf(
+            Color(0xFF132152),
+            Color(0x750E0D3A),
+            Color.Transparent
         )
+    )
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .alpha(alpha)
-        .background(color = Color.Black))
-    Column(modifier = modifier.background(brush = gradientBrush),
-        horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .alpha(alpha)
+            .background(color = Color.Black)
+    )
+    Column(
+        modifier = modifier
+            .background(brush = gradientBrush)
+            .defaultMinSize(minHeight = 200.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        MarqueeText(songFullName.value)
         if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
-            MarqueeText(songFullName.value)
             ScoreComposable(viewModel)
         }
     }
@@ -117,18 +127,21 @@ fun MarqueeText(
         withContext(Dispatchers.Main) {
             textState.animateScrollTo(
                 value = value,
-                animationSpec = tween(durationMillis = (scrollSpeed * text.length), easing = LinearEasing)
+                animationSpec = tween(
+                    durationMillis = (scrollSpeed * text.length),
+                    easing = LinearEasing
+                )
             )
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(text) {
         launch {
-            while(true) {
+            while (true) {
                 animateScrollTo(textState.maxValue)
-                delay(scrollSpeed * text.length + scrollSpeed.toLong())
+                delay(scrollSpeed * text.length.toLong())
                 animateScrollTo(0)
-                delay(scrollSpeed * text.length + scrollSpeed.toLong())
+                delay(scrollSpeed * text.length.toLong())
             }
         }
     }
@@ -139,12 +152,14 @@ fun MarqueeText(
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
-        Text(text = text,
+        Text(
+            text = text,
             color = Color.White,
             fontSize = 18.sp,
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.W400,
-            modifier = Modifier.padding(horizontal = 40.dp))
+            modifier = Modifier.padding(horizontal = 40.dp)
+        )
     }
 }
 
@@ -154,12 +169,21 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
         LocalConfiguration.current.screenHeightDp.dp.toPx()
     }
     val colorState = viewModel.similarityColor.collectAsState()
-    val color = animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
+    val color =
+        animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
     val score by rememberUpdatedState(viewModel.score.collectAsState())
     val playState = viewModel.playingState.collectAsState()
+    var opinion by remember { mutableStateOf("") }
+    LaunchedEffect(playState.value) {
+        opinion = if (playState.value == WorkspaceViewModel.PlayerState.END) {
+            viewModel.giveOpinionForScore(score.value)
+        } else {
+            ""
+        }
+    }
 
-
-    val transition = updateTransition(targetState = playState.value == WorkspaceViewModel.PlayerState.END,
+    val transition = updateTransition(
+        targetState = playState.value == WorkspaceViewModel.PlayerState.END,
         label = ""
     )
     val translateY by transition.animateFloat(
@@ -177,14 +201,16 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
         }
     )
 
-    Box(modifier = Modifier
-        .padding(20.dp)
-        .graphicsLayer {
-            translationY = translateY
-            scaleY = scale
-            scaleX = scale
-        },
-        contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .padding(20.dp)
+            .graphicsLayer {
+                translationY = translateY
+                scaleY = scale
+                scaleX = scale
+            },
+        contentAlignment = Alignment.Center
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 Modifier
@@ -192,12 +218,15 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                     .padding(7.5.dp)
                     .widthIn(50.dp, 300.dp)
                     .heightIn(50.dp, 300.dp),
-                contentAlignment = Alignment.Center) {
-                Text(text = "${score.value}",
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${score.value}",
                     color = Color.White,
                     fontSize = 30.sp,
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.W500)
+                    fontWeight = FontWeight.W500
+                )
             }
 
             AnimatedVisibility(
@@ -208,7 +237,7 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Well Done!", color = Color.White,
+                        text = opinion, color = Color.White,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.W400,
@@ -216,20 +245,24 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                     )
                     Button(colors = ButtonDefaults.buttonColors(Color.White),
                         modifier = Modifier.defaultMinSize(
-                            minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp),
+                            minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
+                        ),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         onClick = {
                             viewModel.resetScoreAndWorkspaceState()
                         }) {
-                        Text(text = "Cancel", color = Color.Black,
+                        Text(
+                            text = "Cancel", color = Color.Black,
                             fontSize = 14.sp,
-                            textAlign = TextAlign.Center,)
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
             }
         }
     }
 }
+
 @Preview
 @Composable
 fun WorkspaceHeaderPreview() {

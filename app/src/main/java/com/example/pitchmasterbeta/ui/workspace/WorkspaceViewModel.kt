@@ -33,6 +33,7 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.lang.reflect.Type
 import java.net.URL
+import java.util.UUID
 
 
 class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
@@ -42,7 +43,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var notification: SpleeterProgressNotification? = null
     private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = false
+    private val devTestMode: Boolean = true
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
@@ -51,22 +52,12 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private val _lyricsSegments = MutableStateFlow<List<LyricsSegment>>(emptyList())
     val lyricsSegments: StateFlow<List<LyricsSegment>> = _lyricsSegments
 
-    fun fetchLyrics(lyricsApi: LyricsApi) {
-        viewModelScope.launch {
-            try {
-                // Perform your Retrofit request here and update the list
-                val itemsFromServer = lyricsApi.getItems()
-                _lyricsSegments.value = itemsFromServer
-            } catch (e: Exception) {
-                // Handle any errors here
-            }
-        }
-    }
-
     fun mockupLyrics() {
-        val payloadString = "{\"statusCode\": 200, \"body\": \"[{\\\"start\\\": 0.0, \\\"end\\\": 26.5, \\\"text\\\": \\\" There ain't no gold in this river That I've been washing my hands in forever\\\"}, {\\\"start\\\": 26.5, \\\"end\\\": 38.66, \\\"text\\\": \\\" I know there is hope in these waters But I can't bring myself to swim when I am\\\"}, {\\\"start\\\": 38.66, \\\"end\\\": 50.74, \\\"text\\\": \\\" drowning in this silence, baby Let me in, go easy\\\"}, {\\\"start\\\": 50.74, \\\"end\\\": 66.74000000000001, \\\"text\\\": \\\" Help me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 66.74, \\\"end\\\": 86.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 86.74, \\\"end\\\": 100.74, \\\"text\\\": \\\" There ain't no room for things to change When we are both so deeply stuck in our ways\\\"}, {\\\"start\\\": 100.74, \\\"end\\\": 117.74, \\\"text\\\": \\\" You can't deny how hard I've tried I changed who I was to put you both first But now I give up\\\"}, {\\\"start\\\": 117.74, \\\"end\\\": 137.74, \\\"text\\\": \\\" Go easy on me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 137.74, \\\"end\\\": 157.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 158.74, \\\"end\\\": 174.74, \\\"text\\\": \\\" I had good intentions and the highest hopes But I know right now that probably doesn't even show\\\"}, {\\\"start\\\": 174.74, \\\"end\\\": 194.74, \\\"text\\\": \\\" Go easy on me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 194.74, \\\"end\\\": 206.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}]\"}"
+        val payloadString =
+            "{\"statusCode\": 200, \"body\": \"[{\\\"start\\\": 0.0, \\\"end\\\": 26.5, \\\"text\\\": \\\" There ain't no gold in this river That I've been washing my hands in forever\\\"}, {\\\"start\\\": 26.5, \\\"end\\\": 38.66, \\\"text\\\": \\\" I know there is hope in these waters But I can't bring myself to swim when I am\\\"}, {\\\"start\\\": 38.66, \\\"end\\\": 50.74, \\\"text\\\": \\\" drowning in this silence, baby Let me in, go easy\\\"}, {\\\"start\\\": 50.74, \\\"end\\\": 66.74000000000001, \\\"text\\\": \\\" Help me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 66.74, \\\"end\\\": 86.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 86.74, \\\"end\\\": 100.74, \\\"text\\\": \\\" There ain't no room for things to change When we are both so deeply stuck in our ways\\\"}, {\\\"start\\\": 100.74, \\\"end\\\": 117.74, \\\"text\\\": \\\" You can't deny how hard I've tried I changed who I was to put you both first But now I give up\\\"}, {\\\"start\\\": 117.74, \\\"end\\\": 137.74, \\\"text\\\": \\\" Go easy on me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 137.74, \\\"end\\\": 157.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 158.74, \\\"end\\\": 174.74, \\\"text\\\": \\\" I had good intentions and the highest hopes But I know right now that probably doesn't even show\\\"}, {\\\"start\\\": 174.74, \\\"end\\\": 194.74, \\\"text\\\": \\\" Go easy on me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 194.74, \\\"end\\\": 206.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}]\"}"
         val lyricsSegmentListType: Type = object : TypeToken<List<LyricsSegment?>?>() {}.type
-        _lyricsSegments.value = Gson().fromJson(JSONObject(payloadString).getString("body"), lyricsSegmentListType)
+        _lyricsSegments.value =
+            Gson().fromJson(JSONObject(payloadString).getString("body"), lyricsSegmentListType)
     }
 
     enum class WorkspaceState {
@@ -98,13 +89,17 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private val _songFullName = MutableStateFlow("")
     val songFullName: StateFlow<String> = _songFullName
 
-    suspend fun handleResultUriForAudioIntent(context: Context, contentResolver: ContentResolver?, uri: Uri?) {
+    suspend fun handleResultUriForAudioIntent(
+        context: Context,
+        contentResolver: ContentResolver?,
+        uri: Uri?
+    ) {
         uri?.let {
             contentResolver?.let {
                 if (devTestMode) {
 
                     // resetting the streams because we are starting a new work
-                    if  (mediaInfo.bgMusicInputStream != null && mediaInfo.singerInputStream != null) {
+                    if (mediaInfo.bgMusicInputStream != null && mediaInfo.singerInputStream != null) {
                         mediaInfo.bgMusicInputStream?.close()
                         mediaInfo.singerInputStream?.close()
                         mediaInfo.bgMusicInputStream = null
@@ -112,23 +107,28 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     }
 
                     if (mediaInfo.bgMusicInputStream == null && mediaInfo.singerInputStream == null) {
-                        mediaInfo.bgMusicInputStream = BufferedInputStream(contentResolver.openInputStream(uri))
+                        mediaInfo.bgMusicInputStream =
+                            BufferedInputStream(contentResolver.openInputStream(uri))
                         setWorkspaceState(WorkspaceState.PICK)
                     } else {
-                        mediaInfo.singerInputStream = BufferedInputStream(contentResolver.openInputStream(uri))
+                        mediaInfo.singerInputStream =
+                            BufferedInputStream(contentResolver.openInputStream(uri))
                         mediaInfo.max(context, uri)
                         audioProcessor = AudioProcessor(mediaInfo)
                         val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
                         val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
-                        _durationTime.value = "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                        _durationTime.value =
+                            "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                         setWorkspaceState(WorkspaceState.IDLE)
                         resetAudio()
+                        mockupLyrics()
                     }
                 } else {
                     mediaInfo.getSongInfo(context, uri)
                     _songFullName.value = "${mediaInfo.sponsorTitle}${
-                        if (mediaInfo.sponsorArtist.isNotEmpty()) 
-                            " - ${mediaInfo.sponsorArtist}" else ""}"
+                        if (mediaInfo.sponsorArtist.isNotEmpty())
+                            " - ${mediaInfo.sponsorArtist}" else ""
+                    }"
 
                     beginGenerateKaraoke(context, uri)
                     setWorkspaceState(WorkspaceState.WAITING)
@@ -139,13 +139,13 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     private fun beginGenerateKaraoke(context: Context, fileUri: Uri) {
-        try
-        {
+        try {
             lyricsProvider = LyricsProvider(context)
             notification = SpleeterProgressNotification(context)
             val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
-            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, _songFullName.value.ifEmpty { "mashu" })
+            // TODO: UUID.randomUUID().toString()
+            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, "mashu")
             context.startService(serviceSpleeterIntent)
             notification?.showNotification()
         } catch (e: Exception) {
@@ -164,12 +164,12 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     data class NoteState(var noteF: Float, val volume: Float)
 
-    private val _micNote = MutableStateFlow(NoteState(0f,0f))
+    private val _micNote = MutableStateFlow(NoteState(0f, 0f))
     private val _micNoteActive = MutableStateFlow(false)
     val micNoteActive: StateFlow<Boolean> = _micNoteActive
     val micNote: StateFlow<NoteState> = _micNote
 
-    private val _sinNote = MutableStateFlow(NoteState(0f,0f))
+    private val _sinNote = MutableStateFlow(NoteState(0f, 0f))
     private val _sinNoteActive = MutableStateFlow(false)
     val sinNoteActive: StateFlow<Boolean> = _sinNoteActive
     val sinNote: StateFlow<NoteState> = _sinNote
@@ -203,6 +203,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             audioProcessor?.volumeFactor = 0f
         }
     }
+
     fun getSingerVolume(): Float {
         return audioProcessor?.volumeFactor ?: 0f
     }
@@ -236,13 +237,16 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             goodForThisWindowWatch = true
                             _micNote.value = _sinNote.value
                         } else {
-                            _micNote.value = NoteState(AudioProcessor.rangeIndex(noteI), AudioProcessor.shrinkVolume(volume))
+                            _micNote.value = NoteState(
+                                AudioProcessor.rangeIndex(noteI),
+                                AudioProcessor.shrinkVolume(volume)
+                            )
                         }
                         _micNoteActive.value = true
                     } else {
                         _micNoteActive.value = false
                     }
-            }
+                }
             microphoneAudioDispatcher = audioProcessor?.buildMicrophoneAudioDispatcher(handlePitch)
             // Start the audio dispatcher
             microphoneAudioDispatcher?.run()
@@ -255,7 +259,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
                     val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
                     val min: Int = (musicTimeStamp % 1000 / 60).toInt()
-                    _currentTime.value = "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                    _currentTime.value =
+                        "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                     val currentWindowPosition: Int = (musicTimeStamp % 1000 % 60).toInt()
                     if (goodForThisWindowWatch && (lastWindowPosition != currentWindowPosition)) {
                         _score.value++
@@ -264,15 +269,20 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     lastWindowPosition = currentWindowPosition
 
                     if (noteI > 0) {
-                        _sinNote.value = NoteState(AudioProcessor.rangeIndex(noteI), AudioProcessor.shrinkVolume(volume))
+                        _sinNote.value = NoteState(
+                            AudioProcessor.rangeIndex(noteI),
+                            AudioProcessor.shrinkVolume(volume)
+                        )
                         _sinNoteActive.value = true
                     } else {
                         _sinNoteActive.value = false
                     }
 
                     if (_lyricsSegments.value[lyricsScrollToPosition.value].end < musicTimeStamp
-                        && lyricsScrollToPosition.value < _lyricsSegments.value.size - 1 ) {
-                        _lyricsScrollToPosition.value = (_lyricsScrollToPosition.value + 1) % _lyricsSegments.value.size
+                        && lyricsScrollToPosition.value < _lyricsSegments.value.size - 1
+                    ) {
+                        _lyricsScrollToPosition.value =
+                            (_lyricsScrollToPosition.value + 1) % _lyricsSegments.value.size
                     }
                 }
             val onCompletion: () -> Unit = {
@@ -280,7 +290,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 resetAudio()
             }
             setPlayingState(PlayerState.PLAYING)
-            musicAudioDispatcher = audioProcessor?.buildMusicAudioDispatcher(handlePitch, onCompletion)
+            musicAudioDispatcher =
+                audioProcessor?.buildMusicAudioDispatcher(handlePitch, onCompletion)
             // Start the audio dispatcher
             musicAudioDispatcher?.run()
         }
@@ -308,8 +319,16 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _micNoteActive.value = false
         _sinNoteActive.value = false
         try {
-            musicAudioDispatcher?.run { if(!this.isStopped) { this.stop() } }
-            microphoneAudioDispatcher?.run { if(!this.isStopped) { this.stop() } }
+            musicAudioDispatcher?.run {
+                if (!this.isStopped) {
+                    this.stop()
+                }
+            }
+            microphoneAudioDispatcher?.run {
+                if (!this.isStopped) {
+                    this.stop()
+                }
+            }
             mediaInfo.singerInputStream?.reset()
             mediaInfo.bgMusicInputStream?.reset()
             runBlocking {
@@ -333,7 +352,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         vocalsUrl: URL,
         accompanimentUrl: URL,
         bitRate: Int,
-        sampleRate: Int
+        sampleRate: Int,
+        duration: Int
     ) {
         appContentResolver?.let { contentResolver ->
             viewModelScope.launch {
@@ -345,14 +365,32 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     resetTempFiles()
                     tempSingerFile?.let { singerFile ->
                         tempMusicFile?.let { musicFile ->
-                            singerObservable = { mediaInfo.downloadAndExtractMedia(contentResolver, vocalsUrl, singerFile) }
-                            musicObservable = { mediaInfo.downloadAndExtractMedia(contentResolver, accompanimentUrl, musicFile) }
+                            singerObservable = {
+                                mediaInfo.downloadAndExtractMedia(
+                                    contentResolver,
+                                    vocalsUrl,
+                                    singerFile
+                                )
+                            }
+                            musicObservable = {
+                                mediaInfo.downloadAndExtractMedia(
+                                    contentResolver,
+                                    accompanimentUrl,
+                                    musicFile
+                                )
+                            }
 
                             val songName = _songFullName.value
-                            lyricsObservable = { lyricsProvider?.invokeLyricsLambdaFunction(songName, vocalsUrl.toString()) }
+                            lyricsObservable = {
+                                lyricsProvider?.invokeLyricsLambdaFunction(
+                                    songName,
+                                    vocalsUrl.toString()
+                                )
+                            }
 
                             val streamsAndLyrics = try {
-                                val singerStream = withContext(Dispatchers.IO) { singerObservable() }
+                                val singerStream =
+                                    withContext(Dispatchers.IO) { singerObservable() }
                                 val musicStream = withContext(Dispatchers.IO) { musicObservable() }
                                 val lyricsList = withContext(Dispatchers.IO) { lyricsObservable() }
                                 Pair(Pair(singerStream, musicStream), lyricsList)
@@ -366,13 +404,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                     mediaInfo.closeStreams()
                                     mediaInfo.singerInputStream = streams.first
                                     mediaInfo.bgMusicInputStream = streams.second
-                                    mediaInfo.prepareForExecution(bitRate, sampleRate)
+                                    mediaInfo.prepareForExecution(bitRate, sampleRate, duration)
                                     _lyricsSegments.value = lyrics
 
                                     audioProcessor = AudioProcessor(mediaInfo)
                                     val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
                                     val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
-                                    _durationTime.value = "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                                    _durationTime.value =
+                                        "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                                     setWorkspaceState(WorkspaceState.IDLE)
                                     resetAudio()
                                     notification?.hideNotification()
@@ -392,14 +431,19 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
 
-
     override fun notifyFailed() {
-        //TODO: Notify Failure
+        mediaInfo.closeStreams()
+        closeTempFiles()
+        _workspaceState.value = WorkspaceState.PICK
         notification?.hideNotification()
     }
 
+    private val _notificationMessage = MutableStateFlow("")
+    val notificationMessage: StateFlow<String> = _notificationMessage
+
     override fun notifyProgressChanged(progress: Int, message: String) {
         notification?.updateProgress(progress, message)
+        _notificationMessage.value = message
     }
 
     private fun resetTempFiles() {
@@ -425,5 +469,20 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         super.onCleared()
         mediaInfo.closeStreams()
         closeTempFiles()
+    }
+
+    fun giveOpinionForScore(givenScore: Int): String {
+        val range1 = (mediaInfo.timeStampDuration / 8).toInt()
+        val range2 = (mediaInfo.timeStampDuration / 4).toInt()
+        val range3 = (mediaInfo.timeStampDuration / 1.7).toInt()
+        val range4 = (mediaInfo.timeStampDuration).toInt()
+
+        return when (givenScore) {
+            in 0..range1 -> "Try better next time!"
+            in range3..range4 -> "Pro Singer!"
+            in range1..range2 -> "Nice work"
+            in range2..range3 -> "Well Done!"
+            else -> "Umm.. Try again?"
+        }
     }
 }

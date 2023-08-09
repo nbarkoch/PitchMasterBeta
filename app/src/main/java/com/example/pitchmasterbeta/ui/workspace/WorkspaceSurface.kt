@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,10 +42,12 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
         .background(brush = gradientBrush))
     {
         Box (
-            modifier = Modifier.fillMaxSize().alpha(0.1f).padding(50.dp),
-            contentAlignment = Alignment.Center) {
+            modifier = Modifier.fillMaxSize().alpha(0.15f).offset(y=70.dp),
+            contentAlignment = Alignment.BottomCenter) {
             Image(
-                painter = painterResource(id = R.drawable.image_mic_bg),
+                modifier = Modifier.fillMaxSize(),
+                alignment = Alignment.BottomCenter,
+                painter = painterResource(id = R.drawable.image_smic_bg),
                 contentDescription = ""
             )
         }

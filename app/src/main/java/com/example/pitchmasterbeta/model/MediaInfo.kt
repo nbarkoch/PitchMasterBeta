@@ -58,9 +58,7 @@ data class MediaInfo(
                         ?: DEFAULT_WAV_BITRATE) / 512
                 } catch (_: NumberFormatException) {
                 } finally {
-                    val minutes = duration % (1000 * 60 * 60) / (1000 * 60)
-                    val seconds = duration % (1000 * 60 * 60) % (1000 * 60) / 1000
-                    timeStampDuration = minutes * 60.0 + seconds
+                    timeStampDuration = duration / 1000.0
                     mmr.release()
                 }
 
@@ -133,11 +131,12 @@ data class MediaInfo(
     }
 
 
-    fun prepareForExecution(bitRate: Int, sampleRate: Int) {
+    fun prepareForExecution(bitRate: Int, sampleRate: Int, duration: Int) {
         audioFloatBuffer = bitRate / 16
         overlap = audioFloatBuffer / 4
         voiceSampleRate = sampleRate * 2
         audioFloatBuffer = AudioRecord.getMinBufferSize(voiceSampleRate, 16, 2)
+        timeStampDuration = duration.toDouble()
     }
 
 }
