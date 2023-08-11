@@ -1,5 +1,8 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -25,7 +28,7 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
 ) {
     val gradientBrush = Brush.linearGradient(
         colors = listOf(
-            Color(0xFF443E7C),
+            Color(0xFF403C63),
             Color(0xFF2E265E),
             Color(0xFF121314),
         ),
@@ -41,16 +44,7 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
         .fillMaxSize()
         .background(brush = gradientBrush))
     {
-        Box (
-            modifier = Modifier.fillMaxSize().alpha(0.15f).offset(y=70.dp),
-            contentAlignment = Alignment.BottomCenter) {
-            Image(
-                modifier = Modifier.fillMaxSize(),
-                alignment = Alignment.BottomCenter,
-                painter = painterResource(id = R.drawable.image_smic_bg),
-                contentDescription = ""
-            )
-        }
+        BackgroundMic(viewModel = viewModel)
         WorkspaceBody(Modifier.fillMaxSize(), viewModel = viewModel)
         WorkspaceFooter(
             Modifier

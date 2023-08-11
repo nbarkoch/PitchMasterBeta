@@ -29,8 +29,10 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
 @Composable
-fun LyricsLazyColumn(modifier: Modifier = Modifier,
-                     viewModel: WorkspaceViewModel) {
+fun LyricsLazyColumn(
+    modifier: Modifier = Modifier,
+    viewModel: WorkspaceViewModel
+) {
     // Observe changes in scrollToPosition and trigger smooth scroll when it changes
     val listState = rememberLazyListState()
     val scrollToPosition by rememberUpdatedState(viewModel.lyricsScrollToPosition.collectAsState())
@@ -65,7 +67,10 @@ fun LyricsLazyColumn(modifier: Modifier = Modifier,
                     //val parallaxOffset = (i.toFloat() / (segments.size - 1)) * (columnMidpoint * 2)
                     val divider = if (i == 0) 1.75f else 1.25f
                     val itemMidpoint = (currentItemInfo.size / 2f) + currentItemInfo.offset
-                    (1f - minOf(1f, abs(columnMidpoint / divider - itemMidpoint) / currentMidpoint) * 0.75f)
+                    (1f - minOf(
+                        1f,
+                        abs(columnMidpoint / divider - itemMidpoint) / currentMidpoint
+                    ) * 0.75f)
                 }
             }
 
@@ -81,7 +86,9 @@ fun LyricsLazyColumn(modifier: Modifier = Modifier,
                         color = Color.White,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
-                        fontWeight = if (scrollToPosition.value == i) FontWeight.Bold else FontWeight(400)
+                        fontWeight = if (scrollToPosition.value == i) FontWeight.Bold else FontWeight(
+                            400
+                        )
                     )
                 )
             }
@@ -92,7 +99,7 @@ fun LyricsLazyColumn(modifier: Modifier = Modifier,
     }
 
     LaunchedEffect(scrollToPosition.value) {
-        listState.animateScrollToItem(scrollToPosition.value, -(columnMidpoint * 0.7f).toInt() )
+        listState.animateScrollToItem(scrollToPosition.value, -(columnMidpoint * 0.7f).toInt())
     }
 }
 

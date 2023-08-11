@@ -1,5 +1,6 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.InfiniteRepeatableSpec
@@ -52,6 +53,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -165,14 +167,16 @@ fun MarqueeText(
 
 @Composable
 fun ScoreComposable(viewModel: WorkspaceViewModel) {
-    val screenHeightPx = with(LocalDensity.current) {
-        LocalConfiguration.current.screenHeightDp.dp.toPx()
-    }
+    val offsetY = (with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx()/ 2f - 100.dp.toPx() * 1f}  )
+
+
     val colorState = viewModel.similarityColor.collectAsState()
     val color =
         animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
     val score by rememberUpdatedState(viewModel.score.collectAsState())
     val playState = viewModel.playingState.collectAsState()
+
+
     var opinion by remember { mutableStateOf("") }
     LaunchedEffect(playState.value) {
         opinion = if (playState.value == WorkspaceViewModel.PlayerState.END) {
@@ -184,13 +188,13 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
 
     val transition = updateTransition(
         targetState = playState.value == WorkspaceViewModel.PlayerState.END,
-        label = ""
+        label = "",
     )
     val translateY by transition.animateFloat(
         transitionSpec = { tween(1000) },
         label = "",
         targetValueByState = {
-            if (it) screenHeightPx / 2.2f else 0f
+            if (it) offsetY  else 0f
         }
     )
     val scale by transition.animateFloat(

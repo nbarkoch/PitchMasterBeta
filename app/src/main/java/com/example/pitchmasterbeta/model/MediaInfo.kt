@@ -52,9 +52,11 @@ data class MediaInfo(
                 overlap = DEFAULT_WAV_BITRATE / 512
                 try {
                     mmr.setDataSource(context, uri)
-                    duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toIntOrNull()
+                    duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                        ?.toIntOrNull()
                         ?: 2000000
-                    overlap = (mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toIntOrNull()
+                    overlap = (mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)
+                        ?.toIntOrNull()
                         ?: DEFAULT_WAV_BITRATE) / 512
                 } catch (_: NumberFormatException) {
                 } finally {
@@ -77,7 +79,8 @@ data class MediaInfo(
             sponsorArtist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: ""
             sponsorTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: ""
             if (sponsorTitle.isEmpty()) {
-                val returnCursor: Cursor = context.contentResolver.query(uri, null, null, null, null)!!
+                val returnCursor: Cursor =
+                    context.contentResolver.query(uri, null, null, null, null)!!
                 val nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 returnCursor.moveToFirst()
                 sponsorTitle = returnCursor.getString(nameIndex)
@@ -91,7 +94,11 @@ data class MediaInfo(
     }
 
 
-    fun downloadAndExtractMedia(contextResolver: ContentResolver, url: URL, tempFile: File): BufferedInputStream? {
+    fun downloadAndExtractMedia(
+        contextResolver: ContentResolver,
+        url: URL,
+        tempFile: File
+    ): BufferedInputStream? {
         try {
             val connection = url.openConnection() as HttpURLConnection
             connection.connect()

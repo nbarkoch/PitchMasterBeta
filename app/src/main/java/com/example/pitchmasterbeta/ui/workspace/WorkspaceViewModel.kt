@@ -114,6 +114,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         mediaInfo.singerInputStream =
                             BufferedInputStream(contentResolver.openInputStream(uri))
                         mediaInfo.max(context, uri)
+                        mediaInfo.getSongInfo(context, uri)
+                        _songFullName.value = "${mediaInfo.sponsorTitle}${
+                            if (mediaInfo.sponsorArtist.isNotEmpty())
+                                " - ${mediaInfo.sponsorArtist}" else ""
+                        }"
                         audioProcessor = AudioProcessor(mediaInfo)
                         val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
                         val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()

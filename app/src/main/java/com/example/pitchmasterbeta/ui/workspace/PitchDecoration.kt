@@ -44,10 +44,12 @@ fun PitchDecorations(
     chordHeight: Dp = 14.dp,
     maxChordWidth: Dp = 30.dp
 ) {
+    val localDensity = LocalDensity.current
+    val chordHeightPx = with(localDensity) { 14.dp.toPx() }
+    val screenHeightPx = with(localDensity) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
 
-    val screenHeightDp = LocalConfiguration.current.screenHeightDp
     val items by remember {
-        mutableStateOf(List((screenHeightDp.dp / chordHeight).toInt()) {0})
+        mutableStateOf(List((screenHeightPx / chordHeightPx).toInt()) {0})
     }
 
     PitchDecorationColumn(viewModel, 1, maxChordWidth, items, chordHeight)

@@ -24,6 +24,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+
 @Composable
 fun VerticalSeekBar(
     modifier: Modifier = Modifier,
@@ -38,11 +39,13 @@ fun VerticalSeekBar(
         modifier = modifier
             .pointerInput(Unit) {
                 detectVerticalDragGestures { change, _ ->
-                    val offsetY = (1 - percent) * height + change.position.y - change.previousPosition.y
+                    val offsetY =
+                        (1 - percent) * height + change.position.y - change.previousPosition.y
                     percent = (1 - (offsetY / size.height.toFloat())).coerceIn(.05f, 1f)
                     onProgressChanged(percent)
                 }
-            }.clip(shape = RoundedCornerShape(10.dp))
+            }
+            .clip(shape = RoundedCornerShape(10.dp))
             .onGloballyPositioned {
                 height = it.size.height.toFloat()
             }
@@ -73,6 +76,11 @@ fun VerticalSeekBar(
 @Composable
 fun VerticalSeekBarPreview() {
     MaterialTheme {
-        VerticalSeekBar(modifier = Modifier.height(100.dp).width(40.dp), initialOffsetPercent = 0.5f, onProgressChanged = {})
+        VerticalSeekBar(
+            modifier = Modifier
+                .height(100.dp)
+                .width(40.dp),
+            initialOffsetPercent = 0.5f,
+            onProgressChanged = {})
     }
 }
