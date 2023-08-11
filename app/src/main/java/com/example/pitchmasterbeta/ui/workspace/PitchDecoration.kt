@@ -75,18 +75,15 @@ fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
     }
 
     Box(modifier = modifier) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            itemsIndexed(items) { i, _ ->
-                PitchItem(
-                    modifier = Modifier
-                        .width(10.dp)
-                        .padding(0.dp, 3.dp),
-                    color = interpolateColor(i, items.size),
-                    chordHeight = chordHeight - 6.dp
-                )
-            }
+        repeat(items.size) { i ->
+            PitchItem(
+                modifier = Modifier
+                    .width(10.dp)
+                    .padding(0.dp, 3.dp)
+                    .offset(x = 0.dp, y = i * chordHeight),
+                color = interpolateColor(i, items.size),
+                chordHeight = chordHeight - 6.dp,
+            )
         }
         LazyWindowScroller(viewModel, direction, chordHeight, items)
     }
@@ -119,8 +116,7 @@ fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeigh
         modifier = Modifier
             .height(chordHeight * 5)
             .offset(y = offset.value)
-            .alpha(if (noteActive.value) 1f else 0.2f)
-        ,
+            .alpha(if (noteActive.value) 1f else 0.2f),
         state = scrollState
     ) {
         itemsIndexed(items) { i, _ ->
