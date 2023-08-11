@@ -17,7 +17,6 @@ import com.example.pitchmasterbeta.model.getColor
 import com.example.pitchmasterbeta.notifications.SpleeterProgressNotification
 import com.example.pitchmasterbeta.services.LyricsProvider
 import com.example.pitchmasterbeta.services.SpleeterService
-import com.example.pitchmasterbeta.utils.network.LyricsApi
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +32,6 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.lang.reflect.Type
 import java.net.URL
-import java.util.UUID
 
 
 class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
@@ -163,6 +161,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var musicAudioDispatcher: SongAudioDispatcher? = null
     private var lastWindowPosition: Int = 0
     private var goodForThisWindowWatch: Boolean = false
+    private var goodForOpinionWatch: Boolean = false
+    private var expectedScore = 0
+    fun getExpectedScore(): Int {
+        return expectedScore
+    }
     private var _score = MutableStateFlow(0)
     val score: StateFlow<Int> = _score
 
@@ -247,6 +250,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                 AudioProcessor.shrinkVolume(volume)
                             )
                         }
+                        if (similarity != AudioProcessor.NotesSimilarity.Idle) {
+                            goodForOpinionWatch = true
+                        }
                         _micNoteActive.value = true
                     } else {
                         _micNoteActive.value = false
@@ -267,9 +273,15 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     _currentTime.value =
                         "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                     val currentWindowPosition: Int = (musicTimeStamp % 1000 % 60).toInt()
-                    if (goodForThisWindowWatch && (lastWindowPosition != currentWindowPosition)) {
-                        _score.value++
-                        goodForThisWindowWatch = false
+                    if (lastWindowPosition != currentWindowPosition) {
+                        if (goodForThisWindowWatch) {
+                            _score.value++
+                            goodForThisWindowWatch = false
+                        }
+                        if (goodForOpinionWatch) {
+                            expectedScore++
+                            goodForOpinionWatch = false
+                        }
                     }
                     lastWindowPosition = currentWindowPosition
 
@@ -283,7 +295,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         _sinNoteActive.value = false
                     }
 
-                    if (_lyricsSegments.value[lyricsScrollToPosition.value].end < musicTimeStamp
+                    if (_lyricsSegments.value.isNotEmpty() &&
+                        _lyricsSegments.value[lyricsScrollToPosition.value].end < musicTimeStamp
                         && lyricsScrollToPosition.value < _lyricsSegments.value.size - 1
                     ) {
                         _lyricsScrollToPosition.value =
@@ -477,10 +490,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     fun giveOpinionForScore(givenScore: Int): String {
-        val range1 = (mediaInfo.timeStampDuration / 8).toInt()
-        val range2 = (mediaInfo.timeStampDuration / 4).toInt()
-        val range3 = (mediaInfo.timeStampDuration / 1.7).toInt()
-        val range4 = (mediaInfo.timeStampDuration).toInt()
+        val range1 = (expectedScore / 8f).toInt()
+        val range2 = (expectedScore / 4f).toInt()
+        val range3 = (expectedScore / 1.7f).toInt()
+        val range4 = (expectedScore)
 
         return when (givenScore) {
             in 0..range1 -> "Try better next time!"
@@ -490,4 +503,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             else -> "Umm.. Try again?"
         }
     }
+
+    //TODO: 1.back press to return to previous state (PICK) during IDLE or WAITING
+    //TODO: 2.score should be according to the spots where we are sure there is a vocal voice from the singer
 }

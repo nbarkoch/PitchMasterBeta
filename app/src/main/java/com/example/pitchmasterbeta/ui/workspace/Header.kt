@@ -1,24 +1,12 @@
 package com.example.pitchmasterbeta.ui.workspace
 
-import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.InfiniteRepeatableSpec
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.RepeatableSpec
-import androidx.compose.animation.core.TwoWayConverter
-import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateValue
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -33,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +31,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,13 +39,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -169,20 +153,25 @@ fun MarqueeText(
 fun ScoreComposable(viewModel: WorkspaceViewModel) {
     val offsetY = (with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx()/ 2f - 100.dp.toPx() * 1f}  )
 
-
     val colorState = viewModel.similarityColor.collectAsState()
     val color =
         animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
     val score by rememberUpdatedState(viewModel.score.collectAsState())
     val playState = viewModel.playingState.collectAsState()
 
+    var grade by remember { mutableStateOf(0) }
 
     var opinion by remember { mutableStateOf("") }
     LaunchedEffect(playState.value) {
-        opinion = if (playState.value == WorkspaceViewModel.PlayerState.END) {
-            viewModel.giveOpinionForScore(score.value)
+        if (playState.value == WorkspaceViewModel.PlayerState.END) {
+            opinion = viewModel.giveOpinionForScore(score.value)
+            val expectedScore = viewModel.getExpectedScore()
+            if (expectedScore > 0) {
+                grade = ((score.value * 100f) / viewModel.getExpectedScore()).toInt()
+            }
         } else {
-            ""
+            opinion = ""
+            grade = 0
         }
     }
 
@@ -241,7 +230,7 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = opinion, color = Color.White,
+                        text = "($grade%) $opinion", color = Color.White,
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.W400,

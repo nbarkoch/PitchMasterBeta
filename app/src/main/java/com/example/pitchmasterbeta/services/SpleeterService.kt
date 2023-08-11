@@ -10,8 +10,6 @@ import android.os.StrictMode.ThreadPolicy
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.CognitoCachingCredentialsProvider
 import com.amazonaws.event.ProgressEvent
-import com.amazonaws.regions.Region
-import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.PutObjectRequest
 import org.json.JSONObject
@@ -24,14 +22,11 @@ import com.amazonaws.services.lambda.AWSLambdaClient
 import com.amazonaws.services.lambda.model.InvokeRequest
 import com.amazonaws.services.lambda.model.InvokeResult
 import com.amazonaws.services.s3.model.CannedAccessControlList
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.example.pitchmasterbeta.MainActivity
-import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 

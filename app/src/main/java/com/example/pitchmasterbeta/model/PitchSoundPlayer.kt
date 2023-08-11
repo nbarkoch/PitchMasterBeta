@@ -2,6 +2,7 @@ package com.example.pitchmasterbeta.model
 
 import androidx.compose.ui.graphics.Color
 import kotlin.math.floor
+import kotlin.math.sin
 
 
 class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
@@ -9,12 +10,12 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
     private val sample: DoubleArray
     val generatedSnd: Array<ByteArray>
 
-    fun buildSounds() {
+    private fun buildSounds() {
         for (j in sortedPlayerFrequencies.indices) {
             for (i in 0 until numSamples) {
                 // sample[i] = Math.sin(2 * Math.PI * i / (sampleRate/freqOfTone));
                 sample[i] =
-                    Math.sin((2 * Math.PI - .001) * i / (sampleRate / sortedPlayerFrequencies[j]))
+                    sin((2 * Math.PI - .001) * i / (sampleRate / sortedPlayerFrequencies[j]))
             }
 
             // convert to 16 bit pcm sound array
@@ -106,7 +107,7 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
             /*B3*/
             246.94f
         )
-        val sortedFrequencies = floatArrayOf( /* nothing */
+        private val sortedFrequencies = floatArrayOf( /* nothing */
             0.0f,  /*C0 */
             16.35f,  //2109.89
             /*C#0/Db0 */

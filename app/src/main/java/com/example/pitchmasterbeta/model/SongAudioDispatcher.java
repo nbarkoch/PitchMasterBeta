@@ -1,9 +1,6 @@
 package com.example.pitchmasterbeta.model;
 
 
-import android.annotation.SuppressLint;
-import android.media.AudioRecord;
-
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -15,7 +12,6 @@ import be.tarsos.dsp.AudioProcessor;
 import be.tarsos.dsp.io.TarsosDSPAudioFloatConverter;
 import be.tarsos.dsp.io.TarsosDSPAudioFormat;
 import be.tarsos.dsp.io.TarsosDSPAudioInputStream;
-import be.tarsos.dsp.io.android.AndroidAudioInputStream;
 
 
 public class SongAudioDispatcher implements Runnable {
@@ -25,7 +21,7 @@ public class SongAudioDispatcher implements Runnable {
     private float[] audioFloatBuffer;
     private byte[] audioByteBuffer;
     private byte[] audioByteBuffer2;
-    private final List<MicAudioProcessor> audioProcessors = new CopyOnWriteArrayList();
+    private final List<MicAudioProcessor> audioProcessors = new CopyOnWriteArrayList<>();
     private final TarsosDSPAudioFloatConverter converter;
     private final TarsosDSPAudioFormat format;
     private int floatOverlap;
@@ -34,7 +30,7 @@ public class SongAudioDispatcher implements Runnable {
     private int byteStepSize;
     private long bytesToSkip;
     private long bytesProcessed;
-    private AudioEvent audioEvent;
+    private final AudioEvent audioEvent;
     private boolean stopped;
     private boolean paused;
     private boolean zeroPadFirstBuffer;

@@ -15,6 +15,7 @@ import com.example.pitchmasterbeta.utils.math.shiftArrayRight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.ByteOrder
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 
@@ -72,15 +73,17 @@ class AudioProcessor {
             var maxVal = -2
             for (singerHZ in singerHZs) {
                 for (speakerHZ in speakerHZs) {
-                    if (maxVal < 0 && (singerHZ == 0 || speakerHZ == 0 || singerHZ == sortedNotes.size - 1 || speakerHZ == sortedNotes.size - 1)) {
+                    if (maxVal < 0 && (singerHZ == 0 || singerHZ == sortedNotes.size - 1)) {
                         return NotesSimilarity.Idle
+                    } else if (maxVal < 0 && (speakerHZ == 0 || speakerHZ == sortedNotes.size - 1)) {
+                        return NotesSimilarity.Neutral
                     } else {
-                        if (Math.abs(speakerHZ - singerHZ) % 12 == 0) {
+                        if (abs(speakerHZ - singerHZ) % 12 == 0) {
                             if (speakerHZ == singerHZ) {
                                 return NotesSimilarity.Equal
                             }
                             maxVal = 1
-                        } else if (Math.abs(speakerHZ - singerHZ) % 12 < 2) {
+                        } else if (abs(speakerHZ - singerHZ) % 12 < 2) {
                             maxVal = 1
                         }
                     }

@@ -48,7 +48,7 @@ fun LyricsLazyColumn(
     LazyColumn(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .onGloballyPositioned { coordinates ->
                 columnMidpoint = coordinates.size.height.toFloat() / 2f
