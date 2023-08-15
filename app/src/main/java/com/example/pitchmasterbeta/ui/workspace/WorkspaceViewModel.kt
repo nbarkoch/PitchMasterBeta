@@ -361,6 +361,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     fun resetScoreAndWorkspaceState() {
         setPlayingState(PlayerState.IDLE)
         _score.value = 0
+        expectedScore = 0
     }
 
     private var tempSingerFile: File? = null
@@ -505,5 +506,5 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     //TODO: 1.back press to return to previous state (PICK) during IDLE or WAITING
-    //TODO: 2.score should be according to the spots where we are sure there is a vocal voice from the singer
+    //TODO: 2.notification is not showing onn some devices!
 }

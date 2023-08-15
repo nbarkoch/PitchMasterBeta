@@ -1,6 +1,7 @@
 package com.example.pitchmasterbeta.services
 
 import android.content.Context
+import android.util.Log
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.CognitoCachingCredentialsProvider
 import com.amazonaws.services.lambda.AWSLambda
@@ -68,10 +69,14 @@ class LyricsProvider(context: Context?) {
                         responseJson.getString("body"),
                         lyricsSegmentListType
                     )
+                    if (lyricsSegments.isEmpty()) {
+                        Log.e("LyricsProvider", " - bad response - lyrics are empty :(")
+                    }
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            Log.e("LyricsProvider", " - bad response - something went wrong :(\n ${e.message}")
         }
         return lyricsSegments
     }
