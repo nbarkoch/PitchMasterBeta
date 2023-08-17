@@ -16,10 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
 
 @Composable
-fun BackgroundMic(viewModel: WorkspaceViewModel) {
+fun BackgroundMic() {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     AnimatedVisibility(
         visible = workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE,

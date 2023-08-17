@@ -14,15 +14,17 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.example.pitchmasterbeta.MainActivity
 
 @Composable
-fun WorkspaceBody(modifier: Modifier, viewModel: WorkspaceViewModel) {
+fun WorkspaceBody(modifier: Modifier) {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val loadingMessage by rememberUpdatedState(viewModel.notificationMessage.collectAsState())
 
     when (workspaceState.value) {
         WorkspaceViewModel.WorkspaceState.IDLE -> {
-            LyricsLazyColumn(modifier.fillMaxSize(), viewModel = viewModel)
+            LyricsLazyColumn(modifier.fillMaxSize())
         }
         WorkspaceViewModel.WorkspaceState.PICK -> {
             Box( modifier = modifier.fillMaxSize(),

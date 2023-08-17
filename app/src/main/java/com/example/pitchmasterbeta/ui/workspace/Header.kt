@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.pitchmasterbeta.MainActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -54,8 +55,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun WorkspaceHeader(
     modifier: Modifier = Modifier,
-    viewModel: WorkspaceViewModel
 ) {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
     val songFullName = viewModel.songFullName.collectAsState()
@@ -260,10 +261,7 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
 @Preview
 @Composable
 fun WorkspaceHeaderPreview() {
-    val viewModel = WorkspaceViewModel()
-    viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.IDLE)
-    viewModel.setPlayingState(WorkspaceViewModel.PlayerState.IDLE)
     MaterialTheme {
-        WorkspaceHeader(modifier = Modifier.fillMaxWidth(), viewModel = viewModel)
+        WorkspaceHeader(modifier = Modifier.fillMaxWidth())
     }
 }

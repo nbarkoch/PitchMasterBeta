@@ -33,23 +33,22 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
         viewModelStore.put("workspace", WorkspaceViewModel())
     }
     // Create or retrieve the ViewModel associated with the ViewModelStore
-    val viewModel: WorkspaceViewModel = viewModelStore["workspace"] as WorkspaceViewModel
-    BackPressHandler(viewModel)
+    BackPressHandler()
     Box(modifier = modifier
         .fillMaxSize()
         .background(brush = gradientBrush))
     {
-        BackgroundMic(viewModel = viewModel)
-        WorkspaceBody(Modifier.fillMaxSize(), viewModel = viewModel)
+        BackgroundMic()
+        WorkspaceBody(Modifier.fillMaxSize())
         WorkspaceFooter(
             Modifier
                 .fillMaxWidth()
-                .align(Alignment.BottomCenter), viewModel = viewModel)
+                .align(Alignment.BottomCenter))
         WorkspaceHeader(
             Modifier
                 .fillMaxWidth()
-                .align(Alignment.TopCenter), viewModel = viewModel)
-        PitchDecorations(viewModel = viewModel)
+                .align(Alignment.TopCenter))
+        PitchDecorations()
     }
 }
 
@@ -58,7 +57,6 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
 @Preview(showBackground = true)
 @Composable
 fun WorkspaceSurfacePreview(
-    viewModel: WorkspaceViewModel = WorkspaceViewModel()
 ) {
     PitchMasterBetaTheme {
         WorkspaceSurface()

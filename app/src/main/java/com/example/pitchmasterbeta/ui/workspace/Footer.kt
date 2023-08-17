@@ -69,8 +69,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun WorkspaceFooter(
     modifier: Modifier = Modifier,
-    viewModel: WorkspaceViewModel
 ) {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val context = LocalContext.current.applicationContext
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val showDialog by rememberUpdatedState(viewModel.showDialog.collectAsState())
@@ -104,7 +104,7 @@ fun WorkspaceFooter(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
-            ControlsRow(viewModel = viewModel)
+            ControlsRow()
         }
 
         Column(
@@ -137,7 +137,7 @@ fun WorkspaceFooter(
                 }
             }
             if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
-                DurationRow(viewModel = viewModel)
+                DurationRow()
             }
         }
     }
@@ -351,7 +351,8 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
 
 
 @Composable
-fun DurationRow(viewModel: WorkspaceViewModel) {
+fun DurationRow() {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val current = viewModel.currentTime.collectAsState()
     val duration = viewModel.durationTime.collectAsState()
     Box(
@@ -368,7 +369,8 @@ fun DurationRow(viewModel: WorkspaceViewModel) {
 }
 
 @Composable
-fun ControlsRow(viewModel: WorkspaceViewModel) {
+fun ControlsRow() {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val displaySingerVolume by rememberUpdatedState(viewModel.displaySingerVolume.collectAsState())
     val displayPitchControls by rememberUpdatedState(viewModel.displayPitchControls.collectAsState())
     val volumeScale by animateFloatAsState(
@@ -399,7 +401,7 @@ fun ControlsRow(viewModel: WorkspaceViewModel) {
                         color = Color.White,
                         shape = RoundedCornerShape(20.dp)
                     )
-                    .padding(10.dp), viewModel = viewModel
+                    .padding(10.dp)
             )
         }
         VerticalSeekBar(modifier = Modifier
@@ -415,7 +417,8 @@ fun ControlsRow(viewModel: WorkspaceViewModel) {
 }
 
 @Composable
-fun PitchControls(modifier: Modifier, viewModel: WorkspaceViewModel) {
+fun PitchControls(modifier: Modifier) {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val isComputingPitchMic by rememberUpdatedState(viewModel.isComputingPitchMic.collectAsState())
     val isComputingPitchSinger by rememberUpdatedState(viewModel.isComputingPitchSinger.collectAsState())
 
@@ -445,9 +448,7 @@ fun PitchControls(modifier: Modifier, viewModel: WorkspaceViewModel) {
 @Preview
 @Composable
 fun WorkspaceFooterPreview() {
-    val viewModel = WorkspaceViewModel()
-    viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.IDLE)
     MaterialTheme {
-        WorkspaceFooter(modifier = Modifier.fillMaxWidth(), viewModel = viewModel)
+        WorkspaceFooter(modifier = Modifier.fillMaxWidth())
     }
 }

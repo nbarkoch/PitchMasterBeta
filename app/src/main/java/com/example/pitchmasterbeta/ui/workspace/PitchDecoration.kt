@@ -35,16 +35,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
+import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 
 @Composable
 fun PitchDecorations(
-    viewModel: WorkspaceViewModel = WorkspaceViewModel(),
     chordHeight: Dp = 14.dp,
     maxChordWidth: Dp = 30.dp
 ) {
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
 
     val items by remember {

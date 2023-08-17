@@ -147,6 +147,7 @@ class SpleeterService : Service() {
                                             )
                                         }
                                 } ?: serviceNotifier?.notifyFailed()
+                            stopSelf()
                         }
 
                         ProgressEvent.FAILED_EVENT_CODE -> serviceNotifier?.notifyFailed()
@@ -159,11 +160,12 @@ class SpleeterService : Service() {
             s3Client.putObject(putObjectRequest)
         } catch (e: Exception) {
             e.printStackTrace()
+            stopSelf()
         }
     }
 
     private fun checkItself() {
-        if (!apiCoroutineScope.isActive) {
+        if (!isActive) {
             s3Client.shutdown()
             lambdaClient.shutdown()
             serviceNotifier?.notifyFailed()
@@ -215,7 +217,6 @@ class SpleeterService : Service() {
         apiCoroutineScope.launch {
             initServices()
             startUploadToS3(uri, objectKey)
-            stopSelf()
         }
     }
 
