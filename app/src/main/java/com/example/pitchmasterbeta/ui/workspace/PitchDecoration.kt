@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -92,7 +93,8 @@ fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
 fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeight: Dp, items: List<Any>) {
     val localDensity = LocalDensity.current
     val scrollState = rememberLazyListState()
-    val currentMidpoint = with(localDensity) { chordHeight.toPx() } * 2.5f
+    val chordHeightPx = with(localDensity) { chordHeight.toPx() }
+    val currentMidpoint = chordHeightPx * 2.5f
     val note by rememberUpdatedState(
         if (direction < 0) viewModel.sinNote.collectAsState()
         else viewModel.micNote.collectAsState()
@@ -102,18 +104,19 @@ fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeigh
         else viewModel.micNoteActive.collectAsState()
     )
 
-    val offset = remember(scrollState) {
+    val offsetY = remember(scrollState) {
         derivedStateOf {
-            chordHeight *
-            scrollState.firstVisibleItemIndex +
-            with(localDensity) { scrollState.firstVisibleItemScrollOffset.toDp() }
+            chordHeightPx *
+            scrollState.firstVisibleItemIndex + scrollState.firstVisibleItemScrollOffset
         }
     }
 
     LazyColumn(
         modifier = Modifier
             .height(chordHeight * 5)
-            .offset(y = offset.value)
+            .graphicsLayer {
+                translationY = offsetY.value
+            }
             .alpha(if (noteActive.value) 1f else 0.2f),
         state = scrollState
     ) {

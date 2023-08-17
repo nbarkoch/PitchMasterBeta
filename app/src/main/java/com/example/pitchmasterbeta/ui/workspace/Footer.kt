@@ -3,7 +3,9 @@ package com.example.pitchmasterbeta.ui.workspace
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.MediaStore
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,12 +26,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,7 +55,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
@@ -67,6 +73,7 @@ fun WorkspaceFooter(
 ) {
     val context = LocalContext.current.applicationContext
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
+    val showDialog by rememberUpdatedState(viewModel.showDialog.collectAsState())
 
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(
@@ -86,6 +93,9 @@ fun WorkspaceFooter(
                     MainActivity.appContentResolver,
                     result.data?.data
                 )
+                if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                    viewModel.showDialog()
+                }
             }
         }
     }
@@ -132,6 +142,41 @@ fun WorkspaceFooter(
         }
     }
 
+    if (showDialog.value) {
+        Dialog(onDismissRequest = { viewModel.hideDialog() }) {
+            AlertDialog(
+                onDismissRequest = { viewModel.hideDialog() },
+                title = { Text("Notify when ready") },
+                text = { Text("Would you like to be notify when the Karaoke is ready?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val intent = Intent()
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                intent.action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                                intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            } else
+                                intent.action = "android.settings.APP_NOTIFICATION_SETTINGS"
+                            intent.putExtra("app_package", context.packageName)
+                            intent.putExtra("app_uid", context.applicationInfo.uid)
+                            context.startActivity(intent)
+                            viewModel.hideDialog()
+                        }
+                    ) {
+                        Text("SURE")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.hideDialog() }
+                    ) {
+                        Text("NO")
+                    }
+                }
+            )
+        }
+    }
 
 }
 

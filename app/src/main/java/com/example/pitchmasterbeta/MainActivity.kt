@@ -34,6 +34,10 @@ class MainActivity : ComponentActivity() {
         var appContentResolver: ContentResolver? = null
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModelStore.clear()
+    }
 
 }
 

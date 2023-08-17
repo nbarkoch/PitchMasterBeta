@@ -1,10 +1,14 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.OnBackPressedDispatcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -23,13 +27,14 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
             Color(0xFF121314),
         ),
     )
+
     // Obtain the ViewModelStore
     if (viewModelStore["workspace"] == null) {
         viewModelStore.put("workspace", WorkspaceViewModel())
     }
     // Create or retrieve the ViewModel associated with the ViewModelStore
     val viewModel: WorkspaceViewModel = viewModelStore["workspace"] as WorkspaceViewModel
-
+    BackPressHandler(viewModel)
     Box(modifier = modifier
         .fillMaxSize()
         .background(brush = gradientBrush))

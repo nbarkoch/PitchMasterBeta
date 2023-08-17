@@ -4,6 +4,8 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -41,7 +43,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var notification: SpleeterProgressNotification? = null
     private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = true
+    private val devTestMode: Boolean = false
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
@@ -75,6 +77,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private val _workspaceState = MutableStateFlow(WorkspaceState.PICK)
     val workspaceState: StateFlow<WorkspaceState> = _workspaceState
     fun setWorkspaceState(state: WorkspaceState) {
+        _playingState.value = PlayerState.IDLE
         _workspaceState.value = state
     }
 
@@ -153,8 +156,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             notification?.showNotification()
         } catch (e: Exception) {
             e.printStackTrace()
-            notification?.hideNotification()
+            stopGenerateKaraoke(context)
         }
+    }
+
+    fun stopGenerateKaraoke(context: Context){
+        val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
+        context.stopService(serviceSpleeterIntent)
+        notification?.hideNotification()
     }
 
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
@@ -358,7 +367,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
-    fun resetScoreAndWorkspaceState() {
+    fun resetScoreAndPlayingState() {
         setPlayingState(PlayerState.IDLE)
         _score.value = 0
         expectedScore = 0
@@ -451,8 +460,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
 
     override fun notifyFailed() {
+        resetWorkspace()
+    }
+
+    fun resetWorkspace() {
+        resetAudio()
         mediaInfo.closeStreams()
         closeTempFiles()
+        _songFullName.value = ""
         _workspaceState.value = WorkspaceState.PICK
         notification?.hideNotification()
     }
@@ -505,6 +520,31 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
+    private val _showDialog = MutableStateFlow(false)
+    val showDialog: StateFlow<Boolean> = _showDialog
+
+    fun showDialog() {
+        _showDialog.value = true
+    }
+
+    fun hideDialog() {
+        _showDialog.value = false
+    }
+    fun openAppNotificationSettings(context: Context) {
+        val intent = Intent().apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            } else {
+                action = "android.settings.APP_NOTIFICATION_SETTINGS"
+                putExtra("app_package", context.packageName)
+                putExtra("app_uid", context.applicationInfo.uid)
+            }
+        }
+        context.startActivity(intent)
+        hideDialog()
+    }
     //TODO: 1.back press to return to previous state (PICK) during IDLE or WAITING
     //TODO: 2.notification is not showing onn some devices!
 }

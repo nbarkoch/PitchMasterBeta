@@ -242,7 +242,8 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                         ),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         onClick = {
-                            viewModel.resetScoreAndWorkspaceState()
+                            viewModel.resetScoreAndPlayingState()
+
                         }) {
                         Text(
                             text = "Cancel", color = Color.Black,

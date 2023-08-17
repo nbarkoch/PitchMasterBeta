@@ -27,6 +27,7 @@ import com.example.pitchmasterbeta.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 
@@ -128,10 +129,11 @@ class SpleeterService : Service() {
                     when (progressEvent.eventCode) {
 
                         ProgressEvent.COMPLETED_EVENT_CODE -> {
+                            checkItself()
                             serviceNotifier?.notifyProgressChanged(40, "Separating..")
                             val lambdaExecutionResult = invokeLambdaFunction(objectKey)
                             serviceNotifier?.notifyProgressChanged(60, "Extracting results")
-
+                            checkItself()
                             vocalsUrl?.takeIf { lambdaExecutionResult }
                                 ?.let { vocalsUrl ->
                                     accompanimentUrl
@@ -152,10 +154,20 @@ class SpleeterService : Service() {
                     }
                 }
             }
+            checkItself()
             serviceNotifier?.notifyProgressChanged(20, "Uploading The file")
             s3Client.putObject(putObjectRequest)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun checkItself() {
+        if (!apiCoroutineScope.isActive) {
+            s3Client.shutdown()
+            lambdaClient.shutdown()
+            serviceNotifier?.notifyFailed()
+            throw Exception("Spleeter Interrupted")
         }
     }
 
