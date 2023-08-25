@@ -98,14 +98,15 @@ data class MediaInfo(
     suspend fun downloadAndExtractMedia(
         context: Context,
         url: URL,
-        tempFile: File,
-    ): Pair<BufferedInputStream,File>? {
+        outputFile: File
+    ): BufferedInputStream? {
         try {
             val connection = url.openConnection() as HttpURLConnection
             connection.connect()
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 // Create a temporary file to store the downloaded content
-                val outputStream = FileOutputStream(tempFile)
+                val mp3TempFile = File.createTempFile("media", null)
+                val outputStream = FileOutputStream(mp3TempFile)
 
                 // Download the content
                 val inputStream = connection.inputStream
@@ -120,16 +121,16 @@ data class MediaInfo(
                 outputStream.close()
 
                 // Get the Uri reference to the downloaded file
-                val inputUri = Uri.fromFile(tempFile)
+                val inputUri = Uri.fromFile(mp3TempFile)
                 val inputUriPath = FFmpegKitConfig.getSafParameterForRead(context, inputUri)
-                val outputFile = File.createTempFile("media", null)
+
                 val outputUri = Uri.fromFile(outputFile)
                 val outputUriPath = FFmpegKitConfig.getSafParameterForWrite(context, outputUri)
 
                 FFmpegKit.execute(" -i $inputUriPath -acodec pcm_s16le -ar 44100 -ac 2 -f wav $outputUriPath")
-                tempFile.delete()
+                mp3TempFile.delete()
                 max(context, outputUri)
-                return Pair(BufferedInputStream(context.contentResolver.openInputStream(outputUri)), outputFile)
+                return BufferedInputStream(context.contentResolver.openInputStream(outputUri))
                 // Rest of your code...
             } else {
                 // Handle the case when the connection fails

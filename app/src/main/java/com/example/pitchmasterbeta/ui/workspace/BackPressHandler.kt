@@ -46,12 +46,12 @@ fun BackPressHandler(
                         WorkspaceViewModel.PlayerState.PAUSE ->{
                             viewModel.resetScoreAndPlayingState()
                             viewModel.resetWorkspace()
+                            viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.PICK)
                         }
                         WorkspaceViewModel.PlayerState.END ->{
                             viewModel.resetScoreAndPlayingState()
                         }
                     }
-                    viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.PICK)
                 }
                 else -> {
                     viewModel.stopGenerateKaraoke(context)

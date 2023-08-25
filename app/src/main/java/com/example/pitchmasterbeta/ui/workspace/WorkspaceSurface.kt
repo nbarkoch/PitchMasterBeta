@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.MainActivity.Companion.viewModelStore
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 
@@ -30,7 +31,11 @@ fun WorkspaceSurface(modifier: Modifier = Modifier
 
     // Obtain the ViewModelStore
     if (viewModelStore["workspace"] == null) {
-        viewModelStore.put("workspace", WorkspaceViewModel())
+        val viewModel = WorkspaceViewModel()
+        appContext?.run {
+            viewModel.initTempFiles(this)
+        }
+        viewModelStore.put("workspace", viewModel)
     }
     // Create or retrieve the ViewModel associated with the ViewModelStore
     BackPressHandler()

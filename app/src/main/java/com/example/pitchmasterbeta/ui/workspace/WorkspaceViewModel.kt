@@ -376,25 +376,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     private var tempSingerFile: File? = null
-    private fun resetTempSingerFile(newFile: File) {
-        tempSingerFile?.apply {
-            if (this.exists()) {
-                this.delete()
-            }
-        }
-        tempSingerFile = newFile
-    }
-
-    private fun resetTempMusicFile(newFile: File) {
-        tempMusicFile?.apply {
-            if (this.exists()) {
-                this.delete()
-            }
-        }
-        tempMusicFile = newFile
-    }
-
-
     private var tempMusicFile: File? = null
 
     override fun notifyCompletion(
@@ -404,31 +385,21 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         appContext?.let { context ->
             viewModelScope.launch {
                 try {
-                    val singerObservable: suspend () -> BufferedInputStream?
-                    val musicObservable: suspend () -> BufferedInputStream?
                     val lyricsObservable: suspend () -> List<LyricsSegment>?
-                    val mp3fileSinger = File.createTempFile("media", null)
-                    val mp3fileMusic = File.createTempFile("media", null)
-                    resetTempFiles()
-                    singerObservable = {
+                    deleteTempFiles()
+                    val singerObservable: suspend () -> BufferedInputStream? = {
                         mediaInfo.downloadAndExtractMedia(
                             context,
                             vocalsUrl,
-                            mp3fileSinger,
-                        )?.let {
-                            resetTempSingerFile(it.second)
-                            it.first
-                        }
+                            tempSingerFile!!,
+                        )
                     }
-                    musicObservable = {
+                    val musicObservable: suspend () -> BufferedInputStream? = {
                         mediaInfo.downloadAndExtractMedia(
                             context,
                             accompanimentUrl,
-                            mp3fileMusic
-                        )?.let {
-                            resetTempMusicFile(it.second)
-                            it.first
-                        }
+                            tempMusicFile!!
+                        )
                     }
 
                     val songName = _songFullName.value
@@ -471,8 +442,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     } ?: run {
                         // Handle the case where the streams and lyrics are null
                     }
-
-                    resetTempFiles()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -502,10 +471,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _notificationMessage.value = message
     }
 
-    private fun resetTempFiles() {
+    fun initTempFiles(context: Context) {
+        tempSingerFile = File(context.cacheDir, "vocalFile.wav")
+        tempMusicFile = File(context.cacheDir, "musicFile.wav")
         deleteTempFiles()
-        tempSingerFile = File.createTempFile("media", null)
-        tempMusicFile = File.createTempFile("media", null)
     }
 
     private fun deleteTempFiles() {

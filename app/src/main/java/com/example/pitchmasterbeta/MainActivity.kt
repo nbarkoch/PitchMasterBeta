@@ -17,7 +17,6 @@ import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         appContentResolver = contentResolver
         appContext = applicationContext
         setContent {
