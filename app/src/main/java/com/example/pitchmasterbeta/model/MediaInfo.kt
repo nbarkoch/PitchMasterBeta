@@ -1,6 +1,5 @@
 package com.example.pitchmasterbeta.model
 
-import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
 import android.media.AudioRecord
@@ -10,6 +9,8 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.runtime.Immutable
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.FFmpegKitConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -94,11 +95,11 @@ data class MediaInfo(
     }
 
 
-    fun downloadAndExtractMedia(
-        contextResolver: ContentResolver,
+    suspend fun downloadAndExtractMedia(
+        context: Context,
         url: URL,
-        tempFile: File
-    ): BufferedInputStream? {
+        tempFile: File,
+    ): Pair<BufferedInputStream,File>? {
         try {
             val connection = url.openConnection() as HttpURLConnection
             connection.connect()
@@ -119,12 +120,22 @@ data class MediaInfo(
                 outputStream.close()
 
                 // Get the Uri reference to the downloaded file
-                val uri = Uri.fromFile(tempFile)
-                return BufferedInputStream(contextResolver.openInputStream(uri))
+                val inputUri = Uri.fromFile(tempFile)
+                val inputUriPath = FFmpegKitConfig.getSafParameterForRead(context, inputUri)
+                val outputFile = File.createTempFile("media", null)
+                val outputUri = Uri.fromFile(outputFile)
+                val outputUriPath = FFmpegKitConfig.getSafParameterForWrite(context, outputUri)
+
+                FFmpegKit.execute(" -i $inputUriPath -acodec pcm_s16le -ar 44100 -ac 2 -f wav $outputUriPath")
+                tempFile.delete()
+                max(context, outputUri)
+                return Pair(BufferedInputStream(context.contentResolver.openInputStream(outputUri)), outputFile)
                 // Rest of your code...
             } else {
                 // Handle the case when the connection fails
             }
+
+
         } catch (e: IOException) {
             e.printStackTrace()
             // Handle any errors that occur during download or extraction

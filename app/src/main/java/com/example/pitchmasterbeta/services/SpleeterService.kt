@@ -12,7 +12,6 @@ import com.amazonaws.auth.CognitoCachingCredentialsProvider
 import com.amazonaws.event.ProgressEvent
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.PutObjectRequest
-import org.json.JSONObject
 import java.io.InputStream
 import java.net.URL
 import java.nio.ByteBuffer
@@ -46,14 +45,10 @@ class SpleeterService : Service() {
 
     private var vocalsUrl: URL? = null
     private var accompanimentUrl: URL? = null
-    private var bitRate = 0
-    private var sampleRate = 0
-    private var duration = 0
-
     private var isActive: Boolean = false
 
     interface ServiceNotifier {
-        fun notifyCompletion(vocalsUrl: URL, accompanimentUrl: URL, bitRate: Int, sampleRate: Int, duration: Int)
+        fun notifyCompletion(vocalsUrl: URL, accompanimentUrl: URL)
 
         fun notifyFailed()
 
@@ -140,10 +135,7 @@ class SpleeterService : Service() {
                                         ?.let { accompanimentUrl ->
                                             serviceNotifier?.notifyCompletion(
                                                 vocalsUrl,
-                                                accompanimentUrl,
-                                                bitRate,
-                                                sampleRate,
-                                                duration
+                                                accompanimentUrl
                                             )
                                         }
                                 } ?: serviceNotifier?.notifyFailed()
@@ -185,20 +177,14 @@ class SpleeterService : Service() {
             val statusCode: Int? = invokeResult?.statusCode
             vocalsUrl = s3Client.generatePresignedUrl(
                 AWSKeys.BUCKET_NAME,
-                "output/" + objectKey + "_vocals.wav",
+                "output/" + objectKey + "_vocals.mp3",
                 null
             )
             accompanimentUrl = s3Client.generatePresignedUrl(
                 AWSKeys.BUCKET_NAME,
-                "output/" + objectKey + "_accompaniment.wav",
+                "output/" + objectKey + "_accompaniment.mp3",
                 null
             )
-            val payloadString = String(invokeResult?.payload?.array() ?: byteArrayOf())
-            val responseJson = JSONObject(payloadString)
-            val jsonArray = responseJson.getJSONArray("body")
-            bitRate = jsonArray.getInt(0)
-            sampleRate = jsonArray.getInt(1)
-            duration = jsonArray.getInt(2)
             return statusCode == 200
         } catch (e: Exception) {
             e.printStackTrace()

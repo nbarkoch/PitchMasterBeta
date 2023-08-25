@@ -43,10 +43,12 @@ fun BackPressHandler(
                             viewModel.pauseAudioDispatchers()
                         }
                         WorkspaceViewModel.PlayerState.IDLE,
-                        WorkspaceViewModel.PlayerState.PAUSE,
-                        WorkspaceViewModel.PlayerState.END -> {
+                        WorkspaceViewModel.PlayerState.PAUSE ->{
                             viewModel.resetScoreAndPlayingState()
                             viewModel.resetWorkspace()
+                        }
+                        WorkspaceViewModel.PlayerState.END ->{
+                            viewModel.resetScoreAndPlayingState()
                         }
                     }
                     viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.PICK)

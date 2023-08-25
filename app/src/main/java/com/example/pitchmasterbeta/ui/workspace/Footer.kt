@@ -90,7 +90,7 @@ fun WorkspaceFooter(
             viewModel.viewModelScope.launch(Dispatchers.IO) {
                 viewModel.handleResultUriForAudioIntent(
                     context,
-                    MainActivity.appContentResolver,
+                    MainActivity.appContext?.contentResolver,
                     result.data?.data
                 )
                 if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {

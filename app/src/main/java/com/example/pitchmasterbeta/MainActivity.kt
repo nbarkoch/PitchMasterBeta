@@ -1,7 +1,9 @@
 package com.example.pitchmasterbeta
 
 import android.content.ContentResolver
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +17,9 @@ import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         appContentResolver = contentResolver
+        appContext = applicationContext
         setContent {
             PitchMasterBetaTheme {
                 // A surface container using the 'background' color from the theme
@@ -32,6 +36,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         val viewModelStore by lazy { ViewModelStore() }
         var appContentResolver: ContentResolver? = null
+        var appContext: Context? = null
     }
 
     override fun onDestroy() {

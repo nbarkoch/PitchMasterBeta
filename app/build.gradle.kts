@@ -75,6 +75,7 @@ dependencies {
     implementation("com.amazonaws:aws-android-sdk-core:2.2.+")
     implementation("com.amazonaws:aws-android-sdk-lambda:2.2.+")
     implementation("androidx.compose.material:material")
+    implementation("com.arthenica:ffmpeg-kit-full:6.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
