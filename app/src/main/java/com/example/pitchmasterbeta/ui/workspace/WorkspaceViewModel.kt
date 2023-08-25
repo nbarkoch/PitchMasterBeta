@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Constraints.Companion.Infinity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity.Companion.appContext
@@ -497,16 +498,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     fun giveOpinionForScore(givenScore: Int): String {
-        val range1 = (expectedScore / 8f).toInt()
-        val range2 = (expectedScore / 4f).toInt()
-        val range3 = (expectedScore / 1.7f).toInt()
-        val range4 = (expectedScore)
-
-        return when (givenScore) {
-            in 0..range1 -> "Try better next time!"
-            in range3..range4 -> "Pro Singer!"
-            in range1..range2 -> "Nice work"
-            in range2..range3 -> "Well Done!"
+        return when (((givenScore.toFloat() / expectedScore) * 100).toInt()) {
+            in 0..55 -> "Try better next time!"
+            in 56..70 -> "Nice work"
+            in 71..85 -> "Well Done!"
+            in 86..Infinity -> "Pro Singer!"
             else -> "Umm.. Try again?"
         }
     }
@@ -537,6 +533,4 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         context.startActivity(intent)
         hideDialog()
     }
-    //TODO: 1.back press (still hard to work with current implementation)
-    //TODO: 2.delete the temp files
 }
