@@ -500,9 +500,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     fun giveOpinionForScore(givenScore: Int): String {
         return when (((givenScore.toFloat() / expectedScore) * 100).toInt()) {
             in 0..55 -> "Try better next time!"
-            in 56..70 -> "Nice work"
-            in 71..85 -> "Well Done!"
-            in 86..Infinity -> "Pro Singer!"
+            in 56..74 -> "Nice work"
+            in 75..84 -> "Well Done!"
+            in 85..Infinity -> "Pro Singer!"
             else -> "Umm.. Try again?"
         }
     }
