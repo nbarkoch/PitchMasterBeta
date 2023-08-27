@@ -4,9 +4,6 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
-import android.provider.Settings
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Constraints.Companion.Infinity
 import androidx.lifecycle.ViewModel
@@ -316,7 +313,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     }
                 }
             val onCompletion: () -> Unit = {
-                setPlayingState(PlayerState.END)
+                if(_playingState.value == PlayerState.PLAYING) {
+                    setPlayingState(PlayerState.END)
+                }
                 resetAudio()
             }
             setPlayingState(PlayerState.PLAYING)
@@ -457,6 +456,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun resetWorkspace() {
         resetAudio()
+        resetScoreAndPlayingState()
         mediaInfo.closeStreams()
         deleteTempFiles()
         _songFullName.value = ""
@@ -516,21 +516,5 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun hideDialog() {
         _showDialog.value = false
-    }
-
-    fun openAppNotificationSettings(context: Context) {
-        val intent = Intent().apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            } else {
-                action = "android.settings.APP_NOTIFICATION_SETTINGS"
-                putExtra("app_package", context.packageName)
-                putExtra("app_uid", context.applicationInfo.uid)
-            }
-        }
-        context.startActivity(intent)
-        hideDialog()
     }
 }

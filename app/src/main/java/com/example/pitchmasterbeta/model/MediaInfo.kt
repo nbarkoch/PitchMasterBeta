@@ -147,15 +147,8 @@ data class MediaInfo(
     fun closeStreams() {
         singerInputStream?.run { this.close() }
         bgMusicInputStream?.run { this.close() }
-    }
-
-
-    fun prepareForExecution(bitRate: Int, sampleRate: Int, duration: Int) {
-        audioFloatBuffer = bitRate / 16
-        overlap = audioFloatBuffer / 4
-        voiceSampleRate = sampleRate * 2
-        audioFloatBuffer = AudioRecord.getMinBufferSize(voiceSampleRate, 16, 2)
-        timeStampDuration = duration.toDouble()
+        singerInputStream = null
+        bgMusicInputStream = null
     }
 
 }

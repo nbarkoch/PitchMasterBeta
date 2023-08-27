@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -67,13 +68,16 @@ fun BackgroundMic() {
 
 @Composable
 fun BubbleMaker() {
-    repeat(40) {
-        BubbleAnimation()
+    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val playState by rememberUpdatedState(viewModel.playingState.collectAsState())
+
+    repeat(50) {
+        BubbleAnimation(playState.value == WorkspaceViewModel.PlayerState.PLAYING)
     }
 }
 
 @Composable
-fun BubbleAnimation() {
+fun BubbleAnimation(active: Boolean) {
     val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp.value
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp.value
     var bubbleSizeDp by remember { mutableStateOf(50.dp) }
@@ -119,10 +123,10 @@ fun BubbleAnimation() {
     }
 
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay((500..14000).random().toLong())
-            bubbleSizeDp = (30..50).random().dp
+    LaunchedEffect(active) {
+        while (active) {
+            delay((500..16000).random().toLong())
+            bubbleSizeDp = (30..70).random().dp
             initialX = (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
             targetX = (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
             duration = (7000..9000).random()
@@ -135,25 +139,23 @@ fun BubbleAnimation() {
         }
     }
 
+    val brush = Brush.radialGradient(
+        colors = listOf(
+            color,
+            color,
+            Color.Transparent,
+        )
+    )
+
     Box(
         modifier = Modifier
             .offset(x = x.dp, y = y.dp)
             .size(bubbleSizeDp)
-            .alpha(if (isVisible) 0.65f else 0f)
-            .background(color = color, shape = CircleShape)
+            .alpha(if (isVisible) 0.35f else 0f)
+            .background(brush = brush, shape = CircleShape)
     )
 
 }
-//
-//private fun interpolateColor(fraction: Float): Color {
-//    return Color(
-//        ArgbEvaluator().evaluate(
-//            fraction,
-//            android.graphics.Color.BLUE,
-//            android.graphics.Color.RED
-//        ) as Int
-//    )
-//}
 
 @Preview(showBackground = true)
 @Composable

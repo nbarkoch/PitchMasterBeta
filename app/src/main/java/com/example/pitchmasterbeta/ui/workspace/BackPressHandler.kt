@@ -1,11 +1,9 @@
 package com.example.pitchmasterbeta.ui.workspace
 
-import android.util.Log
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
@@ -44,9 +42,7 @@ fun BackPressHandler(
                         }
                         WorkspaceViewModel.PlayerState.IDLE,
                         WorkspaceViewModel.PlayerState.PAUSE ->{
-                            viewModel.resetScoreAndPlayingState()
                             viewModel.resetWorkspace()
-                            viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.PICK)
                         }
                         WorkspaceViewModel.PlayerState.END ->{
                             viewModel.resetScoreAndPlayingState()
