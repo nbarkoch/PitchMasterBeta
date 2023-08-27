@@ -23,8 +23,10 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -241,6 +243,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private var musicJob: Job? = null
     private var micJob: Job? = null
+    private var jobsCompleted: Boolean = true
 
 
     fun startAudioDispatchers() {
@@ -324,6 +327,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             // Start the audio dispatcher
             musicAudioDispatcher?.run()
         }
+        jobsCompleted = false
     }
 
     fun pauseAudioDispatchers() {
@@ -358,12 +362,24 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     this.stop()
                 }
             }
-            mediaInfo.singerInputStream?.reset()
-            mediaInfo.bgMusicInputStream?.reset()
-            runBlocking {
-                musicJob?.join()
-                micJob?.join()
+            mediaInfo.singerInputStream?.run {
+                if (markSupported()){
+                    reset()
+                }
             }
+            mediaInfo.bgMusicInputStream?.run {
+                if (markSupported()){
+                    reset()
+                }
+            }
+
+            if (!jobsCompleted) {
+                jobsCompleted = true
+                runBlocking {
+                    joinAll(*listOfNotNull(musicJob, micJob).toTypedArray())
+                }
+            }
+
         } catch (e: Exception) {
             e.printStackTrace()
         }

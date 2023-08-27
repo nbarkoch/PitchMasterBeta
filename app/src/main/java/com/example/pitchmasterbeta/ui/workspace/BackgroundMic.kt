@@ -35,6 +35,7 @@ import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import kotlinx.coroutines.delay
+import kotlin.random.Random
 
 @Composable
 fun BackgroundMic() {
@@ -71,7 +72,7 @@ fun BubbleMaker() {
     val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val playState by rememberUpdatedState(viewModel.playingState.collectAsState())
 
-    repeat(50) {
+    repeat(60) {
         BubbleAnimation(playState.value == WorkspaceViewModel.PlayerState.PLAYING)
     }
 }
@@ -81,6 +82,7 @@ fun BubbleAnimation(active: Boolean) {
     val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp.value
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp.value
     var bubbleSizeDp by remember { mutableStateOf(50.dp) }
+    var bubbleOpacity by remember { mutableStateOf(0.6f) }
     var duration by remember { mutableStateOf(3000) }
     var isVisible by remember { mutableStateOf(false) }
     var initialX by remember {
@@ -126,10 +128,11 @@ fun BubbleAnimation(active: Boolean) {
     LaunchedEffect(active) {
         while (active) {
             delay((500..16000).random().toLong())
-            bubbleSizeDp = (30..70).random().dp
+            bubbleSizeDp = (20..80).random().dp
             initialX = (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
             targetX = (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
             duration = (7000..9000).random()
+            bubbleOpacity = Random.nextDouble(0.1, 0.75).toFloat()
             initialY = screenHeightDp + (0..1).random()
             targetY = -bubbleSizeDp.value + (0..1).random()
             isVisible = true
@@ -151,7 +154,7 @@ fun BubbleAnimation(active: Boolean) {
         modifier = Modifier
             .offset(x = x.dp, y = y.dp)
             .size(bubbleSizeDp)
-            .alpha(if (isVisible) 0.35f else 0f)
+            .alpha(if (isVisible) bubbleOpacity else 0f)
             .background(brush = brush, shape = CircleShape)
     )
 
