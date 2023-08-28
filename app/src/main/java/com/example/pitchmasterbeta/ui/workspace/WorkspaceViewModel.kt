@@ -488,6 +488,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _notificationMessage.value = message
     }
 
+    override fun notifyProgressChanged(progress: Int, message: String, duration: Double) {
+        notification?.updateProgress(progress, message, duration)
+        _notificationMessage.value = message
+    }
+
     fun initTempFiles(context: Context) {
         tempSingerFile = File(context.cacheDir, "vocalFile.wav")
         tempMusicFile = File(context.cacheDir, "musicFile.wav")
