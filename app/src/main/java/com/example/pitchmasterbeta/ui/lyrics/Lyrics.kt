@@ -1,4 +1,4 @@
-package com.example.pitchmasterbeta.ui.workspace
+package com.example.pitchmasterbeta.ui.lyrics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import kotlin.math.abs
 
 @Composable

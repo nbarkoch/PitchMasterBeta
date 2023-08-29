@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.ui.lyrics.LyricsLazyColumn
+import com.example.pitchmasterbeta.ui.lyrics.LyricsText
 
 @Composable
 fun WorkspaceBody(modifier: Modifier) {
@@ -35,6 +37,8 @@ fun WorkspaceBody(modifier: Modifier) {
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.W400
                 )
+//                LyricsText( " yayas as uasu uays yauy asyas uyy asyu asy ayuy ayu yyy as asyasu yuasy  asyas uyy au asyuuya yua syu ayus" + " yayas as uasu uays yauy asyas uyy asyu asy ayuy ayu yyy as asyasu yuasy  asyas uyy au asyuuya yua syu ayus"+ " yayas as uasu uays yauy asyas uyy asyu asy ayuy ayu yyy as asyasu yuasy  asyas uyy au asyuuya yua syu ayus",
+//                    true, 1f)
             }
         }
         WorkspaceViewModel.WorkspaceState.WAITING -> {

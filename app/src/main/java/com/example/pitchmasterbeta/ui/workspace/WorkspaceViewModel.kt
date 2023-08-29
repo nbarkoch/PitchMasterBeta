@@ -44,7 +44,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var notification: SpleeterProgressNotification? = null
     private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = false
+    private val devTestMode: Boolean = true
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
