@@ -1,31 +1,21 @@
 package com.example.pitchmasterbeta.ui.lyrics
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import kotlin.math.abs
@@ -34,11 +24,14 @@ import kotlin.math.abs
 fun LyricsLazyColumn(
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     // Observe changes in scrollToPosition and trigger smooth scroll when it changes
     val listState = rememberLazyListState()
     val scrollToPosition by rememberUpdatedState(viewModel.lyricsScrollToPosition.collectAsState())
     val segments by viewModel.lyricsSegments.collectAsState()
+    val isPlaying =
+        viewModel.playingState.collectAsState().value == WorkspaceViewModel.PlayerState.PLAYING
 
 
     // Create element height in pixel state
@@ -75,25 +68,11 @@ fun LyricsLazyColumn(
                     ) * 0.75f)
                 }
             }
-
-            Column {
-                Text(
-                    text = item.text,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 7.dp)
-                        .scale(opacity)
-                        .alpha(opacity * 4f - 3f),
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        textAlign = TextAlign.Center,
-                        fontWeight = if (scrollToPosition.value == i) FontWeight.Bold else FontWeight(
-                            400
-                        )
-                    )
-                )
-            }
+            LyricsText(
+                segment = item,
+                isActive = scrollToPosition.value == i && isPlaying,
+                scale = opacity,
+            )
         }
         item {
             Spacer(modifier = Modifier.height(Dp((columnMidpoint * 0.9f) / LocalDensity.current.density)))
@@ -109,7 +88,7 @@ fun LyricsLazyColumn(
 @Composable
 fun CustomLazyColumnPreview() {
     if (MainActivity.viewModelStore["workspace"] == null) {
-        val viewModel =  WorkspaceViewModel()
+        val viewModel = WorkspaceViewModel()
         viewModel.mockupLyrics()
         MainActivity.viewModelStore.put("workspace", viewModel)
     }

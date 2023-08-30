@@ -16,11 +16,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.ui.lyrics.LyricsLazyColumn
-import com.example.pitchmasterbeta.ui.lyrics.LyricsText
 
 @Composable
 fun WorkspaceBody(modifier: Modifier) {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val loadingMessage by rememberUpdatedState(viewModel.notificationMessage.collectAsState())
 
@@ -28,23 +28,29 @@ fun WorkspaceBody(modifier: Modifier) {
         WorkspaceViewModel.WorkspaceState.IDLE -> {
             LyricsLazyColumn(modifier.fillMaxSize())
         }
+
         WorkspaceViewModel.WorkspaceState.PICK -> {
-            Box( modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center) {
-                Text(text = "Pick a song from gallery",
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Pick a song from gallery",
                     color = Color.White,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.W400
                 )
-//                LyricsText( " yayas as uasu uays yauy asyas uyy asyu asy ayuy ayu yyy as asyasu yuasy  asyas uyy au asyuuya yua syu ayus" + " yayas as uasu uays yauy asyas uyy asyu asy ayuy ayu yyy as asyasu yuasy  asyas uyy au asyuuya yua syu ayus"+ " yayas as uasu uays yauy asyas uyy asyu asy ayuy ayu yyy as asyasu yuasy  asyas uyy au asyuuya yua syu ayus",
-//                    true, 1f)
             }
         }
+
         WorkspaceViewModel.WorkspaceState.WAITING -> {
-            Box( modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center) {
-                Text(text = loadingMessage.value,
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = loadingMessage.value,
                     color = Color.White,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center,
@@ -53,6 +59,7 @@ fun WorkspaceBody(modifier: Modifier) {
                 )
             }
         }
+
         else -> {
 
         }
