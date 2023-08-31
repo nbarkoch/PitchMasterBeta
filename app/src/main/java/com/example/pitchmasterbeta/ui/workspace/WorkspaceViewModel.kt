@@ -44,7 +44,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var notification: SpleeterProgressNotification? = null
     private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = true
+    private val devTestMode: Boolean = false
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
@@ -480,17 +480,17 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         notification?.hideNotification()
     }
 
-    private val _notificationMessage = MutableStateFlow("")
-    val notificationMessage: StateFlow<String> = _notificationMessage
+    private val _notificationMessage = MutableStateFlow(LyricsSegment("", 0.0, 0.0))
+    val notificationMessage: StateFlow<LyricsSegment> = _notificationMessage
 
     override fun notifyProgressChanged(progress: Int, message: String) {
         notification?.updateProgress(progress, message)
-        _notificationMessage.value = message
+        _notificationMessage.value = LyricsSegment(message, 0.0, 0.0)
     }
 
     override fun notifyProgressChanged(progress: Int, message: String, duration: Double) {
-        notification?.updateProgress(progress, message, duration)
-        _notificationMessage.value = message
+        notification?.updateProgress(progress, message, duration * 1000.0)
+        _notificationMessage.value = LyricsSegment(message, 0.0, duration)
     }
 
     fun initTempFiles(context: Context) {

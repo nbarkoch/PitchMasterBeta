@@ -7,8 +7,10 @@ import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,25 +32,43 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.model.LyricsSegment
+import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import kotlinx.coroutines.delay
+import kotlin.math.floor
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
 fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
     var lines: List<String> by remember { mutableStateOf(emptyList()) }
-    var visibles by remember { mutableStateOf(emptyList<Boolean>()) }
+    var visibleLines by remember { mutableStateOf(emptyList<Boolean>()) }
     var timeForLine by remember { mutableStateOf(0) }
+
+    DisposableEffect(segment) {
+        onDispose {
+            lines = emptyList()
+            visibleLines = emptyList()
+        }
+    }
 
     LaunchedEffect(isActive, lines) {
         if (isActive && lines.isNotEmpty()) {
-            timeForLine = (((segment.end - segment.start) * 1000) / lines.size).toInt()
-            delay(10)
+            val totalDuration = ((segment.end - segment.start) * 1000)
+            val linesLength =  MutableList(lines.size) { 0 }
+            var totalLength = 0
+            for (i in lines.indices) {
+                linesLength[i] = lines[i].length
+                totalLength += lines[i].length
+            }
+            delay(100)
             for (index in lines.indices) {
-                visibles = visibles.toMutableList().also { it[index] = true }
-                delay(timeForLine.toLong())
+                timeForLine = floor((linesLength[index] / totalLength.toDouble()) * totalDuration * 0.95).toInt()
+                visibleLines = visibleLines.toMutableList().also { it[index] = true }
+                delay((timeForLine).toLong())
             }
         }
     }
@@ -58,11 +78,11 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
             text = segment.text,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 7.dp)
+                .padding(horizontal = 11.dp, vertical = 7.dp)
                 .alpha(0f),
             style = TextStyle(
                 color = Color(0xABFFFFFF),
-                fontSize = 18.sp,
+                fontSize = 19.sp,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold
             ),
@@ -80,7 +100,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
                 lines = (0 until lineCount).map { i ->
                     segment.text.substring(startOffset[i], endOffset[i])
                 }
-                visibles = List(lineCount) { false }
+                visibleLines = List(lineCount) { false }
             }
         )
     } else {
@@ -93,7 +113,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
             for (index in lines.indices) {
                 val line = lines[index]
                 val transition = updateTransition(
-                    targetState = visibles[index],
+                    targetState = visibleLines[index],
                     label = ""
                 )
 
@@ -142,5 +162,18 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun LyricsTextPreview() {
+    if (MainActivity.viewModelStore["workspace"] == null) {
+        val viewModel = WorkspaceViewModel()
+        viewModel.mockupLyrics()
+        MainActivity.viewModelStore.put("workspace", viewModel)
+    }
+    MaterialTheme {
+        LyricsText(LyricsSegment("This is a simple text", 0.0, 7000.0), true,1f)
     }
 }

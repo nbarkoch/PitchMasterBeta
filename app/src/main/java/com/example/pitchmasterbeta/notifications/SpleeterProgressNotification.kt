@@ -77,7 +77,7 @@ class SpleeterProgressNotification(context: Context) {
                 notificationBuilder.setProgress(MAX_PROGRESS, lastProgress, false)
                 notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
                 delay(progressChunkDuration)
-                Log.d("Notification manager", "$lastProgress should notify!")
+                Log.d("Notification manager", "progress: $lastProgress%")
             }
         }
     }

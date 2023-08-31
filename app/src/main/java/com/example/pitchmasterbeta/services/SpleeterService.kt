@@ -127,9 +127,9 @@ class SpleeterService : Service() {
 
                         ProgressEvent.COMPLETED_EVENT_CODE -> {
                             checkItself()
-                            serviceNotifier?.notifyProgressChanged(60, "Separating..", 40 * 1000.0)
+                            serviceNotifier?.notifyProgressChanged(60, "Separating..", 40.0)
                             val lambdaExecutionResult = invokeLambdaFunction(objectKey)
-                            serviceNotifier?.notifyProgressChanged(100, "Extracting results", 35 * 1000.0)
+                            serviceNotifier?.notifyProgressChanged(100, "Extracting results", 35.0)
                             checkItself()
                             vocalsUrl?.takeIf { lambdaExecutionResult }
                                 ?.let { vocalsUrl ->
@@ -150,7 +150,7 @@ class SpleeterService : Service() {
                 }
             }
             checkItself()
-            serviceNotifier?.notifyProgressChanged(20, "Uploading The file", 5 * 1000.0)
+            serviceNotifier?.notifyProgressChanged(20, "Uploading The file", 5.0)
             s3Client.putObject(putObjectRequest)
         } catch (e: Exception) {
             e.printStackTrace()

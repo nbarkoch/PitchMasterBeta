@@ -164,6 +164,12 @@ fun BubbleAnimation(active: Boolean) {
 @Composable
 fun BackgroundMicPreview(
 ) {
+    if (MainActivity.viewModelStore["workspace"] == null) {
+        val viewModel = WorkspaceViewModel()
+        viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.IDLE)
+        viewModel.setPlayingState(WorkspaceViewModel.PlayerState.PLAYING)
+        MainActivity.viewModelStore.put("workspace", viewModel)
+    }
     PitchMasterBetaTheme {
         BackgroundMic()
     }

@@ -10,12 +10,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.ui.lyrics.LyricsLazyColumn
+import com.example.pitchmasterbeta.ui.lyrics.LyricsText
 
 @Composable
 fun WorkspaceBody(modifier: Modifier) {
@@ -49,13 +49,10 @@ fun WorkspaceBody(modifier: Modifier) {
                 modifier = modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = loadingMessage.value,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.W400,
-                    fontStyle = FontStyle.Italic
+                LyricsText(
+                    segment = loadingMessage.value,
+                    true,
+                    1f
                 )
             }
         }
