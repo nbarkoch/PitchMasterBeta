@@ -47,6 +47,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
     var lines: List<String> by remember { mutableStateOf(emptyList()) }
     var visibleLines by remember { mutableStateOf(emptyList<Boolean>()) }
     var timeForLine by remember { mutableStateOf(0) }
+    var isRTL by remember { mutableStateOf(false) }
 
     DisposableEffect(segment) {
         onDispose {
@@ -54,6 +55,8 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
             visibleLines = emptyList()
         }
     }
+
+
 
     LaunchedEffect(isActive, lines) {
         if (isActive && lines.isNotEmpty()) {
@@ -68,6 +71,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
             for (index in lines.indices) {
                 timeForLine = floor((linesLength[index] / totalLength.toDouble()) * totalDuration * 0.95).toInt()
                 visibleLines = visibleLines.toMutableList().also { it[index] = true }
+                isRTL = lines[index].isNotEmpty() && Character.getDirectionality(lines[index][0]) != Character.DIRECTIONALITY_LEFT_TO_RIGHT
                 delay((timeForLine).toLong())
             }
         }
@@ -112,6 +116,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
         ) {
             for (index in lines.indices) {
                 val line = lines[index]
+
                 val transition = updateTransition(
                     targetState = visibleLines[index],
                     label = ""
@@ -133,15 +138,21 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
                 val brush = remember(offset) {
                     object : ShaderBrush() {
                         override fun createShader(size: Size): Shader {
+                            val colors = listOf(Color.White, Color(0x90CACACA))
                             val widthOffset = if (isActive) {
                                 size.width * offset
                             } else {
                                 0f
                             }
+                            val lineActiveOffset = if (isRTL) {
+                                size.width - widthOffset
+                            } else {
+                                widthOffset
+                            }
                             return LinearGradientShader(
-                                colors = listOf(Color.White, Color(0x90CACACA)),
-                                from = Offset(widthOffset, 0f),
-                                to = Offset(widthOffset + 1f, 0f),
+                                colors = if (isRTL) colors.reversed() else colors,
+                                from = Offset(lineActiveOffset, 0f),
+                                to = Offset(lineActiveOffset + 1f, 0f),
                                 tileMode = TileMode.Clamp
                             )
                         }

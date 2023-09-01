@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -31,8 +32,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import com.example.pitchmasterbeta.MainActivity
@@ -52,9 +55,11 @@ fun PitchDecorations(
         mutableStateOf(List((screenHeightDp.dp / chordHeight).toInt()) {0})
     }
 
-    PitchDecorationColumn(viewModel, 1, maxChordWidth, items, chordHeight)
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr ) {
+        PitchDecorationColumn(viewModel, 1, maxChordWidth, items, chordHeight)
 
-    PitchDecorationColumn(viewModel, -1, maxChordWidth, items, chordHeight)
+        PitchDecorationColumn(viewModel, -1, maxChordWidth, items, chordHeight)
+    }
 }
 
 @Composable
@@ -64,8 +69,8 @@ fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val gradientBrush = Brush.horizontalGradient(
         colors = listOf(
-            Color.Transparent,
             Color(0x2DE96ADC),
+            Color.Transparent,
         ),
     )
     val modifier = Modifier.fillMaxHeight().width(maxChordWidth).run {
@@ -175,6 +180,9 @@ fun PitchItem(
 @Preview(showBackground = true)
 @Composable
 fun PitchDecorationsPreview() {
+    if (MainActivity.viewModelStore["workspace"] == null) {
+        MainActivity.viewModelStore.put("workspace", WorkspaceViewModel())
+    }
     PitchMasterBetaTheme {
         PitchDecorations()
     }
