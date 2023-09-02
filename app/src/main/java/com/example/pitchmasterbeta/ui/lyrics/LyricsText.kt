@@ -1,5 +1,6 @@
 package com.example.pitchmasterbeta.ui.lyrics
 
+import android.util.Log
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
@@ -71,7 +72,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
             for (index in lines.indices) {
                 timeForLine = floor((linesLength[index] / totalLength.toDouble()) * totalDuration * 0.95).toInt()
                 visibleLines = visibleLines.toMutableList().also { it[index] = true }
-                isRTL = lines[index].isNotEmpty() && Character.getDirectionality(lines[index][0]) != Character.DIRECTIONALITY_LEFT_TO_RIGHT
+                isRTL = lines[index].isNotEmpty() && Character.getDirectionality(lines[index][0]) in 1..2
                 delay((timeForLine).toLong())
             }
         }

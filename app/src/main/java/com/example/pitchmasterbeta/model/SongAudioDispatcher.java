@@ -186,17 +186,17 @@ public class SongAudioDispatcher implements Runnable {
         assert this.floatOverlap < this.audioFloatBuffer.length;
 
         boolean var1 = this.bytesProcessed == 0L || this.bytesProcessed == this.bytesToSkip;
-        int var2;
-        int var3;
-        int var4;
+        int byteOverlap;
+        int floatOverlap;
+        int byteStepSize;
         if (var1 && !this.zeroPadFirstBuffer) {
-            var4 = this.audioByteBuffer.length;
-            var2 = 0;
-            var3 = 0;
+            byteStepSize = this.audioByteBuffer.length;
+            byteOverlap = 0;
+            floatOverlap = 0;
         } else {
-            var4 = this.byteStepSize;
-            var2 = this.byteOverlap;
-            var3 = this.floatOverlap;
+            byteStepSize = this.byteStepSize;
+            byteOverlap = this.byteOverlap;
+            floatOverlap = this.floatOverlap;
         }
 
         if (!var1 && this.audioFloatBuffer.length == this.floatOverlap + this.floatStepSize) {
@@ -207,11 +207,11 @@ public class SongAudioDispatcher implements Runnable {
         boolean var6 = false;
         boolean var7 = false;
 
-        while (!this.paused && !this.stopped && !var7 && var5 < var4) {
+        while (!this.paused && !this.stopped && !var7 && var5 < byteStepSize) {
             int var11;
             try {
-                var11 = this.audioInputStream1.read(this.audioByteBuffer, var2 + var5, var4 - var5);
-                this.audioInputStream2.read(this.audioByteBuffer2, var2 + var5, var4 - var5);
+                var11 = this.audioInputStream1.read(this.audioByteBuffer, byteOverlap + var5, byteStepSize - var5);
+                this.audioInputStream2.read(this.audioByteBuffer2, byteOverlap + var5, byteStepSize - var5);
             } catch (IndexOutOfBoundsException var10) {
                 var11 = -1;
             }
@@ -225,14 +225,14 @@ public class SongAudioDispatcher implements Runnable {
 
         if (var7) {
             if (this.zeroPadLastBuffer) {
-                for (int var8 = var2 + var5; var8 < this.audioByteBuffer.length; ++var8) {
+                for (int var8 = byteOverlap + var5; var8 < this.audioByteBuffer.length; ++var8) {
                     this.audioByteBuffer[var8] = 0;
                 }
 
-                this.converter.toFloatArray(this.audioByteBuffer, var2, this.audioFloatBuffer, var3, this.floatStepSize);
+                this.converter.toFloatArray(this.audioByteBuffer, byteOverlap, this.audioFloatBuffer, floatOverlap, this.floatStepSize);
             } else {
                 byte[] var12 = this.audioByteBuffer;
-                this.audioByteBuffer = new byte[var2 + var5];
+                this.audioByteBuffer = new byte[byteOverlap + var5];
 
                 int var9;
                 for (var9 = 0; var9 < this.audioByteBuffer.length; ++var9) {
@@ -240,21 +240,21 @@ public class SongAudioDispatcher implements Runnable {
                 }
 
                 var9 = var5 / this.format.getFrameSize();
-                this.audioFloatBuffer = new float[var3 + var5 / this.format.getFrameSize()];
-                this.converter.toFloatArray(this.audioByteBuffer, var2, this.audioFloatBuffer, var3, var9);
+                this.audioFloatBuffer = new float[floatOverlap + var5 / this.format.getFrameSize()];
+                this.converter.toFloatArray(this.audioByteBuffer, byteOverlap, this.audioFloatBuffer, floatOverlap, var9);
             }
-        } else if (var4 == var5) {
+        } else if (byteStepSize == var5) {
             if (var1 && !this.zeroPadFirstBuffer) {
                 this.converter.toFloatArray(this.audioByteBuffer, 0, this.audioFloatBuffer, 0, this.audioFloatBuffer.length);
             } else {
-                this.converter.toFloatArray(this.audioByteBuffer, var2, this.audioFloatBuffer, var3, this.floatStepSize);
+                this.converter.toFloatArray(this.audioByteBuffer, byteOverlap, this.audioFloatBuffer, floatOverlap, this.floatStepSize);
             }
         } else if (!this.stopped) {
-            throw new IOException(String.format("The end of the audio stream has not been reached and the number of bytes read (%d) is not equal to the expected amount of bytes(%d).", var5, var4));
+            throw new IOException(String.format("The end of the audio stream has not been reached and the number of bytes read (%d) is not equal to the expected amount of bytes(%d).", var5, byteStepSize));
         }
 
         this.audioEvent.setFloatBuffer(this.audioFloatBuffer);
-        this.audioEvent.setOverlap(var3);
+        this.audioEvent.setOverlap(floatOverlap);
         return var5;
     }
 
