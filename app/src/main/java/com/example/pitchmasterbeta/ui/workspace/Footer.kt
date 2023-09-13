@@ -299,10 +299,16 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
     val progress = viewModel.progress.collectAsState()
     val playState = viewModel.playingState.collectAsState()
 
-    SimpleCircleButton(
-        65.dp, R.drawable.filters_1_svgrepo_com,
-        onClick = { viewModel.displayPitchControls(!viewModel.displayPitchControls.value) },
-        contentDesc = "singer voice volume"
+//    SimpleCircleButton(
+//        65.dp, R.drawable.filters_1_svgrepo_com,
+//        onClick = { viewModel.displayPitchControls(!viewModel.displayPitchControls.value) },
+//        contentDesc = "singer voice volume"
+//    )
+
+    SimpleCircleButton(65.dp,
+        R.drawable.wave_sine,
+        onClick = { viewModel.displayPitchFactor(!viewModel.displayPitchFactor.value) },
+        contentDesc = "audio pitch factor"
     )
 
     Box(contentAlignment = Alignment.Center) {
@@ -372,47 +378,62 @@ fun DurationRow() {
 fun ControlsRow() {
     val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val displaySingerVolume by rememberUpdatedState(viewModel.displaySingerVolume.collectAsState())
-    val displayPitchControls by rememberUpdatedState(viewModel.displayPitchControls.collectAsState())
+    val displayPitchFactor by rememberUpdatedState(viewModel.displayPitchFactor.collectAsState())
+//    val displayPitchControls by rememberUpdatedState(viewModel.displayPitchControls.collectAsState())
     val volumeScale by animateFloatAsState(
         targetValue = if (displaySingerVolume.value) 1f else 0f,
         label = ""
     )
-    val pitchesControlsScale by animateFloatAsState(
-        targetValue = if (displayPitchControls.value) 1f else 0f,
+    val pitchFactorScale by animateFloatAsState(
+        targetValue = if (displayPitchFactor.value) 1f else 0f,
         label = ""
     )
+//    val pitchesControlsScale by animateFloatAsState(
+//        targetValue = if (displayPitchControls.value) 1f else 0f,
+//        label = ""
+//    )
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .padding(horizontal = 10.dp)
-                .offset(x = (-50).dp)
-                .graphicsLayer(
-                    scaleX = pitchesControlsScale, scaleY = pitchesControlsScale,
-                    alpha = pitchesControlsScale
-                )
-        ) {
-            PitchControls(
-                Modifier
-                    .background(
-                        color = Color.White,
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .padding(10.dp)
-            )
-        }
+//        Box(
+//            Modifier
+//                .padding(horizontal = 10.dp)
+//                .offset(x = (-50).dp)
+//                .graphicsLayer(
+//                    scaleX = pitchesControlsScale, scaleY = pitchesControlsScale,
+//                    alpha = pitchesControlsScale
+//                )
+//        ) {
+//            PitchControls(
+//                Modifier
+//                    .background(
+//                        color = Color.White,
+//                        shape = RoundedCornerShape(20.dp)
+//                    )
+//                    .padding(10.dp)
+//            )
+//        }
         VerticalSeekBar(modifier = Modifier
             .height(100.dp)
             .width(35.dp)
-            .offset(x = (-5).dp)
+            .offset(x = (-55).dp)
+            .graphicsLayer(scaleX = pitchFactorScale, alpha = pitchFactorScale, scaleY = pitchFactorScale),
+            onProgressChanged = {
+                viewModel.setPitchFactor(it)
+            }, initialOffsetPercent = viewModel.getPitchFactor()
+        )
+        VerticalSeekBar(modifier = Modifier
+            .height(100.dp)
+            .width(35.dp)
+            .offset(x = (55).dp)
             .graphicsLayer(scaleX = volumeScale, alpha = volumeScale, scaleY = volumeScale),
             onProgressChanged = {
                 viewModel.setSingerVolume(it)
             }, initialOffsetPercent = viewModel.getSingerVolume()
         )
+
     }
 }
 
@@ -448,6 +469,9 @@ fun PitchControls(modifier: Modifier) {
 @Preview
 @Composable
 fun WorkspaceFooterPreview() {
+    if (MainActivity.viewModelStore["workspace"] == null) {
+        MainActivity.viewModelStore.put("workspace", WorkspaceViewModel())
+    }
     MaterialTheme {
         WorkspaceFooter(modifier = Modifier.fillMaxWidth())
     }

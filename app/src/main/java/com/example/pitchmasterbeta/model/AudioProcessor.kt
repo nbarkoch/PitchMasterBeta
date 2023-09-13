@@ -2,6 +2,7 @@ package com.example.pitchmasterbeta.model
 
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.media.PlaybackParams
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
 import be.tarsos.dsp.io.TarsosDSPAudioFormat
@@ -36,6 +37,9 @@ class AudioProcessor {
     private var musicDispatcher: SongAudioDispatcher? = null
     private var mainAudioTrack: AudioTrack? = null
     var volumeFactor: Float = 0f
+    var pitchFactor: Float = 1.0f
+
+    val playbackParams = PlaybackParams()
     var computeAndPlaySingerSoundMode: Boolean = false
     var computeAndPlayRecordedSoundMode: Boolean = false
     private var generatedSingerByteSound: ByteArray = byteArrayOf()
@@ -204,7 +208,7 @@ class AudioProcessor {
         val pitchDetectionHandler =
             PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
                 val sTimeStamp = audioEvent.timeStamp
-                singNoteI = processPitchHeavy(pitchDetectionResult.pitch)
+                singNoteI = processPitchHeavy(pitchDetectionResult.pitch * pitchFactor)
                 val singVolume = soundVolume(audioEvent.floatBuffer)
                 if (singNoteI != sortedNotes.size - 1) {
                     shiftArrayRight(singerCurrentPitches, singNoteI)
@@ -220,8 +224,7 @@ class AudioProcessor {
             floatBuffer,
             pitchDetectionHandler
         )
-
-        val bufferSizeInBytes = floatBuffer * tarsosDSPAudioFormat.sampleSizeInBits / 8
+         val bufferSizeInBytes = floatBuffer * tarsosDSPAudioFormat.sampleSizeInBits / 8
         mainAudioTrack = AudioTrack(
             AudioManager.STREAM_MUSIC,
             tarsosDSPAudioFormat.sampleRate.toInt(),
@@ -232,9 +235,11 @@ class AudioProcessor {
         )
         mainAudioTrack?.play()
         val bytesToRead = (floatBuffer - overlap) * 2
-
+        
         musicDispatcher?.addAudioProcessor(object : SongAudioDispatcher.MicAudioProcessor {
             override fun process(audioEvent: AudioEvent, musicBuffer: ByteArray): Boolean {
+                playbackParams.pitch = pitchFactor
+                mainAudioTrack?.playbackParams = playbackParams
                 p.process(audioEvent)
                 var singerBuffer = ByteArray(musicBuffer.size)
                 if (volumeFactor > 0.05f) {

@@ -44,7 +44,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var notification: SpleeterProgressNotification? = null
     private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = false
+    private val devTestMode: Boolean = true
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
@@ -209,12 +209,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _displaySingerVolume.value = b
     }
 
-    private val _displayPitchControls = MutableStateFlow(false)
-    val displayPitchControls: StateFlow<Boolean> = _displayPitchControls
-    fun displayPitchControls(b: Boolean) {
-        _displayPitchControls.value = b
-    }
-
     fun setSingerVolume(volume: Float) {
         if (volume > 0.06f) {
             audioProcessor?.volumeFactor = volume
@@ -226,6 +220,35 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     fun getSingerVolume(): Float {
         return audioProcessor?.volumeFactor ?: 0f
     }
+
+
+    private val _displayPitchFactor = MutableStateFlow(false)
+    val displayPitchFactor: StateFlow<Boolean> = _displayPitchFactor
+    fun displayPitchFactor(b: Boolean) {
+        _displayPitchFactor.value = b
+    }
+
+    fun getPitchFactor(): Float {
+        return (audioProcessor?.pitchFactor ?: 1f) - 0.5f
+    }
+
+    fun setPitchFactor(pitchFactor: Float) {
+        if (pitchFactor > 0.06f) {
+            audioProcessor?.pitchFactor = pitchFactor + 0.5f
+        } else {
+            audioProcessor?.pitchFactor = 0.5f
+        }
+    }
+
+
+    private val _displayPitchControls = MutableStateFlow(false)
+    val displayPitchControls: StateFlow<Boolean> = _displayPitchControls
+    fun displayPitchControls(b: Boolean) {
+        _displayPitchControls.value = b
+    }
+
+
+
 
     private val _isComputingPitchSinger = MutableStateFlow(false)
     val isComputingPitchSinger: StateFlow<Boolean> = _isComputingPitchSinger
