@@ -23,7 +23,6 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.joinAll
@@ -48,6 +47,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private val _lyricsScrollToPosition = MutableStateFlow(0)
     val lyricsScrollToPosition: StateFlow<Int> = _lyricsScrollToPosition
+    private val _lyricsActivePosition = MutableStateFlow(-1)
+    val lyricsActivePosition: StateFlow<Int> = _lyricsActivePosition
 
     // MutableState for storing your list of items obtained from the server
     private val _lyricsSegments = MutableStateFlow<List<LyricsSegment>>(emptyList())
@@ -55,7 +56,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun mockupLyrics() {
         val payloadString =
-            "{\"statusCode\": 200, \"body\": \"[{\\\"start\\\": 0.0, \\\"end\\\": 26.5, \\\"text\\\": \\\" There ain't no gold in this river That I've been washing my hands in forever\\\"}, {\\\"start\\\": 26.5, \\\"end\\\": 38.66, \\\"text\\\": \\\" I know there is hope in these waters But I can't bring myself to swim when I am\\\"}, {\\\"start\\\": 38.66, \\\"end\\\": 50.74, \\\"text\\\": \\\" drowning in this silence, baby Let me in, go easy\\\"}, {\\\"start\\\": 50.74, \\\"end\\\": 66.74000000000001, \\\"text\\\": \\\" Help me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 66.74, \\\"end\\\": 86.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 86.74, \\\"end\\\": 100.74, \\\"text\\\": \\\" There ain't no room for things to change When we are both so deeply stuck in our ways\\\"}, {\\\"start\\\": 100.74, \\\"end\\\": 117.74, \\\"text\\\": \\\" You can't deny how hard I've tried I changed who I was to put you both first But now I give up\\\"}, {\\\"start\\\": 117.74, \\\"end\\\": 137.74, \\\"text\\\": \\\" Go easy on me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 137.74, \\\"end\\\": 157.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 158.74, \\\"end\\\": 174.74, \\\"text\\\": \\\" I had good intentions and the highest hopes But I know right now that probably doesn't even show\\\"}, {\\\"start\\\": 174.74, \\\"end\\\": 194.74, \\\"text\\\": \\\" Go easy on me, baby, I was still a child Didn't get the chance to feel the world around me\\\"}, {\\\"start\\\": 194.74, \\\"end\\\": 206.74, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}]\"}"
+            "{  \"statusCode\": 200,  \"body\": \"[{\\\"start\\\": 12.9524, \\\"end\\\": 25.6667, \\\"text\\\": \\\" There ain't no gold in this river That I've been washing my hands in forever\\\"}, {\\\"start\\\": 26.5, \\\"end\\\": 39.94, \\\"text\\\": \\\" I know there is hope in these waters But I can't bring myself to swim when I am drowning\\\"}, {\\\"start\\\": 39.94, \\\"end\\\": 53.7, \\\"text\\\": \\\" In this silence, baby, let me in Go easy on me, baby\\\"}, {\\\"start\\\": 53.7, \\\"end\\\": 66.74000000000001, \\\"text\\\": \\\" I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 66.74000000000001, \\\"end\\\": 78.18, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 83.7, \\\"end\\\": 100.34, \\\"text\\\": \\\" There ain't no room for things to change When we are both so deeply stuck in our ways\\\"}, {\\\"start\\\": 100.82000000000001, \\\"end\\\": 113.14, \\\"text\\\": \\\" You can't deny how hard I've tried I changed who I was to put you both first\\\"}, {\\\"start\\\": 113.14, \\\"end\\\": 124.66, \\\"text\\\": \\\" But now I give up Go easy on me, baby\\\"}, {\\\"start\\\": 124.66, \\\"end\\\": 137.94, \\\"text\\\": \\\" I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 137.94, \\\"end\\\": 159.06, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 159.06, \\\"end\\\": 175.14000000000001, \\\"text\\\": \\\" I had good intentions and the highest hopes But I know right now that probably doesn't even show\\\"}, {\\\"start\\\": 175.22, \\\"end\\\": 195.14, \\\"text\\\": \\\" Go easy on me, baby I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 195.14, \\\"end\\\": 215.14, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}]\"}"
         val lyricsSegmentListType: Type = object : TypeToken<List<LyricsSegment?>?>() {}.type
         _lyricsSegments.value =
             Gson().fromJson(JSONObject(payloadString).getString("body"), lyricsSegmentListType)
@@ -330,12 +331,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         _sinNoteActive.value = false
                     }
 
-                    if (_lyricsSegments.value.isNotEmpty() &&
-                        _lyricsSegments.value[lyricsScrollToPosition.value].end < musicTimeStamp
-                        && lyricsScrollToPosition.value < _lyricsSegments.value.size - 1
-                    ) {
-                        _lyricsScrollToPosition.value =
-                            (_lyricsScrollToPosition.value + 1) % _lyricsSegments.value.size
+                    _lyricsActivePosition.value.let { currentPosition ->
+                        val nextPosition = (currentPosition + 1) % _lyricsSegments.value.size
+                        if (_lyricsSegments.value.isNotEmpty() &&
+                            _lyricsSegments.value[nextPosition].start <= musicTimeStamp &&
+                            musicTimeStamp < _lyricsSegments.value[nextPosition].end) {
+                            _lyricsScrollToPosition.value = nextPosition
+                            _lyricsActivePosition.value = _lyricsScrollToPosition.value
+                        }
                     }
                 }
             val onCompletion: () -> Unit = {

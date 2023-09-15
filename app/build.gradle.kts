@@ -72,7 +72,7 @@ dependencies {
     implementation("com.amazonaws:aws-android-sdk-cognito:2.16.1")
     implementation("com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.22.2")
     /*Amazon Lambda Libraries*/
-    implementation("com.amazonaws:aws-android-sdk-core:2.2.+")
+    implementation("com.amazonaws:aws-android-sdk-core:2.22.2")
     implementation("com.amazonaws:aws-android-sdk-lambda:2.2.+")
     implementation("androidx.compose.material:material")
     implementation("com.arthenica:ffmpeg-kit-full:6.0")
