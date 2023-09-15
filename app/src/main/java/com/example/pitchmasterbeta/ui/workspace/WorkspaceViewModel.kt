@@ -337,7 +337,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             _lyricsSegments.value[nextPosition].start <= musicTimeStamp &&
                             musicTimeStamp < _lyricsSegments.value[nextPosition].end) {
                             _lyricsScrollToPosition.value = nextPosition
-                            _lyricsActivePosition.value = _lyricsScrollToPosition.value
+                            _lyricsActivePosition.value = nextPosition
                         }
                     }
                 }
