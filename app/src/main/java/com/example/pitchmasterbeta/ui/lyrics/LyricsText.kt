@@ -1,16 +1,18 @@
 package com.example.pitchmasterbeta.ui.lyrics
 
-import android.util.Log
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,19 +30,155 @@ import androidx.compose.ui.graphics.LinearGradientShader
 import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.model.LyricsSegment
+import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
+import com.example.pitchmasterbeta.model.LyricsWord
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
+import com.example.pitchmasterbeta.utils.math.findSubArrayListIndices
 import kotlinx.coroutines.delay
 import kotlin.math.floor
+
+@OptIn(ExperimentalTextApi::class)
+@Composable
+fun LyricsText(segment: LyricsTimestampedSegment, isActive: Boolean, scale: Float, activeWord: Int) {
+    var lines: List<List<LyricsWord>> by remember { mutableStateOf(emptyList()) }
+    var isSegmentRTL by remember { mutableStateOf(false) }
+
+    DisposableEffect(segment) {
+        onDispose {
+            lines = emptyList()
+        }
+    }
+
+    if (lines.isEmpty()) {
+        Text(
+            text = segment.text.joinToString(" ") { w -> w.word },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 11.dp, vertical = 7.dp)
+                .alpha(0f),
+            style = TextStyle(
+                color = Color(0xABFFFFFF),
+                fontSize = 23.sp,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold
+            ),
+            onTextLayout = { textLayoutResult: TextLayoutResult ->
+                val lineCount = textLayoutResult.lineCount
+                val startOffset = IntArray(lineCount)
+                val endOffset = IntArray(lineCount)
+
+                // Get the start and end offsets for each line
+                for (i in 0 until lineCount) {
+                    startOffset[i] = textLayoutResult.getLineStart(i)
+                    endOffset[i] = textLayoutResult.getLineEnd(i)
+                }
+
+                val text = segment.text.joinToString(" ") { w -> w.word }
+                isSegmentRTL = text.isNotEmpty() && Character.getDirectionality(text[0]) in 1..2
+                // Split the original text into lines based on offsets
+
+                lines = (0 until lineCount).map { i ->
+                    var resList = emptyList<LyricsWord>()
+                    val lineText = text.substring(startOffset[i], endOffset[i]).trim().split(" ")
+                    findSubArrayListIndices(segment.text.map { w -> w.word }, lineText)?.let {offsets ->
+                        resList = segment.text.subList(offsets.first, offsets.second + 1)
+                    }
+                    resList
+                }
+            }
+        )
+    } else {
+        CompositionLocalProvider(LocalLayoutDirection provides if (isSegmentRTL) LayoutDirection.Rtl else LayoutDirection.Ltr ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                for (lineIdx in lines.indices) {
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .scale(scale),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center) {
+                        val lineOffset = lines.subList(0, lineIdx).flatten().size
+                        for (index in lines[lineIdx].indices) {
+                            val word = lines[lineIdx][index]
+                            val isRTL = word.word.isNotEmpty() && Character.getDirectionality(word.word[0]) in 1..2
+                            val transition = updateTransition(
+                                targetState = activeWord >= lineOffset + index,
+                                label = ""
+                            )
+
+                            val offset by transition.animateFloat(
+                                transitionSpec = {
+                                    tween(
+                                        durationMillis = (word.duration * 900).toInt(),
+                                        easing = LinearEasing
+                                    )
+                                },
+                                label = "",
+                                targetValueByState = {
+                                    if (it) 1f else 0f
+                                }
+                            )
+
+                            val brush = remember(offset) {
+                                object : ShaderBrush() {
+                                    override fun createShader(size: Size): Shader {
+                                        val colors = listOf(Color.White, Color(0x90CACACA))
+                                        val lineActiveOffset = if (activeWord == lineOffset + index ) {
+                                            if (isRTL) {
+                                                size.width - size.width * offset
+                                            } else {
+                                                size.width * offset
+                                            }
+                                        } else if (activeWord > lineOffset + index) {
+                                            size.width
+                                        } else {
+                                            0.0f
+                                        }
+                                        return LinearGradientShader(
+                                            colors = if (isRTL) colors.reversed() else colors,
+                                            from = Offset(lineActiveOffset, 0f),
+                                            to = Offset(lineActiveOffset + 1f, 0f),
+                                            tileMode = TileMode.Clamp
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = "${if (index == 0) "" else " "}${word.word}",
+                                modifier = Modifier.alpha(scale * 4f - 3f),
+                                style = TextStyle(
+                                    brush = brush,
+                                    fontSize = 22.sp,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = if (offset > 0 || isActive) FontWeight.Bold else FontWeight(400)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -186,6 +324,6 @@ fun LyricsTextPreview() {
         MainActivity.viewModelStore.put("workspace", viewModel)
     }
     MaterialTheme {
-        LyricsText(LyricsSegment("This is a simple text", 0.0, 7000.0), true,1f)
+        LyricsText(LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))), true,1f, 2)
     }
 }

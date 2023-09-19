@@ -8,6 +8,8 @@ import com.amazonaws.services.lambda.AWSLambda
 import com.amazonaws.services.lambda.AWSLambdaClient
 import com.amazonaws.services.lambda.model.InvokeRequest
 import com.example.pitchmasterbeta.model.LyricsSegment
+import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
+import com.example.pitchmasterbeta.model.LyricsWord
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.json.JSONObject
@@ -48,9 +50,10 @@ class LyricsProvider(context: Context?) {
         }
     }
 
-    fun invokeLyricsLambdaFunction(songName: String, objectKey: String): List<LyricsSegment> {
+    fun invokeLyricsLambdaFunction(songName: String, objectKey: String): List<LyricsTimestampedSegment> {
         initLambda()
-        var lyricsSegments: List<LyricsSegment> = ArrayList()
+        var lyricsTimestampedSegments = listOf<LyricsTimestampedSegment>()
+        var lyricsSegments: List<LyricsSegment>
         val payload = "{\"song\": \"$songName\", \"url\":\"$objectKey\"}"
         val payloadBuffer = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
         val invokeRequest = InvokeRequest()
@@ -72,13 +75,22 @@ class LyricsProvider(context: Context?) {
                     if (lyricsSegments.isEmpty()) {
                         Log.e("LyricsProvider", " - bad response - lyrics are empty :(")
                     }
+                    lyricsTimestampedSegments = lyricsSegments.map { lyricsSegment ->
+                        val words = lyricsSegment.text.trim().split(" ")
+                        val segmentDuration = lyricsSegment.end - lyricsSegment.start
+                        val wordDuration = segmentDuration / words.size.toDouble()
+                        val lyricsWords = words.mapIndexed { index, word ->
+                            LyricsWord(word, start = wordDuration * index + lyricsSegment.start, duration = wordDuration)
+                        }
+                        LyricsTimestampedSegment(text = lyricsWords)
+                    }
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             Log.e("LyricsProvider", " - bad response - something went wrong :(\n ${e.message}")
         }
-        return lyricsSegments
+        return lyricsTimestampedSegments
     }
 
     companion object {

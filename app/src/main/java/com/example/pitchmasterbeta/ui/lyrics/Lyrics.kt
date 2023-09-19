@@ -29,11 +29,8 @@ fun LyricsLazyColumn(
     // Observe changes in scrollToPosition and trigger smooth scroll when it changes
     val listState = rememberLazyListState()
     val scrollToPosition by rememberUpdatedState(viewModel.lyricsScrollToPosition.collectAsState())
-    val activePosition by rememberUpdatedState(viewModel.lyricsActivePosition.collectAsState())
+    val activeWordIndex by rememberUpdatedState(viewModel.lyricsActiveWordIndex.collectAsState())
     val segments by viewModel.lyricsSegments.collectAsState()
-    val isPlaying =
-        viewModel.playingState.collectAsState().value == WorkspaceViewModel.PlayerState.PLAYING
-
 
     // Create element height in pixel state
     var columnMidpoint by remember {
@@ -71,8 +68,9 @@ fun LyricsLazyColumn(
             }
             LyricsText(
                 segment = item,
-                isActive = activePosition.value == i && isPlaying,
+                isActive = scrollToPosition.value >= i,
                 scale = opacity,
+                activeWord = if (scrollToPosition.value == i) activeWordIndex.value else -1
             )
         }
         item {

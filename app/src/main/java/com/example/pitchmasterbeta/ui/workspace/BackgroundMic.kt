@@ -128,11 +128,12 @@ fun BubbleAnimation(active: Boolean) {
     LaunchedEffect(active) {
         while (active) {
             delay((500..16000).random().toLong())
-            bubbleSizeDp = (20..90).random().dp
-            initialX = (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
+            bubbleSizeDp = (20..screenWidthDp.toInt() / 2).random().dp
+            val halfBubbleSize = bubbleSizeDp.value.toInt() / 2
+            initialX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()
             targetX = (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
             duration = (7000..9000).random()
-            bubbleOpacity = Random.nextDouble(0.1, 0.45).toFloat()
+            bubbleOpacity = Random.nextDouble(0.1, 0.25).toFloat()
             initialY = screenHeightDp + (0..1).random()
             targetY = -bubbleSizeDp.value + (0..1).random()
             isVisible = true
