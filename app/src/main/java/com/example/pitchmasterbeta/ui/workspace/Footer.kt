@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -70,7 +69,8 @@ import kotlinx.coroutines.launch
 fun WorkspaceFooter(
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val context = LocalContext.current.applicationContext
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val showDialog by rememberUpdatedState(viewModel.showDialog.collectAsState())
@@ -305,14 +305,16 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
 //        contentDesc = "singer voice volume"
 //    )
 
-    SimpleCircleButton(65.dp,
+    SimpleCircleButton(
+        65.dp,
         R.drawable.wave_sine,
         onClick = { viewModel.displayPitchFactor(!viewModel.displayPitchFactor.value) },
         contentDesc = "audio pitch factor"
     )
 
     Box(contentAlignment = Alignment.Center) {
-        ComplexCircleButton(70.dp,
+        ComplexCircleButton(
+            70.dp,
             when (playState.value) {
                 WorkspaceViewModel.PlayerState.IDLE,
                 WorkspaceViewModel.PlayerState.END,
@@ -348,7 +350,8 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
         CircleProgressbar(Modifier.size(65.dp), progress = progress.value)
     }
 
-    SimpleCircleButton(65.dp,
+    SimpleCircleButton(
+        65.dp,
         R.drawable.noun_singing_mic_3242509,
         onClick = { viewModel.displaySingerVolume(!viewModel.displaySingerVolume.value) },
         contentDesc = "singer voice volume"
@@ -358,7 +361,8 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
 
 @Composable
 fun DurationRow() {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val current = viewModel.currentTime.collectAsState()
     val duration = viewModel.durationTime.collectAsState()
     Box(
@@ -376,7 +380,8 @@ fun DurationRow() {
 
 @Composable
 fun ControlsRow() {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val displaySingerVolume by rememberUpdatedState(viewModel.displaySingerVolume.collectAsState())
     val displayPitchFactor by rememberUpdatedState(viewModel.displayPitchFactor.collectAsState())
 //    val displayPitchControls by rememberUpdatedState(viewModel.displayPitchControls.collectAsState())
@@ -415,20 +420,26 @@ fun ControlsRow() {
 //                    .padding(10.dp)
 //            )
 //        }
-        VerticalSeekBar(modifier = Modifier
-            .height(100.dp)
-            .width(35.dp)
-            .offset(x = (-55).dp)
-            .graphicsLayer(scaleX = pitchFactorScale, alpha = pitchFactorScale, scaleY = pitchFactorScale),
+        VerticalSeekBar(
+            modifier = Modifier
+                .height(100.dp)
+                .width(35.dp)
+                .offset(x = (-55).dp)
+                .graphicsLayer(
+                    scaleX = pitchFactorScale,
+                    alpha = pitchFactorScale,
+                    scaleY = pitchFactorScale
+                ),
             onProgressChanged = {
                 viewModel.setPitchFactor(it)
             }, initialOffsetPercent = viewModel.getPitchFactor()
         )
-        VerticalSeekBar(modifier = Modifier
-            .height(100.dp)
-            .width(35.dp)
-            .offset(x = (55).dp)
-            .graphicsLayer(scaleX = volumeScale, alpha = volumeScale, scaleY = volumeScale),
+        VerticalSeekBar(
+            modifier = Modifier
+                .height(100.dp)
+                .width(35.dp)
+                .offset(x = (55).dp)
+                .graphicsLayer(scaleX = volumeScale, alpha = volumeScale, scaleY = volumeScale),
             onProgressChanged = {
                 viewModel.setSingerVolume(it)
             }, initialOffsetPercent = viewModel.getSingerVolume()
@@ -439,7 +450,8 @@ fun ControlsRow() {
 
 @Composable
 fun PitchControls(modifier: Modifier) {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val isComputingPitchMic by rememberUpdatedState(viewModel.isComputingPitchMic.collectAsState())
     val isComputingPitchSinger by rememberUpdatedState(viewModel.isComputingPitchSinger.collectAsState())
 

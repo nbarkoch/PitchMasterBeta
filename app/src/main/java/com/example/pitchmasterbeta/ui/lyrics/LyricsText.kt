@@ -51,7 +51,12 @@ import kotlin.math.floor
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
-fun LyricsText(segment: LyricsTimestampedSegment, isActive: Boolean, scale: Float, activeWord: Int) {
+fun LyricsText(
+    segment: LyricsTimestampedSegment,
+    isActive: Boolean,
+    scale: Float,
+    activeWord: Int
+) {
     var lines: List<List<LyricsWord>> by remember { mutableStateOf(emptyList()) }
     var isSegmentRTL by remember { mutableStateOf(false) }
 
@@ -92,7 +97,10 @@ fun LyricsText(segment: LyricsTimestampedSegment, isActive: Boolean, scale: Floa
                 lines = (0 until lineCount).map { i ->
                     var resList = emptyList<LyricsWord>()
                     val lineText = text.substring(startOffset[i], endOffset[i]).trim().split(" ")
-                    findSubArrayListIndices(segment.text.map { w -> w.word }, lineText)?.let {offsets ->
+                    findSubArrayListIndices(
+                        segment.text.map { w -> w.word },
+                        lineText
+                    )?.let { offsets ->
                         resList = segment.text.subList(offsets.first, offsets.second + 1)
                     }
                     resList
@@ -100,7 +108,7 @@ fun LyricsText(segment: LyricsTimestampedSegment, isActive: Boolean, scale: Floa
             }
         )
     } else {
-        CompositionLocalProvider(LocalLayoutDirection provides if (isSegmentRTL) LayoutDirection.Rtl else LayoutDirection.Ltr ) {
+        CompositionLocalProvider(LocalLayoutDirection provides if (isSegmentRTL) LayoutDirection.Rtl else LayoutDirection.Ltr) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -109,15 +117,18 @@ fun LyricsText(segment: LyricsTimestampedSegment, isActive: Boolean, scale: Floa
                 verticalArrangement = Arrangement.Center
             ) {
                 for (lineIdx in lines.indices) {
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .scale(scale),
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .scale(scale),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center) {
+                        horizontalArrangement = Arrangement.Center
+                    ) {
                         val lineOffset = lines.subList(0, lineIdx).flatten().size
                         for (index in lines[lineIdx].indices) {
                             val word = lines[lineIdx][index]
-                            val isRTL = word.word.isNotEmpty() && Character.getDirectionality(word.word[0]) in 1..2
+                            val isRTL =
+                                word.word.isNotEmpty() && Character.getDirectionality(word.word[0]) in 1..2
                             val transition = updateTransition(
                                 targetState = activeWord >= lineOffset + index,
                                 label = ""
@@ -140,17 +151,15 @@ fun LyricsText(segment: LyricsTimestampedSegment, isActive: Boolean, scale: Floa
                                 object : ShaderBrush() {
                                     override fun createShader(size: Size): Shader {
                                         val colors = listOf(Color.White, Color(0x90CACACA))
-                                        val lineActiveOffset = if (activeWord == lineOffset + index ) {
-                                            if (isRTL) {
-                                                size.width - size.width * offset
-                                            } else {
+                                        val lineActiveOffset =
+                                            (if(activeWord == lineOffset + index) {
                                                 size.width * offset
-                                            }
-                                        } else if (activeWord > lineOffset + index) {
-                                            size.width
-                                        } else {
-                                            0.0f
-                                        }
+                                            } else if (activeWord > lineOffset + index) {
+                                                size.width
+                                            } else {
+                                                0.0f
+                                            }).let { if (isRTL) size.width - it else it }
+
                                         return LinearGradientShader(
                                             colors = if (isRTL) colors.reversed() else colors,
                                             from = Offset(lineActiveOffset, 0f),
@@ -168,7 +177,9 @@ fun LyricsText(segment: LyricsTimestampedSegment, isActive: Boolean, scale: Floa
                                     brush = brush,
                                     fontSize = 22.sp,
                                     textAlign = TextAlign.Center,
-                                    fontWeight = if (offset > 0 || isActive) FontWeight.Bold else FontWeight(400)
+                                    fontWeight = if (offset > 0 || isActive) FontWeight.Bold else FontWeight(
+                                        400
+                                    )
                                 )
                             )
                         }
@@ -200,7 +211,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
     LaunchedEffect(isActive, lines) {
         if (isActive && lines.isNotEmpty()) {
             val totalDuration = ((segment.end - segment.start) * 1000)
-            val linesLength =  MutableList(lines.size) { 0 }
+            val linesLength = MutableList(lines.size) { 0 }
             var totalLength = 0
             for (i in lines.indices) {
                 linesLength[i] = lines[i].length
@@ -208,9 +219,11 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
             }
             delay(100)
             for (index in lines.indices) {
-                timeForLine = floor((linesLength[index] / totalLength.toDouble()) * totalDuration * 0.95).toInt()
+                timeForLine =
+                    floor((linesLength[index] / totalLength.toDouble()) * totalDuration * 0.95).toInt()
                 visibleLines = visibleLines.toMutableList().also { it[index] = true }
-                isRTL = lines[index].isNotEmpty() && Character.getDirectionality(lines[index][0]) in 1..2
+                isRTL =
+                    lines[index].isNotEmpty() && Character.getDirectionality(lines[index][0]) in 1..2
                 delay((timeForLine).toLong())
             }
         }
@@ -324,6 +337,6 @@ fun LyricsTextPreview() {
         MainActivity.viewModelStore.put("workspace", viewModel)
     }
     MaterialTheme {
-        LyricsText(LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))), true,1f, 2)
+        LyricsText(LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))), true, 1f, 2)
     }
 }

@@ -31,8 +31,8 @@ class LyricsProvider(context: Context?) {
     private fun initLambda() {
         if (clientConfiguration == null) {
             clientConfiguration = ClientConfiguration().apply {
-               connectionTimeout = 1000 * 60 * 4
-               socketTimeout = 1000 * 60 * 4
+                connectionTimeout = 1000 * 60 * 4
+                socketTimeout = 1000 * 60 * 4
             }
         }
         if (sCredProvider == null) {
@@ -50,7 +50,10 @@ class LyricsProvider(context: Context?) {
         }
     }
 
-    fun invokeLyricsLambdaFunction(songName: String, objectKey: String): List<LyricsTimestampedSegment> {
+    fun invokeLyricsLambdaFunction(
+        songName: String,
+        objectKey: String
+    ): List<LyricsTimestampedSegment> {
         initLambda()
         var lyricsTimestampedSegments = listOf<LyricsTimestampedSegment>()
         var lyricsSegments: List<LyricsSegment>
@@ -67,7 +70,8 @@ class LyricsProvider(context: Context?) {
                     val payloadString = String(invokeResult.payload.array())
                     val responseJson = JSONObject(payloadString)
                     val gson = Gson()
-                    val lyricsSegmentListType: Type = object : TypeToken<List<LyricsSegment>>() {}.type
+                    val lyricsSegmentListType: Type =
+                        object : TypeToken<List<LyricsSegment>>() {}.type
                     lyricsSegments = gson.fromJson(
                         responseJson.getString("body"),
                         lyricsSegmentListType
@@ -80,7 +84,11 @@ class LyricsProvider(context: Context?) {
                         val segmentDuration = lyricsSegment.end - lyricsSegment.start
                         val wordDuration = segmentDuration / words.size.toDouble()
                         val lyricsWords = words.mapIndexed { index, word ->
-                            LyricsWord(word, start = wordDuration * index + lyricsSegment.start, duration = wordDuration)
+                            LyricsWord(
+                                word,
+                                start = wordDuration * index + lyricsSegment.start,
+                                duration = wordDuration
+                            )
                         }
                         LyricsTimestampedSegment(text = lyricsWords)
                     }

@@ -38,8 +38,7 @@ fun LyricsLazyColumn(
     }
 
 
-    LazyColumn(
-        state = listState,
+    LazyColumn(state = listState,
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier
             .fillMaxWidth()
@@ -53,16 +52,15 @@ fun LyricsLazyColumn(
         itemsIndexed(segments) { i, item ->
             val opacity by remember {
                 derivedStateOf {
-                    val currentItemInfo = listState.layoutInfo.visibleItemsInfo
-                        .firstOrNull { it.index == i }
-                        ?: return@derivedStateOf 0.65f
+                    val currentItemInfo =
+                        listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == i }
+                            ?: return@derivedStateOf 0.65f
                     val currentMidpoint = (columnMidpoint * 2)
                     //val parallaxOffset = (i.toFloat() / (segments.size - 1)) * (columnMidpoint * 2)
                     val divider = if (i == 0) 1.75f else 1.25f
                     val itemMidpoint = (currentItemInfo.size / 2f) + currentItemInfo.offset
                     (1f - minOf(
-                        1f,
-                        abs(columnMidpoint / divider - itemMidpoint) / currentMidpoint
+                        1f, abs(columnMidpoint / divider - itemMidpoint) / currentMidpoint
                     ) * 0.75f)
                 }
             }

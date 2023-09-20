@@ -57,7 +57,11 @@ fun CircleProgressbar(modifier: Modifier, progress: Float = 0f) {
 
         handleCenter = Offset(x, y)
 
-        drawCircle(color = Color(0xFF69357C).copy(alpha = 0.40f), style = Stroke(10f), radius = radius)
+        drawCircle(
+            color = Color(0xFF69357C).copy(alpha = 0.40f),
+            style = Stroke(10f),
+            radius = radius
+        )
         drawArc(
             color = Color(0xFFDF2FA4),
             startAngle = 0f,

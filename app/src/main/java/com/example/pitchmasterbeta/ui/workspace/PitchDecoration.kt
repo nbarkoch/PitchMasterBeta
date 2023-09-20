@@ -44,11 +44,12 @@ fun PitchDecorations(
     chordHeight: Dp = 14.dp,
     maxChordWidth: Dp = 30.dp
 ) {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
 
     val items by remember {
-        mutableStateOf(List((screenHeightDp.dp / chordHeight).toInt()) {0})
+        mutableStateOf(List((screenHeightDp.dp / chordHeight).toInt()) { 0 })
     }
 
     PitchDecorationColumn(viewModel, 1, maxChordWidth, items, chordHeight)
@@ -57,9 +58,11 @@ fun PitchDecorations(
 }
 
 @Composable
-fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
-                          direction: Int,
-                          maxChordWidth: Dp, items: List<Int>, chordHeight: Dp) {
+fun PitchDecorationColumn(
+    viewModel: WorkspaceViewModel,
+    direction: Int,
+    maxChordWidth: Dp, items: List<Int>, chordHeight: Dp
+) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val gradientBrush = Brush.horizontalGradient(
         colors = listOf(
@@ -69,7 +72,9 @@ fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
     )
     val modifier = Modifier.fillMaxHeight().width(maxChordWidth).run {
         (if (direction < 0) {
-            this.offset(x = screenWidthDp.dp - maxChordWidth).scale(scaleX = -1f, scaleY = 1f)
+            this
+                .offset(x = screenWidthDp.dp - maxChordWidth)
+                .scale(scaleX = -1f, scaleY = 1f)
         } else this).background(brush = gradientBrush)
     }
 
@@ -90,7 +95,12 @@ fun PitchDecorationColumn(viewModel: WorkspaceViewModel,
 }
 
 @Composable
-fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeight: Dp, items: List<Any>) {
+fun LazyWindowScroller(
+    viewModel: WorkspaceViewModel,
+    direction: Int,
+    chordHeight: Dp,
+    items: List<Any>
+) {
     val localDensity = LocalDensity.current
     val scrollState = rememberLazyListState()
     val chordHeightPx = with(localDensity) { chordHeight.toPx() }
@@ -107,7 +117,7 @@ fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeigh
     val offsetY = remember(scrollState) {
         derivedStateOf {
             chordHeightPx *
-            scrollState.firstVisibleItemIndex + scrollState.firstVisibleItemScrollOffset
+                    scrollState.firstVisibleItemIndex + scrollState.firstVisibleItemScrollOffset
         }
     }
 
@@ -126,8 +136,10 @@ fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeigh
                     val currentItemInfo = scrollState.layoutInfo.visibleItemsInfo
                         .firstOrNull { it.index == i }
                     if (currentItemInfo != null) {
-                        val offsetFromMidpoint = currentItemInfo.offset + (currentItemInfo.size / 2) - currentMidpoint
-                        val scalingFactor = (1f - minOf(1f, abs(offsetFromMidpoint) / currentMidpoint) * 0.75f)
+                        val offsetFromMidpoint =
+                            currentItemInfo.offset + (currentItemInfo.size / 2) - currentMidpoint
+                        val scalingFactor =
+                            (1f - minOf(1f, abs(offsetFromMidpoint) / currentMidpoint) * 0.75f)
                         scalingFactor * 3f * note.value.volume
                     } else {
                         0f
@@ -150,10 +162,15 @@ fun LazyWindowScroller(viewModel: WorkspaceViewModel, direction: Int, chordHeigh
 }
 
 
-
 private fun interpolateColor(position: Int, totalItems: Int): Color {
     val fraction = position.toFloat() / (totalItems - 1)
-    return Color(ArgbEvaluator().evaluate(fraction, android.graphics.Color.BLUE, android.graphics.Color.RED) as Int)
+    return Color(
+        ArgbEvaluator().evaluate(
+            fraction,
+            android.graphics.Color.BLUE,
+            android.graphics.Color.RED
+        ) as Int
+    )
 }
 
 

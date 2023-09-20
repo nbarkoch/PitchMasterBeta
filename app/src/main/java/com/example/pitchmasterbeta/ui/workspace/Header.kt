@@ -56,7 +56,8 @@ import kotlinx.coroutines.withContext
 fun WorkspaceHeader(
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
     val songFullName = viewModel.songFullName.collectAsState()
@@ -152,7 +153,8 @@ fun MarqueeText(
 
 @Composable
 fun ScoreComposable(viewModel: WorkspaceViewModel) {
-    val offsetY = (with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx()/ 2f - 100.dp.toPx() * 1f}  )
+    val offsetY =
+        (with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() / 2f - 100.dp.toPx() * 1f })
 
     val colorState = viewModel.similarityColor.collectAsState()
     val color =
@@ -184,7 +186,7 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
         transitionSpec = { tween(1000) },
         label = "",
         targetValueByState = {
-            if (it) offsetY  else 0f
+            if (it) offsetY else 0f
         }
     )
     val scale by transition.animateFloat(

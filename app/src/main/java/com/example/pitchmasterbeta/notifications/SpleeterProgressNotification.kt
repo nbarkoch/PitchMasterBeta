@@ -27,9 +27,7 @@ class SpleeterProgressNotification(context: Context) {
         // Create a notification channel (required for Android 8.0 or higher)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Spleeter Channel",
-                NotificationManager.IMPORTANCE_LOW
+                CHANNEL_ID, "Spleeter Channel", NotificationManager.IMPORTANCE_LOW
             )
             notificationManager.createNotificationChannel(channel)
         }
@@ -37,8 +35,7 @@ class SpleeterProgressNotification(context: Context) {
         // Create a notification builder
         notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Progress Notification")
-            .setContentText("Upload in progress")
+            .setContentTitle("Progress Notification").setContentText("Upload in progress")
             .setDefaults(Notification.DEFAULT_LIGHTS or Notification.DEFAULT_VIBRATE)
             .setProgress(MAX_PROGRESS, lastProgress, true).setSound(null)
     }

@@ -136,38 +136,42 @@ class AudioProcessor {
     }
 
 
-    suspend fun buildMicrophoneAudioDispatcher(pitchHandler: (timestamp: Double, noteI: Int, volume: Int, sim: NotesSimilarity) -> Unit)
-       = withContext(Dispatchers.Default) {
+    suspend fun buildMicrophoneAudioDispatcher(pitchHandler: (timestamp: Double, noteI: Int, volume: Int, sim: NotesSimilarity) -> Unit) =
+        withContext(Dispatchers.Default) {
 
-        val pitchDetectionHandler =
-            PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
-                val newTimeStamp = audioEvent.timeStamp
-                micNoteI = processPitchHeavy(pitchDetectionResult.pitch)
-                val micVolume = soundVolume(audioEvent.floatBuffer)
-                if (micNoteI != sortedNotes.size - 1) {
-                    shiftArrayRight(micCurrentPitches, micNoteI)
+            val pitchDetectionHandler =
+                PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
+                    val newTimeStamp = audioEvent.timeStamp
+                    micNoteI = processPitchHeavy(pitchDetectionResult.pitch)
+                    val micVolume = soundVolume(audioEvent.floatBuffer)
+                    if (micNoteI != sortedNotes.size - 1) {
+                        shiftArrayRight(micCurrentPitches, micNoteI)
+                    }
+                    generatedRecordByteSound =
+                        playSound.generatedSnd[if (micNoteI == 0) 0 else (micNoteI - 1) % 12 + 1]
+                    val similarity = compareHeavy(
+                        singerCurrentPitches.copyOfRange(6, 9),
+                        micCurrentPitches.copyOfRange(0, 5)
+                    )
+
+                    pitchHandler(newTimeStamp, micNoteI, micVolume, similarity)
                 }
-                generatedRecordByteSound = playSound.generatedSnd[if (micNoteI == 0) 0 else (micNoteI - 1) % 12 + 1]
-                val similarity = compareHeavy(singerCurrentPitches.copyOfRange(6, 9), micCurrentPitches.copyOfRange(0, 5))
 
-                pitchHandler(newTimeStamp, micNoteI, micVolume, similarity)
-            }
+            val overlap = mediaInfo.overlap
+            val sampleRate = mediaInfo.voiceSampleRate
+            val floatBuffer = mediaInfo.audioFloatBuffer
+            microphoneDispatcher =
+                VocalAudioDispatcher.fromDefaultMicrophone(sampleRate, floatBuffer, overlap)
 
-        val overlap = mediaInfo.overlap
-        val sampleRate = mediaInfo.voiceSampleRate
-        val floatBuffer = mediaInfo.audioFloatBuffer
-        microphoneDispatcher =
-            VocalAudioDispatcher.fromDefaultMicrophone(sampleRate, floatBuffer, overlap)
-
-        val p: AudioProcessor = PitchProcessor(
-            PitchProcessor.PitchEstimationAlgorithm.FFT_YIN,
-            sampleRate.toFloat(),
-            floatBuffer,
-            pitchDetectionHandler
-        )
-        microphoneDispatcher?.addAudioProcessor(p)
-        microphoneDispatcher
-    }
+            val p: AudioProcessor = PitchProcessor(
+                PitchProcessor.PitchEstimationAlgorithm.FFT_YIN,
+                sampleRate.toFloat(),
+                floatBuffer,
+                pitchDetectionHandler
+            )
+            microphoneDispatcher?.addAudioProcessor(p)
+            microphoneDispatcher
+        }
 
 
     suspend fun buildMusicAudioDispatcher(
@@ -224,7 +228,7 @@ class AudioProcessor {
             floatBuffer,
             pitchDetectionHandler
         )
-         val bufferSizeInBytes = floatBuffer * tarsosDSPAudioFormat.sampleSizeInBits / 8
+        val bufferSizeInBytes = floatBuffer * tarsosDSPAudioFormat.sampleSizeInBits / 8
         mainAudioTrack = AudioTrack(
             AudioManager.STREAM_MUSIC,
             tarsosDSPAudioFormat.sampleRate.toInt(),
@@ -235,7 +239,7 @@ class AudioProcessor {
         )
         mainAudioTrack?.play()
         val bytesToRead = (floatBuffer - overlap) * 2
-        
+
         musicDispatcher?.addAudioProcessor(object : SongAudioDispatcher.MicAudioProcessor {
             override fun process(audioEvent: AudioEvent, musicBuffer: ByteArray): Boolean {
                 playbackParams.pitch = pitchFactor
@@ -243,10 +247,17 @@ class AudioProcessor {
                 p.process(audioEvent)
                 var singerBuffer = ByteArray(musicBuffer.size)
                 if (volumeFactor > 0.05f) {
-                    singerBuffer = if (computeAndPlaySingerSoundMode) generatedSingerByteSound else audioEvent.byteBuffer
+                    singerBuffer =
+                        if (computeAndPlaySingerSoundMode) generatedSingerByteSound else audioEvent.byteBuffer
                     singerBuffer = adjustVolume(singerBuffer, volumeFactor)
                 }
-                val soundBuffer = mixedBuffers(musicBuffer, singerBuffer, if (computeAndPlayRecordedSoundMode) generatedRecordByteSound else ByteArray(musicBuffer.size))
+                val soundBuffer = mixedBuffers(
+                    musicBuffer,
+                    singerBuffer,
+                    if (computeAndPlayRecordedSoundMode) generatedRecordByteSound else ByteArray(
+                        musicBuffer.size
+                    )
+                )
                 mainAudioTrack?.write(soundBuffer, overlap * 2, bytesToRead)
                 return false
             }

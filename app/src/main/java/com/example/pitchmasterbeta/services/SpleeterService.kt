@@ -10,24 +10,23 @@ import android.os.StrictMode.ThreadPolicy
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.CognitoCachingCredentialsProvider
 import com.amazonaws.event.ProgressEvent
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.PutObjectRequest
-import java.io.InputStream
-import java.net.URL
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import com.amazonaws.services.lambda.AWSLambda
 import com.amazonaws.services.lambda.AWSLambdaClient
 import com.amazonaws.services.lambda.model.InvokeRequest
 import com.amazonaws.services.lambda.model.InvokeResult
+import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.CannedAccessControlList
 import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.PutObjectRequest
 import com.example.pitchmasterbeta.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.InputStream
+import java.net.URL
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 
 
 class SpleeterService : Service() {
@@ -58,12 +57,10 @@ class SpleeterService : Service() {
     }
 
 
-
     object KEYS {
         const val EXTRA_FILE_URI = "EXTRA_FILE_URI"
         const val EXTRA_OBJECT_KEY = "EXTRA_OBJECT_KEY"
     }
-
 
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {

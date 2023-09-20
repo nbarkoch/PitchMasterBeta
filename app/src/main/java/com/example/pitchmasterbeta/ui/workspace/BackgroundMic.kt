@@ -39,7 +39,8 @@ import kotlin.random.Random
 
 @Composable
 fun BackgroundMic() {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
 
     AnimatedVisibility(
@@ -69,7 +70,8 @@ fun BackgroundMic() {
 
 @Composable
 fun BubbleMaker() {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val playState by rememberUpdatedState(viewModel.playingState.collectAsState())
 
     repeat(60) {
@@ -121,7 +123,7 @@ fun BubbleAnimation(active: Boolean) {
             tween(durationMillis = duration)
         }, label = ""
     ) {
-        Color( if (it) android.graphics.Color.BLUE else android.graphics.Color.RED)
+        Color(if (it) android.graphics.Color.BLUE else android.graphics.Color.RED)
     }
 
 

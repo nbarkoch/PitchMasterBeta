@@ -54,7 +54,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val lyricsActiveWordIndex: StateFlow<Int> = _lyricsActiveWordIndex
 
 
-
     // MutableState for storing your list of items obtained from the server
     private val _lyricsSegments = MutableStateFlow<List<LyricsTimestampedSegment>>(emptyList())
     val lyricsSegments: StateFlow<List<LyricsTimestampedSegment>> = _lyricsSegments
@@ -64,7 +63,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             "{  \"statusCode\": 200,  \"body\": \"[{\\\"start\\\": 12.9524, \\\"end\\\": 25.6667, \\\"text\\\": \\\" There ain't no gold in this river That I've been washing my hands in forever\\\"}, {\\\"start\\\": 26.5, \\\"end\\\": 39.94, \\\"text\\\": \\\" I know there is hope in these waters But I can't bring myself to swim when I am drowning\\\"}, {\\\"start\\\": 39.94, \\\"end\\\": 53.7, \\\"text\\\": \\\" In this silence, baby, let me in Go easy on me, baby\\\"}, {\\\"start\\\": 53.7, \\\"end\\\": 66.74000000000001, \\\"text\\\": \\\" I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 66.74000000000001, \\\"end\\\": 78.18, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 83.7, \\\"end\\\": 100.34, \\\"text\\\": \\\" There ain't no room for things to change When we are both so deeply stuck in our ways\\\"}, {\\\"start\\\": 100.82000000000001, \\\"end\\\": 113.14, \\\"text\\\": \\\" You can't deny how hard I've tried I changed who I was to put you both first\\\"}, {\\\"start\\\": 113.14, \\\"end\\\": 124.66, \\\"text\\\": \\\" But now I give up Go easy on me, baby\\\"}, {\\\"start\\\": 124.66, \\\"end\\\": 137.94, \\\"text\\\": \\\" I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 137.94, \\\"end\\\": 159.06, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 159.06, \\\"end\\\": 175.14000000000001, \\\"text\\\": \\\" I had good intentions and the highest hopes But I know right now that probably doesn't even show\\\"}, {\\\"start\\\": 175.22, \\\"end\\\": 195.14, \\\"text\\\": \\\" Go easy on me, baby I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 195.14, \\\"end\\\": 215.14, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}]\"}"
         //val payloadString ="{ \"statusCode\": 200, \"body\": \"[{\\\"start\\\": 1.0, \\\"end\\\": 2.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8 \\\\u05d8\\\\u05d5\\\\u05d1!\\\"}, {\\\"start\\\": 2.0, \\\"end\\\": 4.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8 \\\\u05d8\\\\u05d5\\\\u05d1, \\\\u05de\\\\u05d4 \\\\u05e7\\\\u05d5\\\\u05e8\\\\u05d4?\\\"}, {\\\"start\\\": 4.0, \\\"end\\\": 6.0, \\\"text\\\": \\\" \\\\u05d0\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d9 \\\\u05dc\\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05d6\\\\u05e8\\\\u05d4 \\\\u05dc\\\\u05d0\\\\u05db\\\\u05d5\\\\u05dc \\\\u05de\\\\u05e9\\\\u05d4\\\\u05d5?\\\"}, {\\\"start\\\": 6.0, \\\"end\\\": 8.0, \\\"text\\\": \\\" \\\\u05de\\\\u05d4 \\\\u05d0\\\\u05d5\\\\u05db\\\\u05dc\\\\u05d9\\\\u05dd \\\\u05e9\\\\u05dd?\\\"}, {\\\"start\\\": 8.0, \\\"end\\\": 11.0, \\\"text\\\": \\\" \\\\u05d4\\\\u05db\\\\u05dc \\\\u05d1\\\\u05ea\\\\u05d5\\\\u05da \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d4 \\\\u05de\\\\u05d5\\\\u05df \\\\u05e4\\\\u05dc\\\\u05e4\\\\u05dc \\\\u05ea\\\\u05e9\\\\u05d5\\\\u05de\\\\u05d4\\\"}, {\\\"start\\\": 11.0, \\\"end\\\": 14.0, \\\"text\\\": \\\" \\\\u05e9\\\\u05e7\\\\u05e9\\\\u05d5\\\\u05e7 \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05e7\\\\u05d1\\\\u05d1 \\\\u05de\\\\u05e8\\\\u05d2\\\\u05d6\\\"}, {\\\"start\\\": 14.0, \\\"end\\\": 18.0, \\\"text\\\": \\\" \\\\u05ea\\\\u05d8\\\\u05e2\\\\u05d1 \\\\u05d5\\\\u05ea\\\\u05ea\\\\u05de\\\\u05e7\\\\u05e8 \\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05db\\\\u05dc \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8\\\"}, {\\\"start\\\": 18.0, \\\"end\\\": 21.0, \\\"text\\\": \\\" \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05e1\\\\u05d1\\\\u05d9\\\\u05e8 \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d0\\\\u05d9\\\\u05da \\\\u05d6\\\\u05d4 \\\\u05e2\\\\u05d5\\\\u05d1\\\\u05d3\\\"}, {\\\"start\\\": 21.0, \\\"end\\\": 24.0, \\\"text\\\": \\\" \\\\u05d6\\\\u05d4 \\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05d6\\\\u05e8\\\\u05d4 \\\\u05de\\\\u05e1\\\\u05ea\\\\u05d5\\\\u05d1\\\\u05d1 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 24.0, \\\"end\\\": 27.0, \\\"text\\\": \\\" \\\\u05d5\\\\u05db\\\\u05dc \\\\u05d4\\\\u05d0\\\\u05d9\\\\u05e0\\\\u05e1\\\\u05d8\\\\u05d2\\\\u05e8\\\\u05dd \\\\u05e9\\\\u05dc\\\\u05d5\\\"}, {\\\"start\\\": 27.0, \\\"end\\\": 30.0, \\\"text\\\": \\\" \\\\u05d6\\\\u05d4 \\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05d6\\\\u05e8\\\\u05d4 \\\\u05de\\\\u05e1\\\\u05ea\\\\u05d5\\\\u05d1\\\\u05d1 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 30.0, \\\"end\\\": 33.0, \\\"text\\\": \\\" \\\\u05d5\\\\u05db\\\\u05dc \\\\u05d4\\\\u05e2\\\\u05d9\\\\u05e8 \\\\u05de\\\\u05ea\\\\u05dc\\\\u05db\\\\u05e9\\\\u05e9\\\\u05d9\\\\u05dd \\\\u05d6\\\\u05d4 \\\\u05d4\\\\u05d0\\\\u05d9\\\\u05e9\\\"}, {\\\"start\\\": 33.0, \\\"end\\\": 36.0, \\\"text\\\": \\\" \\\\u05e9\\\\u05d0\\\\u05ea \\\\u05d0\\\\u05d4\\\\u05d1\\\\u05ea\\\\u05d5 \\\\u05de\\\\u05db\\\\u05e0\\\\u05d9\\\\u05e1 \\\\u05dc\\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd\\\"}, {\\\"start\\\": 36.0, \\\"end\\\": 41.0, \\\"text\\\": \\\" \\\\u05d2\\\\u05dd \\\\u05dc\\\\u05e6\\\\u05e2\\\\u05d9\\\\u05e8 \\\\u05d5\\\\u05d2\\\\u05dd \\\\u05dc\\\\u05e7\\\\u05e9\\\\u05d9\\\"}, {\\\"start\\\": 41.0, \\\"end\\\": 45.0, \\\"text\\\": \\\" \\\\u05db\\\\u05df \\\\u05d6\\\\u05d4\\\\u05d5 \\\\u05d4\\\\u05d0\\\\u05d9\\\\u05e9\\\"}, {\\\"start\\\": 45.0, \\\"end\\\": 48.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 48.0, \\\"end\\\": 51.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 51.0, \\\"end\\\": 54.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 54.0, \\\"end\\\": 57.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 57.0, \\\"end\\\": 60.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 60.0, \\\"end\\\": 63.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 63.0, \\\"end\\\": 66.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 66.0, \\\"end\\\": 73.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 85.0, \\\"end\\\": 88.0, \\\"text\\\": \\\" \\\\u05e2\\\\u05e1\\\\u05e7\\\\u05ea \\\\u05d1\\\\u05e0\\\\u05d3\\\\u05dc\\\\u05df \\\\u05ea\\\\u05d5\\\\u05e4\\\\u05e4\\\\u05ea \\\\u05ea\\\\u05e8\\\\u05d1\\\\u05d5\\\\u05e7\\\\u05d4\\\"}, {\\\"start\\\": 88.0, \\\"end\\\": 91.0, \\\"text\\\": \\\" \\\\u05d3\\\\u05de\\\\u05d9\\\\u05d9\\\\u05e0\\\\u05ea \\\\u05e9\\\\u05e8\\\\u05d0\\\\u05d9\\\\u05ea \\\\u05db\\\\u05d1\\\\u05e8 \\\\u05d0\\\\u05ea \\\\u05d4\\\\u05db\\\\u05dc\\\"}, {\\\"start\\\": 91.0, \\\"end\\\": 94.0, \\\"text\\\": \\\" \\\\u05d4\\\\u05d2\\\\u05e2\\\\u05ea \\\\u05dc\\\\u05de\\\\u05e7\\\\u05d5\\\\u05dd \\\\u05e9\\\\u05db\\\\u05dc\\\\u05dc \\\\u05dc\\\\u05d0 \\\\u05e6\\\\u05d9\\\\u05e4\\\\u05d9\\\\u05ea\\\"}, {\\\"start\\\": 94.0, \\\"end\\\": 98.0, \\\"text\\\": \\\" \\\\u05d7\\\\u05d6\\\\u05e8\\\\u05ea \\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05dd \\\\u05e2\\\\u05d5\\\\u05e8\\\\u05e7\\\\u05d5 \\\\u05d2\\\\u05d3\\\\u05d5\\\\u05dc\\\"}, {\\\"start\\\": 98.0, \\\"end\\\": 101.0, \\\"text\\\": \\\" \\\\u05e8\\\\u05e7 \\\\u05d0\\\\u05ea \\\\u05e4\\\\u05e0\\\\u05d9\\\\u05de\\\\u05da \\\\u05d6\\\\u05d4 \\\\u05d8\\\\u05e2\\\\u05dd \\\\u05e9\\\\u05dc \\\\u05e2\\\\u05d5\\\\u05e9\\\\u05e8\\\"}, {\\\"start\\\": 101.0, \\\"end\\\": 104.0, \\\"text\\\": \\\" \\\\u05ea\\\\u05d4\\\\u05d9\\\\u05d4 \\\\u05e8\\\\u05e7 \\\\u05e2\\\\u05d5\\\\u05d3 \\\\u05d1\\\\u05e6\\\\u05e2 \\\\u05ea\\\\u05de\\\\u05d9\\\\u05d3 \\\\u05de\\\\u05e2\\\\u05e0\\\\u05d9\\\\u05d9\\\\u05df\\\"}, {\\\"start\\\": 104.0, \\\"end\\\": 107.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05ea\\\\u05d2\\\\u05d9\\\\u05e2 \\\\u05db\\\\u05dc \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8\\\"}, {\\\"start\\\": 107.0, \\\"end\\\": 111.0, \\\"text\\\": \\\" \\\\u05d5\\\\u05d4\\\\u05e9\\\\u05d9\\\\u05e8 \\\\u05d4\\\\u05d6\\\\u05d4 \\\\u05ea\\\\u05de\\\\u05d9\\\\u05d3 \\\\u05d9\\\\u05ea\\\\u05e0\\\\u05d2\\\\u05d3\\\"}, {\\\"start\\\": 112.0, \\\"end\\\": 115.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 115.0, \\\"end\\\": 118.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 118.0, \\\"end\\\": 122.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 122.0, \\\"end\\\": 139.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 141.0, \\\"end\\\": 154.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 154.0, \\\"end\\\": 157.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 157.0, \\\"end\\\": 160.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 160.0, \\\"end\\\": 164.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 164.0, \\\"end\\\": 167.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 167.0, \\\"end\\\": 170.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 170.0, \\\"end\\\": 173.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 173.0, \\\"end\\\": 176.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}]\" }"
         val lyricsSegmentListType: Type = object : TypeToken<List<LyricsSegment?>?>() {}.type
-        val lyricsSegments: List<LyricsSegment> = Gson().fromJson(JSONObject(payloadString).getString("body"), lyricsSegmentListType)
+        val lyricsSegments: List<LyricsSegment> =
+            Gson().fromJson(JSONObject(payloadString).getString("body"), lyricsSegmentListType)
         _lyricsSegments.value = lyricsSegments.map { lyricsSegment ->
             val words = lyricsSegment.text.trim().split(" ")
             val segmentDuration = lyricsSegment.end - lyricsSegment.start
@@ -267,8 +267,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 //    }
 
 
-
-
     private val _isComputingPitchSinger = MutableStateFlow(false)
     val isComputingPitchSinger: StateFlow<Boolean> = _isComputingPitchSinger
     fun isComputingPitchSinger(b: Boolean) {
@@ -355,23 +353,27 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                 _lyricsActiveWordIndex.value.let { index ->
                                     if (index > -1) {
                                         thisLyricsSegments[currentPosition].text[index].let {
-                                            if (!(it.start < musicTimeStamp && musicTimeStamp <= it.duration + it.start)){
-                                                _lyricsActiveWordIndex.value = thisLyricsSegments[currentPosition].text.indexOfFirst {
-                                                        w -> w.start < musicTimeStamp && musicTimeStamp <= w.start + w.duration
-                                                }
+                                            if (!(it.start < musicTimeStamp && musicTimeStamp <= it.duration + it.start)) {
+                                                _lyricsActiveWordIndex.value =
+                                                    thisLyricsSegments[currentPosition].text.indexOfFirst { w ->
+                                                        w.start < musicTimeStamp && musicTimeStamp <= w.start + w.duration
+                                                    }
                                             }
                                         }
                                     } else {
-                                        val firstWord = thisLyricsSegments[currentPosition].text.first()
-                                        if (firstWord.start < musicTimeStamp && musicTimeStamp <= firstWord.start + firstWord.duration){
+                                        val firstWord =
+                                            thisLyricsSegments[currentPosition].text.first()
+                                        if (firstWord.start < musicTimeStamp && musicTimeStamp <= firstWord.start + firstWord.duration) {
                                             _lyricsActiveWordIndex.value = 0
                                         }
                                     }
                                 }
 
                                 val nextPosition = (currentPosition + 1) % thisLyricsSegments.size
-                                val segmentBoundaries = Pair(thisLyricsSegments[nextPosition].text.first().start,
-                                    thisLyricsSegments[nextPosition].text.last().start + thisLyricsSegments[nextPosition].text.last().duration)
+                                val segmentBoundaries = Pair(
+                                    thisLyricsSegments[nextPosition].text.first().start,
+                                    thisLyricsSegments[nextPosition].text.last().start + thisLyricsSegments[nextPosition].text.last().duration
+                                )
                                 if (segmentBoundaries.first <= musicTimeStamp && musicTimeStamp < segmentBoundaries.second) {
                                     _lyricsScrollToPosition.value = nextPosition
                                     _lyricsActiveWordIndex.value = -1
@@ -383,7 +385,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
                 }
             val onCompletion: () -> Unit = {
-                if(_playingState.value == PlayerState.PLAYING) {
+                if (_playingState.value == PlayerState.PLAYING) {
                     setPlayingState(PlayerState.END)
                 }
                 resetAudio()
@@ -431,12 +433,12 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 }
             }
             mediaInfo.singerInputStream?.run {
-                if (markSupported()){
+                if (markSupported()) {
                     reset()
                 }
             }
             mediaInfo.bgMusicInputStream?.run {
-                if (markSupported()){
+                if (markSupported()) {
                     reset()
                 }
             }

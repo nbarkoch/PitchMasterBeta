@@ -14,7 +14,8 @@ import com.example.pitchmasterbeta.MainActivity
 @Composable
 fun BackPressHandler(
 ) {
-    val viewModel: WorkspaceViewModel = MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val onBackPressedDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
@@ -34,21 +35,23 @@ fun BackPressHandler(
                 return
             }
             when (workspaceState.value) {
-                WorkspaceViewModel.WorkspaceState.IDLE ->
-                {
+                WorkspaceViewModel.WorkspaceState.IDLE -> {
                     when (playState.value) {
                         WorkspaceViewModel.PlayerState.PLAYING -> {
                             viewModel.pauseAudioDispatchers()
                         }
+
                         WorkspaceViewModel.PlayerState.IDLE,
-                        WorkspaceViewModel.PlayerState.PAUSE ->{
+                        WorkspaceViewModel.PlayerState.PAUSE -> {
                             viewModel.resetWorkspace()
                         }
-                        WorkspaceViewModel.PlayerState.END ->{
+
+                        WorkspaceViewModel.PlayerState.END -> {
                             viewModel.resetScoreAndPlayingState()
                         }
                     }
                 }
+
                 else -> {
                     viewModel.stopGenerateKaraoke(context)
                     viewModel.resetWorkspace()
