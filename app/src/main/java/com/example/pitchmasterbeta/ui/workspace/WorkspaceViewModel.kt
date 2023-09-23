@@ -81,17 +81,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     enum class WorkspaceState {
-        INTRO,
-        PICK,
-        WAITING,
-        IDLE,
+        INTRO, PICK, WAITING, IDLE,
     }
 
     enum class PlayerState {
-        IDLE,
-        PLAYING,
-        PAUSE,
-        END
+        IDLE, PLAYING, PAUSE, END
     }
 
     private val _workspaceState = MutableStateFlow(WorkspaceState.PICK)
@@ -111,9 +105,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val songFullName: StateFlow<String> = _songFullName
 
     suspend fun handleResultUriForAudioIntent(
-        context: Context,
-        contentResolver: ContentResolver?,
-        uri: Uri?
+        context: Context, contentResolver: ContentResolver?, uri: Uri?
     ) {
         uri?.let {
             contentResolver?.let {
@@ -137,8 +129,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         mediaInfo.max(context, uri)
                         mediaInfo.getSongInfo(context, uri)
                         _songFullName.value = "${mediaInfo.sponsorTitle}${
-                            if (mediaInfo.sponsorArtist.isNotEmpty())
-                                " - ${mediaInfo.sponsorArtist}" else ""
+                            if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
                         }"
                         audioProcessor = AudioProcessor(mediaInfo)
                         val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
@@ -152,8 +143,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 } else {
                     mediaInfo.getSongInfo(context, uri)
                     _songFullName.value = "${mediaInfo.sponsorTitle}${
-                        if (mediaInfo.sponsorArtist.isNotEmpty())
-                            " - ${mediaInfo.sponsorArtist}" else ""
+                        if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
                     }"
 
                     beginGenerateKaraoke(context, uri)
@@ -317,73 +307,70 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         // Start the music audio dispatcher
         musicJob = CoroutineScope(Dispatchers.IO).launch {
-            val handlePitch: (Double, Int, Int) -> Unit =
-                { musicTimeStamp, noteI, volume ->
-                    _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
-                    val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
-                    val min: Int = (musicTimeStamp % 1000 / 60).toInt()
-                    _currentTime.value =
-                        "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
-                    val currentWindowPosition: Int = (musicTimeStamp % 1000 % 60).toInt()
-                    if (lastWindowPosition != currentWindowPosition) {
-                        if (goodForThisWindowWatch) {
-                            _score.value++
-                            goodForThisWindowWatch = false
-                        }
-                        if (goodForOpinionWatch) {
-                            expectedScore++
-                            goodForOpinionWatch = false
-                        }
+            val handlePitch: (Double, Int, Int) -> Unit = { musicTimeStamp, noteI, volume ->
+                _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
+                val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
+                val min: Int = (musicTimeStamp % 1000 / 60).toInt()
+                _currentTime.value =
+                    "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                val currentWindowPosition: Int = (musicTimeStamp % 1000 % 60).toInt()
+                if (lastWindowPosition != currentWindowPosition) {
+                    if (goodForThisWindowWatch) {
+                        _score.value++
+                        goodForThisWindowWatch = false
                     }
-                    lastWindowPosition = currentWindowPosition
-
-                    if (noteI > 0) {
-                        _sinNote.value = NoteState(
-                            AudioProcessor.rangeIndex(noteI),
-                            AudioProcessor.shrinkVolume(volume)
-                        )
-                        _sinNoteActive.value = true
-                    } else {
-                        _sinNoteActive.value = false
+                    if (goodForOpinionWatch) {
+                        expectedScore++
+                        goodForOpinionWatch = false
                     }
+                }
+                lastWindowPosition = currentWindowPosition
 
-                    _lyricsSegments.value.let { thisLyricsSegments ->
-                        if (thisLyricsSegments.isNotEmpty()) {
-                            _lyricsScrollToPosition.value.let { currentPosition ->
-                                _lyricsActiveWordIndex.value.let { index ->
-                                    if (index > -1) {
-                                        thisLyricsSegments[currentPosition].text[index].let {
-                                            if (!(it.start < musicTimeStamp && musicTimeStamp <= it.duration + it.start)) {
-                                                _lyricsActiveWordIndex.value =
-                                                    thisLyricsSegments[currentPosition].text.indexOfFirst { w ->
-                                                        w.start < musicTimeStamp && musicTimeStamp <= w.start + w.duration
-                                                    }
-                                            }
-                                        }
-                                    } else {
-                                        val firstWord =
-                                            thisLyricsSegments[currentPosition].text.first()
-                                        if (firstWord.start < musicTimeStamp && musicTimeStamp <= firstWord.start + firstWord.duration) {
-                                            _lyricsActiveWordIndex.value = 0
+                if (noteI > 0) {
+                    _sinNote.value = NoteState(
+                        AudioProcessor.rangeIndex(noteI), AudioProcessor.shrinkVolume(volume)
+                    )
+                    _sinNoteActive.value = true
+                } else {
+                    _sinNoteActive.value = false
+                }
+
+                _lyricsSegments.value.let { thisLyricsSegments ->
+                    if (thisLyricsSegments.isNotEmpty()) {
+                        _lyricsScrollToPosition.value.let { currentPosition ->
+                            _lyricsActiveWordIndex.value.let { index ->
+                                if (index > -1) {
+                                    thisLyricsSegments[currentPosition].text[index].let {
+                                        if (!(it.start < musicTimeStamp && musicTimeStamp <= it.duration + it.start)) {
+                                            _lyricsActiveWordIndex.value =
+                                                thisLyricsSegments[currentPosition].text.indexOfFirst { w ->
+                                                    w.start < musicTimeStamp && musicTimeStamp <= w.start + w.duration
+                                                }
                                         }
                                     }
-                                }
-
-                                val nextPosition = (currentPosition + 1) % thisLyricsSegments.size
-                                val segmentBoundaries = Pair(
-                                    thisLyricsSegments[nextPosition].text.first().start,
-                                    thisLyricsSegments[nextPosition].text.last().start + thisLyricsSegments[nextPosition].text.last().duration
-                                )
-                                if (segmentBoundaries.first <= musicTimeStamp && musicTimeStamp < segmentBoundaries.second) {
-                                    _lyricsScrollToPosition.value = nextPosition
-                                    _lyricsActiveWordIndex.value = -1
+                                } else {
+                                    val firstWord = thisLyricsSegments[currentPosition].text.first()
+                                    if (firstWord.start < musicTimeStamp && musicTimeStamp <= firstWord.start + firstWord.duration) {
+                                        _lyricsActiveWordIndex.value = 0
+                                    }
                                 }
                             }
-                        }
 
+                            val nextPosition = (currentPosition + 1) % thisLyricsSegments.size
+                            val segmentBoundaries = Pair(
+                                thisLyricsSegments[nextPosition].text.first().start,
+                                thisLyricsSegments[nextPosition].text.last().start + thisLyricsSegments[nextPosition].text.last().duration
+                            )
+                            if (segmentBoundaries.first <= musicTimeStamp && musicTimeStamp < segmentBoundaries.second) {
+                                _lyricsScrollToPosition.value = nextPosition
+                                _lyricsActiveWordIndex.value = -1
+                            }
+                        }
                     }
 
                 }
+
+            }
             val onCompletion: () -> Unit = {
                 if (_playingState.value == PlayerState.PLAYING) {
                     setPlayingState(PlayerState.END)
@@ -455,6 +442,43 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
+    suspend fun jumpToTimestamp(time: Double) {
+        if (_playingState.value == PlayerState.IDLE || _playingState.value ==  PlayerState.END) {
+            // we can't just jump to lyrics without starting playing its just doesn't make any sense
+            return
+        }
+        withContext(Dispatchers.IO) {
+            // display a loader
+            if (time >= 0 && time < mediaInfo.timeStampDuration) {
+                val bytesToSkip = (time.toInt() * mediaInfo.voiceSampleRate * 2).toLong()
+                musicAudioDispatcher?.let {
+                    if (_playingState.value == PlayerState.PLAYING) {
+                        it.pause()
+                    }
+                    mediaInfo.singerInputStream?.run {
+                        if (markSupported()) {
+                            reset()
+                        }
+                    }
+                    mediaInfo.bgMusicInputStream?.run {
+                        if (markSupported()) {
+                            reset()
+                        }
+                    }
+                    it.skipBytes(bytesToSkip)
+                    if (_playingState.value == PlayerState.PLAYING) {
+                        it.resume()
+                    }
+                    val segmentIndex = _lyricsSegments.value.indexOfFirst { lyricsSegments ->
+                        lyricsSegments.text.first().start <= time && lyricsSegments.text.last().start > time
+                    }
+                    _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
+                    _lyricsActiveWordIndex.value = -1
+                }
+            }
+        }
+    }
+
     fun resetScoreAndPlayingState() {
         setPlayingState(PlayerState.IDLE)
         _score.value = 0
@@ -482,23 +506,19 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     }
                     val musicObservable: suspend () -> BufferedInputStream? = {
                         mediaInfo.downloadAndExtractMedia(
-                            context,
-                            accompanimentUrl,
-                            tempMusicFile!!
+                            context, accompanimentUrl, tempMusicFile!!
                         )
                     }
 
                     val songName = _songFullName.value
                     lyricsObservable = {
                         lyricsProvider?.invokeLyricsLambdaFunction(
-                            songName,
-                            vocalsUrl.toString()
+                            songName, vocalsUrl.toString()
                         )
                     }
 
                     val streamsAndLyrics = try {
-                        val singerStream =
-                            withContext(Dispatchers.IO) { singerObservable() }
+                        val singerStream = withContext(Dispatchers.IO) { singerObservable() }
                         val musicStream = withContext(Dispatchers.IO) { musicObservable() }
                         val lyricsList = withContext(Dispatchers.IO) { lyricsObservable() }
                         Pair(Pair(singerStream, musicStream), lyricsList)

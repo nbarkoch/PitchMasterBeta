@@ -16,8 +16,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 @Composable
@@ -69,7 +71,11 @@ fun LyricsLazyColumn(
                 isActive = scrollToPosition.value >= i,
                 scale = opacity,
                 activeWord = if (scrollToPosition.value == i) activeWordIndex.value else -1
-            )
+            ) {
+                viewModel.viewModelScope.launch {
+                    viewModel.jumpToTimestamp(item.text.first().start)
+                }
+            }
         }
         item {
             Spacer(modifier = Modifier.height(Dp((columnMidpoint * 0.9f) / LocalDensity.current.density)))

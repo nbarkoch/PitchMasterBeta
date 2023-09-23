@@ -55,8 +55,15 @@ public class SongAudioDispatcher implements Runnable {
         this.zeroPadLastBuffer = true;
     }
 
-    public void skip(double var1) {
-        this.bytesToSkip = Math.round(var1 * (double) this.format.getSampleRate()) * (long) this.format.getFrameSize();
+    public void skipBytes(long bytesToSkip) {
+        try {
+            this.audioInputStream1.skip(bytesToSkip);
+            this.audioInputStream2.skip(bytesToSkip);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+        this.bytesProcessed = bytesToSkip;
+        this.audioEvent.setBytesProcessed(this.bytesProcessed);
     }
 
     public void setStepSizeAndOverlap(int var1, int var2) {

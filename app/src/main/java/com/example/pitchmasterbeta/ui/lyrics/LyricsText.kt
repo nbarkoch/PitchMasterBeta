@@ -4,6 +4,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,7 +56,8 @@ fun LyricsText(
     segment: LyricsTimestampedSegment,
     isActive: Boolean,
     scale: Float,
-    activeWord: Int
+    activeWord: Int,
+    onClick: () -> Unit
 ) {
     var lines: List<List<LyricsWord>> by remember { mutableStateOf(emptyList()) }
     var isSegmentRTL by remember { mutableStateOf(false) }
@@ -112,7 +114,8 @@ fun LyricsText(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                    .padding(horizontal = 10.dp, vertical = 7.dp)
+                    .clickable(onClick=onClick),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -337,6 +340,6 @@ fun LyricsTextPreview() {
         MainActivity.viewModelStore.put("workspace", viewModel)
     }
     MaterialTheme {
-        LyricsText(LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))), true, 1f, 2)
+        LyricsText(LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))), true, 1f, 2) {}
     }
 }
