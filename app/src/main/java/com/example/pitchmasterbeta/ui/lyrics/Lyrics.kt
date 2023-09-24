@@ -73,7 +73,9 @@ fun LyricsLazyColumn(
                 activeWord = if (scrollToPosition.value == i) activeWordIndex.value else -1
             ) {
                 viewModel.viewModelScope.launch {
-                    viewModel.jumpToTimestamp(item.text.first().start)
+                    if (opacity > 0.8) {
+                        viewModel.jumpToTimestamp(item.text.first().start)
+                    }
                 }
             }
         }
