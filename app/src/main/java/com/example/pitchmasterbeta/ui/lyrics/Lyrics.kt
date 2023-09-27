@@ -85,7 +85,12 @@ fun LyricsLazyColumn(
     }
 
     LaunchedEffect(scrollToPosition.value) {
-        listState.animateScrollToItem(scrollToPosition.value, -(columnMidpoint * 0.7f).toInt())
+        val offset =
+            listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == scrollToPosition.value }
+                ?.let { currentItemInfo ->
+                    columnMidpoint - currentItemInfo.size * 1.8f
+                } ?: (columnMidpoint * 0.65f)
+        listState.animateScrollToItem(scrollToPosition.value, -(maxOf(columnMidpoint * 0.65f, offset)).toInt())
     }
 }
 

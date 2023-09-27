@@ -83,6 +83,7 @@ fun WorkspaceFooter(
         ),
     )
 
+
     val loadMusicFromGalleryResultLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -99,6 +100,20 @@ fun WorkspaceFooter(
             }
         }
     }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            loadMusicFromGalleryResultLauncher.launch(
+                Intent(
+                    Intent.ACTION_PICK,
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                )
+            )
+        }
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -124,12 +139,16 @@ fun WorkspaceFooter(
 
                     WorkspaceViewModel.WorkspaceState.PICK -> {
                         ComplexCircleButton(70.dp, R.drawable.baseline_library_music_24, onClick = {
-                            val intent =
-                                Intent(
-                                    Intent.ACTION_PICK,
-                                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                                requestPermissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                            } else {
+                                loadMusicFromGalleryResultLauncher.launch(
+                                    Intent(
+                                        Intent.ACTION_PICK,
+                                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                                    )
                                 )
-                            loadMusicFromGalleryResultLauncher.launch(intent)
+                            }
                         }, "pick a song from gallery", active = true)
                     }
 
@@ -294,7 +313,11 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) {}
+    ) { granted ->
+        if (granted) {
+            viewModel.startAudioDispatchers()
+        }
+    }
 
     val progress = viewModel.progress.collectAsState()
     val playState = viewModel.playingState.collectAsState()
