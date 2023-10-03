@@ -70,12 +70,13 @@ fun PitchDecorationColumn(
             Color.Transparent,
         ),
     )
-    val modifier = Modifier.fillMaxHeight().width(maxChordWidth).run {
-        (if (direction < 0) {
-            this
-                .offset(x = screenWidthDp.dp - maxChordWidth)
-                .scale(scaleX = -1f, scaleY = 1f)
-        } else this).background(brush = gradientBrush)
+
+    val modifier = if (direction < 0) {
+        Modifier.fillMaxHeight().width(maxChordWidth)
+            .offset(x = screenWidthDp.dp - maxChordWidth)
+            .scale(scaleX = -1f, scaleY = 1f).background(brush = gradientBrush)
+    } else {
+        Modifier.fillMaxHeight().width(maxChordWidth).background(brush = gradientBrush)
     }
 
     Box(modifier = modifier) {
