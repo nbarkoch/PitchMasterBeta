@@ -74,7 +74,7 @@ fun BubbleMaker() {
         MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val playState by rememberUpdatedState(viewModel.playingState.collectAsState())
 
-    repeat(60) {
+    repeat(10) {
         BubbleAnimation(playState.value == WorkspaceViewModel.PlayerState.PLAYING)
     }
 }
@@ -130,10 +130,10 @@ fun BubbleAnimation(active: Boolean) {
     LaunchedEffect(active) {
         while (active) {
             delay((500..16000).random().toLong())
-            bubbleSizeDp = (20..screenWidthDp.toInt() / 2).random().dp
+            bubbleSizeDp = (screenWidthDp.toInt() / 2..screenWidthDp.toInt()).random().dp
             val halfBubbleSize = bubbleSizeDp.value.toInt() / 2
             initialX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()
-            targetX = (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
+            targetX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()
             duration = (7000..9000).random()
             bubbleOpacity = Random.nextDouble(0.1, 0.25).toFloat()
             initialY = screenHeightDp + (0..1).random()

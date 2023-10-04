@@ -42,7 +42,7 @@ fun WorkspaceSurface(
             .background(brush = gradientBrush)
     )
     {
-//        BackgroundMic()
+        BackgroundMic()
         WorkspaceBody(Modifier.fillMaxSize())
         WorkspaceFooter(
             Modifier

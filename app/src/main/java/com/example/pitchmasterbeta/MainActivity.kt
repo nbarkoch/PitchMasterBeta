@@ -3,7 +3,7 @@ package com.example.pitchmasterbeta
 import android.content.ContentResolver
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +48,16 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         viewModelStore.clear()
+    }
+
+    fun keepAwake(flag: Boolean) {
+        window.apply {
+            if (flag) {
+                addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
     }
 }
 

@@ -34,6 +34,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -310,7 +311,7 @@ fun ComplexCircleButton(
 
 @Composable
 fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
-
+    val activity = (LocalContext.current as? MainActivity)
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -379,6 +380,10 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
         onClick = { viewModel.displaySingerVolume(!viewModel.displaySingerVolume.value) },
         contentDesc = "singer voice volume"
     )
+
+    LaunchedEffect(playState.value) {
+        activity?.keepAwake(playState.value == WorkspaceViewModel.PlayerState.PLAYING)
+    }
 }
 
 
