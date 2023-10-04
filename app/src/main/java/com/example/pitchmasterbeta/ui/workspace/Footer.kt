@@ -94,7 +94,7 @@ fun WorkspaceFooter(
                     MainActivity.appContext?.contentResolver,
                     result.data?.data
                 )
-                if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                if (!viewModel.isDevMode() && !NotificationManagerCompat.from(context).areNotificationsEnabled()) {
                     viewModel.showDialog()
                 }
             }
