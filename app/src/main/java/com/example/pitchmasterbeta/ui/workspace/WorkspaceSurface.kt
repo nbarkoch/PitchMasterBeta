@@ -63,5 +63,7 @@ fun WorkspaceSurface(
 @Composable
 fun WorkspaceSurfacePreview(
 ) {
-    WorkspaceSurface()
+    PitchMasterBetaTheme {
+        WorkspaceSurface()
+    }
 }

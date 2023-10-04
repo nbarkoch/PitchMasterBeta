@@ -4,6 +4,7 @@ import android.animation.ArgbEvaluator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,24 +46,22 @@ fun PitchDecorations(
     chordHeight: Dp = 14.dp,
     maxChordWidth: Dp = 30.dp
 ) {
-    val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
-    val screenHeightDp = LocalConfiguration.current.screenHeightDp
+    val viewModel: WorkspaceViewModel? =
+        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel?
+    viewModel?.let {
+        val screenHeightDp = LocalConfiguration.current.screenHeightDp
+        val numOfItems = (screenHeightDp.dp / chordHeight).toInt()
+        PitchDecorationColumn(viewModel, 1, maxChordWidth, numOfItems, chordHeight)
 
-    val items by remember {
-        mutableStateOf(List((screenHeightDp.dp / chordHeight).toInt()) { 0 })
+        PitchDecorationColumn(viewModel, -1, maxChordWidth, numOfItems, chordHeight)
     }
-
-    PitchDecorationColumn(viewModel, 1, maxChordWidth, items, chordHeight)
-
-    PitchDecorationColumn(viewModel, -1, maxChordWidth, items, chordHeight)
 }
 
 @Composable
 fun PitchDecorationColumn(
     viewModel: WorkspaceViewModel,
     direction: Int,
-    maxChordWidth: Dp, items: List<Int>, chordHeight: Dp
+    maxChordWidth: Dp, numOfItems: Int, chordHeight: Dp
 ) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val gradientBrush = Brush.horizontalGradient(
@@ -83,17 +83,17 @@ fun PitchDecorationColumn(
     } else baseModifier)
 
     Box(modifier = modifier.background(brush = gradientBrush)) {
-        repeat(items.size) { i ->
+        repeat(numOfItems) { i ->
             PitchItem(
                 modifier = Modifier
                     .width(10.dp)
                     .padding(0.dp, 3.dp)
                     .offset(x = 0.dp, y = i * chordHeight),
-                color = interpolateColor(i, items.size),
+                color = interpolateColor(i, numOfItems),
                 chordHeight = chordHeight - 6.dp,
             )
         }
-        LazyWindowScroller(viewModel, direction, chordHeight, items)
+        LazyWindowScroller(viewModel, direction, chordHeight, numOfItems)
     }
 
 }
@@ -103,7 +103,7 @@ fun LazyWindowScroller(
     viewModel: WorkspaceViewModel,
     direction: Int,
     chordHeight: Dp,
-    items: List<Any>
+    numOfItems: Int,
 ) {
     val localDensity = LocalDensity.current
     val scrollState = rememberLazyListState()
@@ -117,7 +117,9 @@ fun LazyWindowScroller(
         if (direction < 0) viewModel.sinNoteActive.collectAsState()
         else viewModel.micNoteActive.collectAsState()
     )
-
+    val items by remember {
+        mutableStateOf(List(numOfItems) { 0 })
+    }
     val offsetY = remember(scrollState) {
         derivedStateOf {
             chordHeightPx *
@@ -199,15 +201,12 @@ fun PitchDecorationsPreview() {
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
     val chordHeight: Dp = 14.dp
     val maxChordWidth: Dp = 30.dp
-    val items by remember {
-        mutableStateOf(List((screenHeightDp.dp / chordHeight).toInt()) { 0 })
-    }
     PitchMasterBetaTheme {
         PitchDecorationColumn(
             viewModel = viewModelDummy,
             direction = 1,
             maxChordWidth = maxChordWidth,
-            items = items,
+            numOfItems = (screenHeightDp.dp / chordHeight).toInt(),
             chordHeight = chordHeight
         )
     }
