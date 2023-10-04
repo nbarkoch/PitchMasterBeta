@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -397,8 +399,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     fun continueAudioDispatchers() {
+        if (!jumpInProgress) {
+            musicAudioDispatcher?.resume()
+        }
         microphoneAudioDispatcher?.resume()
-        musicAudioDispatcher?.resume()
         setPlayingState(PlayerState.PLAYING)
     }
 
@@ -408,6 +412,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _progress.value = 0f
         _currentTime.value = "00:00"
         goodForThisWindowWatch = false
+        jumpInProgress = false
         _micNote.value = NoteState(0f, 0f)
         _sinNote.value = NoteState(0f, 0f)
         _micNoteActive.value = false
@@ -446,41 +451,48 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
+    private val jumpLock = Mutex()
+    private var jumpInProgress = false
     suspend fun jumpToTimestamp(time: Double) {
-        if (_playingState.value == PlayerState.IDLE || _playingState.value ==  PlayerState.END) {
+        if (jumpInProgress) {
             // we can't just jump to lyrics without starting playing its just doesn't make any sense
             return
         }
-        withContext(Dispatchers.IO) {
-            // display a loader
-            if (time >= 0 && time < mediaInfo.timeStampDuration) {
-                val bytesToSkip = (time.toInt() * mediaInfo.voiceSampleRate * 2).toLong()
-                musicAudioDispatcher?.let {
-                    if (_playingState.value == PlayerState.PLAYING) {
-                        it.pause()
-                    }
-                    mediaInfo.singerInputStream?.run {
-                        if (markSupported()) {
-                            reset()
+        jumpLock.withLock {
+            withContext(Dispatchers.IO) {
+                jumpInProgress = true
+                // display a loader
+                if (time >= 0 && time < mediaInfo.timeStampDuration) {
+                    val bytesToSkip = (time.toInt() * mediaInfo.voiceSampleRate * 2).toLong()
+                    musicAudioDispatcher?.let {
+                        if (_playingState.value == PlayerState.PLAYING) {
+                            it.pause()
                         }
-                    }
-                    mediaInfo.bgMusicInputStream?.run {
-                        if (markSupported()) {
-                            reset()
+                        mediaInfo.singerInputStream?.run {
+                            if (markSupported()) {
+                                reset()
+                            }
                         }
+                        mediaInfo.bgMusicInputStream?.run {
+                            if (markSupported()) {
+                                reset()
+                            }
+                        }
+                        it.skipBytes(bytesToSkip)
+                        if (_playingState.value == PlayerState.PLAYING) {
+                            it.resume()
+                        }
+                        val segmentIndex = _lyricsSegments.value.indexOfFirst { lyricsSegments ->
+                            lyricsSegments.text.first().start <= time && lyricsSegments.text.last().start > time
+                        }
+                        _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
+                        _lyricsActiveWordIndex.value = -1
                     }
-                    it.skipBytes(bytesToSkip)
-                    if (_playingState.value == PlayerState.PLAYING) {
-                        it.resume()
-                    }
-                    val segmentIndex = _lyricsSegments.value.indexOfFirst { lyricsSegments ->
-                        lyricsSegments.text.first().start <= time && lyricsSegments.text.last().start > time
-                    }
-                    _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
-                    _lyricsActiveWordIndex.value = -1
                 }
+                jumpInProgress = false
             }
         }
+
     }
 
     fun resetScoreAndPlayingState() {
