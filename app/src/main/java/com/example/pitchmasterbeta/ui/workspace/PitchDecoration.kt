@@ -69,6 +69,8 @@ fun PitchDecorationColumn(
             Color(0x2DE96ADC),
             Color.Transparent,
         ),
+        startX = 0.0f,
+        endX = 40f
     )
 
     val baseModifier = Modifier
@@ -78,9 +80,9 @@ fun PitchDecorationColumn(
         baseModifier
             .offset(x = screenWidthDp.dp - maxChordWidth)
             .scale(scaleX = -1f, scaleY = 1f)
-    } else baseModifier).background(brush = gradientBrush)
+    } else baseModifier)
 
-    Box(modifier = modifier) {
+    Box(modifier = modifier.background(brush = gradientBrush)) {
         repeat(items.size) { i ->
             PitchItem(
                 modifier = Modifier
@@ -193,10 +195,20 @@ fun PitchItem(
 @Preview(showBackground = true)
 @Composable
 fun PitchDecorationsPreview() {
-    if (MainActivity.viewModelStore["workspace"] == null) {
-        MainActivity.viewModelStore.put("workspace", WorkspaceViewModel())
+    val viewModelDummy = WorkspaceViewModel()
+    val screenHeightDp = LocalConfiguration.current.screenHeightDp
+    val chordHeight: Dp = 14.dp
+    val maxChordWidth: Dp = 30.dp
+    val items by remember {
+        mutableStateOf(List((screenHeightDp.dp / chordHeight).toInt()) { 0 })
     }
     PitchMasterBetaTheme {
-        PitchDecorations()
+        PitchDecorationColumn(
+            viewModel = viewModelDummy,
+            direction = 1,
+            maxChordWidth = maxChordWidth,
+            items = items,
+            chordHeight = chordHeight
+        )
     }
 }
