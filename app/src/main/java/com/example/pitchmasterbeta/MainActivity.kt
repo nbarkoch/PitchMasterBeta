@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.ViewModelStore
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
+import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +66,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainActivityPreview(
 ) {
+    val viewModel = WorkspaceViewModel()
+    viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.IDLE)
+    MainActivity.viewModelStore.put("workspace", viewModel)
     PitchMasterBetaTheme {
         WorkspaceSurface()
     }

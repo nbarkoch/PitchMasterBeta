@@ -95,7 +95,9 @@ fun WorkspaceFooter(
                     MainActivity.appContext?.contentResolver,
                     result.data?.data
                 )
-                if (!viewModel.isDevMode() && !NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                if (!viewModel.isDevMode() && !NotificationManagerCompat.from(context)
+                        .areNotificationsEnabled()
+                ) {
                     viewModel.showDialog()
                 }
             }
@@ -252,7 +254,7 @@ fun SimpleCircleButton(
 fun ComplexCircleButton(
     size: Dp,
     resource: Int,
-    onClick: () -> Unit,
+    onClick: () -> Unit = {},
     contentDesc: String,
     active: Boolean
 ) {
@@ -345,33 +347,37 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
                 WorkspaceViewModel.PlayerState.PAUSE -> R.drawable.baseline_play_arrow_24
 
                 WorkspaceViewModel.PlayerState.PLAYING -> R.drawable.ic_baseline_pause_24
-            }, onClick = {
-                when (playState.value) {
-                    WorkspaceViewModel.PlayerState.IDLE -> {
-                        val recordPermissionGranted = ContextCompat.checkSelfPermission(
-                            context,
-                            android.Manifest.permission.RECORD_AUDIO
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (recordPermissionGranted) {
-                            viewModel.startAudioDispatchers()
-                        } else {
-                            requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
-                        }
-                    }
-
-                    WorkspaceViewModel.PlayerState.PLAYING -> {
-                        viewModel.pauseAudioDispatchers()
-                    }
-
-                    WorkspaceViewModel.PlayerState.PAUSE -> {
-                        viewModel.continueAudioDispatchers()
-                    }
-
-                    else -> {}
-                }
-            }, "start karaoke", active = true
+            }, active = true, contentDesc = "start karaoke"
         )
-        CircleProgressbar(Modifier.size(65.dp), progress = progress.value)
+        CircleProgressbar(Modifier.size(65.dp), progress = progress.value, onClick = {
+            when (playState.value) {
+                WorkspaceViewModel.PlayerState.IDLE -> {
+                    val recordPermissionGranted = ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (recordPermissionGranted) {
+                        viewModel.startAudioDispatchers()
+                    } else {
+                        requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                    }
+                }
+
+                WorkspaceViewModel.PlayerState.PLAYING -> {
+                    viewModel.pauseAudioDispatchers()
+                }
+
+                WorkspaceViewModel.PlayerState.PAUSE -> {
+                    viewModel.continueAudioDispatchers()
+                }
+
+                else -> {}
+            }
+        }, onProgressChanged = { progress ->
+            viewModel.viewModelScope.launch {
+                viewModel.jumpToTimestamp(viewModel.getTimestampFromProgress(progress))
+            }
+        })
     }
 
     SimpleCircleButton(

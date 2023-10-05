@@ -47,7 +47,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var notification: SpleeterProgressNotification? = null
     private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = false
+    private val devTestMode: Boolean = true
 
     fun isDevMode(): Boolean {
         return devTestMode
@@ -486,7 +486,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             lyricsSegments.text.first().start <= time && lyricsSegments.text.last().start > time
                         }
                         _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
-                        _lyricsActiveWordIndex.value = -1
+                        val wordIndex = if (segmentIndex > -1) _lyricsSegments.value[segmentIndex].text.indexOfFirst { word ->
+                            word.start <= time && word.start + word.duration > time
+                        } else -1
+                        _lyricsActiveWordIndex.value = wordIndex
                     }
                 }
                 jumpInProgress = false
@@ -643,5 +646,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun hideDialog() {
         _showDialog.value = false
+    }
+
+    fun getTimestampFromProgress(progress: Float): Double {
+        return progress * mediaInfo.timeStampDuration
     }
 }
