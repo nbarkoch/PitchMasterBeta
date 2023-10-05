@@ -454,7 +454,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private val jumpLock = Mutex()
     private var jumpInProgress = false
     suspend fun jumpToTimestamp(time: Double) {
-        if (jumpInProgress) {
+        if (jumpInProgress || _playingState.value == PlayerState.IDLE || _playingState.value == PlayerState.END) {
             // we can't just jump to lyrics without starting playing its just doesn't make any sense
             return
         }
