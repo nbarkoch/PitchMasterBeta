@@ -374,9 +374,7 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
                 else -> {}
             }
         }, onProgressChanged = { progress ->
-            viewModel.viewModelScope.launch {
-                viewModel.jumpToTimestamp(viewModel.getTimestampFromProgress(progress))
-            }
+            viewModel.jumpToTimestamp(viewModel.getTimestampFromProgress(progress))
         })
     }
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,6 +22,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -31,7 +35,7 @@ fun CircleProgressbar(
     modifier: Modifier,
     progress: Float = 0f,
     onClick: () -> Unit = {},
-    onProgressChanged: (newProgress: Float) -> Unit = {}
+    onProgressChanged: suspend (newProgress: Float) -> Unit = {}
 ) {
     var radius by remember {
         mutableStateOf(0f)
@@ -45,11 +49,15 @@ fun CircleProgressbar(
     var isDragged by remember {
         mutableStateOf(false)
     }
-    var _angle by remember {
+    var angle by remember {
         mutableStateOf(progress * 360.0)
     }
 
-    val angle = if (!isDragged) progress * 360.0 else _angle
+    LaunchedEffect(progress) {
+        if (!isDragged) {
+            angle = progress * 360.0
+        }
+    }
 
     Canvas(
         modifier = modifier
@@ -59,18 +67,22 @@ fun CircleProgressbar(
                 detectDragGestures(
                     onDragStart = { isDragged = true },
                     onDragCancel = {
-                        onProgressChanged(_angle.toFloat() / 360f)
-                        isDragged = false
+                        CoroutineScope(Dispatchers.IO).launch {
+                            onProgressChanged(angle.toFloat() / 360f)
+                            isDragged = false
+                        }
                     },
                     onDragEnd = {
-                        onProgressChanged(_angle.toFloat() / 360f)
-                        isDragged = false
+                        CoroutineScope(Dispatchers.IO).launch {
+                            onProgressChanged(angle.toFloat() / 360f)
+                            isDragged = false
+                        }
                     },
                 ) { change, dragAmount ->
                     handleCenter += dragAmount
                     val tAngle = getRotationAngle(handleCenter, shapeCenter)
-                    if (abs(tAngle - _angle) < 180) {
-                        _angle = tAngle
+                    if (abs(tAngle - angle) < 180) {
+                        angle = tAngle
                     }
                     change.consume()
                 }
