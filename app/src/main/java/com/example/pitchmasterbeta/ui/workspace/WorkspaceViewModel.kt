@@ -47,7 +47,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var notification: SpleeterProgressNotification? = null
     private var lyricsProvider: LyricsProvider? = null
 
-    private val devTestMode: Boolean = true
+    private val devTestMode: Boolean = false
 
     fun isDevMode(): Boolean {
         return devTestMode
