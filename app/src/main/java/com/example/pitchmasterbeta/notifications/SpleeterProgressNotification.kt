@@ -34,7 +34,7 @@ class SpleeterProgressNotification(context: Context) {
         lastProgress = 0
         // Create a notification builder
         notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Progress Notification").setContentText("Upload in progress")
             .setDefaults(Notification.DEFAULT_LIGHTS or Notification.DEFAULT_VIBRATE)
             .setProgress(MAX_PROGRESS, lastProgress, true).setSound(null)
