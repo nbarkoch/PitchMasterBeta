@@ -21,7 +21,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.pitchmasterbeta.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,10 +33,11 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 @Composable
-fun CircleProgressbar(
-    modifier: Modifier,
+fun CircleProgressbarButton(
+    resource: Int,
     progress: Float = 0f,
     onClick: () -> Unit = {},
+    size: Dp = 70.dp,
     onProgressChanged: suspend (newProgress: Float) -> Unit = {}
 ) {
     var radius by remember {
@@ -58,11 +61,17 @@ fun CircleProgressbar(
             angle = progress * 360.0
         }
     }
-
+    ComplexCircleButton(
+        size,
+        resource = resource,
+        active = true,
+        contentDesc = "player button",
+        onClick = onClick,
+    )
     Canvas(
-        modifier = modifier
+        modifier = Modifier.size(size - 5.dp)
             .clip(CircleShape)
-            .clickable(role = Role.Button) { onClick() }
+            .clickable(role = Role.Button, onClick = onClick)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { isDragged = true },
@@ -88,11 +97,10 @@ fun CircleProgressbar(
                 }
             }
             .padding(5.dp),
-
-        ) {
+    ) {
         shapeCenter = center
 
-        radius = size.minDimension / 2
+        radius = this.size.minDimension / 2
 
         val x = (shapeCenter.x + cos(Math.toRadians(angle)) * radius).toFloat()
         val y = (shapeCenter.y + sin(Math.toRadians(angle)) * radius).toFloat()
@@ -133,6 +141,10 @@ private fun getRotationAngle(currentPosition: Offset, center: Offset): Double {
 @Composable
 fun CircleProgressbarPreview() {
     MaterialTheme {
-        CircleProgressbar(Modifier.size(80.dp), progress = 0.4f)
+        CircleProgressbarButton(
+            size = 80.dp,
+            resource = R.drawable.baseline_play_arrow_24,
+            progress = 0.4f
+        )
     }
 }

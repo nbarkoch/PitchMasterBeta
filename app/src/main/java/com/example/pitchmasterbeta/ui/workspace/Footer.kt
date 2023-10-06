@@ -14,6 +14,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -126,7 +128,9 @@ fun WorkspaceFooter(
         }
 
         Column(
-            modifier = modifier.background(gradientBrush),
+            modifier = modifier
+                .background(gradientBrush)
+                .pointerInput(Unit) { detectTapGestures {} },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
@@ -339,43 +343,41 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
     )
 
     Box(contentAlignment = Alignment.Center) {
-        ComplexCircleButton(
-            70.dp,
-            when (playState.value) {
+        CircleProgressbarButton(
+            size = 70.dp,
+            resource = when (playState.value) {
                 WorkspaceViewModel.PlayerState.IDLE,
                 WorkspaceViewModel.PlayerState.END,
                 WorkspaceViewModel.PlayerState.PAUSE -> R.drawable.baseline_play_arrow_24
 
                 WorkspaceViewModel.PlayerState.PLAYING -> R.drawable.ic_baseline_pause_24
-            }, active = true, contentDesc = "start karaoke"
-        )
-        CircleProgressbar(Modifier.size(65.dp), progress = progress.value, onClick = {
-            when (playState.value) {
-                WorkspaceViewModel.PlayerState.IDLE -> {
-                    val recordPermissionGranted = ContextCompat.checkSelfPermission(
-                        context,
-                        android.Manifest.permission.RECORD_AUDIO
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (recordPermissionGranted) {
-                        viewModel.startAudioDispatchers()
-                    } else {
-                        requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            }, progress = progress.value, onClick = {
+                when (playState.value) {
+                    WorkspaceViewModel.PlayerState.IDLE -> {
+                        val recordPermissionGranted = ContextCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.RECORD_AUDIO
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (recordPermissionGranted) {
+                            viewModel.startAudioDispatchers()
+                        } else {
+                            requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                        }
                     }
-                }
 
-                WorkspaceViewModel.PlayerState.PLAYING -> {
-                    viewModel.pauseAudioDispatchers()
-                }
+                    WorkspaceViewModel.PlayerState.PLAYING -> {
+                        viewModel.pauseAudioDispatchers()
+                    }
 
-                WorkspaceViewModel.PlayerState.PAUSE -> {
-                    viewModel.continueAudioDispatchers()
-                }
+                    WorkspaceViewModel.PlayerState.PAUSE -> {
+                        viewModel.continueAudioDispatchers()
+                    }
 
-                else -> {}
-            }
-        }, onProgressChanged = { progress ->
-            viewModel.jumpToTimestamp(viewModel.getTimestampFromProgress(progress))
-        })
+                    else -> {}
+                }
+            }, onProgressChanged = { progress ->
+                viewModel.jumpToTimestamp(viewModel.getTimestampFromProgress(progress))
+            })
     }
 
     SimpleCircleButton(
