@@ -76,7 +76,8 @@ fun WorkspaceFooter(
         MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
     val context = LocalContext.current.applicationContext
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
-    val showDialog by rememberUpdatedState(viewModel.showDialog.collectAsState())
+    val showNotificationDialog by rememberUpdatedState(viewModel.showNotificationDialog.collectAsState())
+    val showSaveAudioDialog by rememberUpdatedState(viewModel.showSaveAudioDialog.collectAsState())
 
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(
@@ -100,7 +101,7 @@ fun WorkspaceFooter(
                 if (!viewModel.isDevMode() && !NotificationManagerCompat.from(context)
                         .areNotificationsEnabled()
                 ) {
-                    viewModel.showDialog()
+                    viewModel.showNotificationDialog()
                 }
             }
         }
@@ -168,10 +169,10 @@ fun WorkspaceFooter(
         }
     }
 
-    if (showDialog.value) {
-        Dialog(onDismissRequest = { viewModel.hideDialog() }) {
+    if (showNotificationDialog.value) {
+        Dialog(onDismissRequest = { viewModel.hideNotificationDialog() }) {
             AlertDialog(
-                onDismissRequest = { viewModel.hideDialog() },
+                onDismissRequest = { viewModel.hideNotificationDialog() },
                 title = { Text("Notify when ready") },
                 text = { Text("Would you like to be notify when the Karaoke is ready?") },
                 confirmButton = {
@@ -187,7 +188,7 @@ fun WorkspaceFooter(
                             intent.putExtra("app_package", context.packageName)
                             intent.putExtra("app_uid", context.applicationInfo.uid)
                             context.startActivity(intent)
-                            viewModel.hideDialog()
+                            viewModel.hideNotificationDialog()
                         }
                     ) {
                         Text("SURE")
@@ -195,7 +196,7 @@ fun WorkspaceFooter(
                 },
                 dismissButton = {
                     TextButton(
-                        onClick = { viewModel.hideDialog() }
+                        onClick = { viewModel.hideNotificationDialog() }
                     ) {
                         Text("NO")
                     }
@@ -203,6 +204,34 @@ fun WorkspaceFooter(
             )
         }
     }
+
+    if (showSaveAudioDialog.value) {
+        Dialog(onDismissRequest = { viewModel.hideSaveAudioDialog() }) {
+            AlertDialog(
+                onDismissRequest = { viewModel.hideSaveAudioDialog() },
+                title = { Text("Save Karaoke") },
+                text = { Text("Would you like to save this karaoke?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = viewModel::hideSaveAudioDialog
+                    ) {
+                        Text("SURE")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.forgetKaraoke()
+                            viewModel.hideSaveAudioDialog()
+                        }
+                    ) {
+                        Text("NO")
+                    }
+                }
+            )
+        }
+    }
+
 
 }
 

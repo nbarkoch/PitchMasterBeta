@@ -8,7 +8,7 @@ android {
     compileSdk = 33
 
     defaultConfig {
-        applicationId = "com.example.pitchmasterbeta"
+        applicationId = "com.nbarkoch.pitchmaster"
         minSdk = 24
         targetSdk = 33
         versionCode = 1

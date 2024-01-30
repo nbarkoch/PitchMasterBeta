@@ -78,6 +78,8 @@ class LyricsProvider(context: Context?) {
                     )
                     if (lyricsSegments.isEmpty()) {
                         Log.e("LyricsProvider", " - bad response - lyrics are empty :(")
+                    } else {
+                        Log.i("LyricsProvider", " - response: \n $lyricsSegments")
                     }
                     lyricsTimestampedSegments = lyricsSegments.map { lyricsSegment ->
                         val words = lyricsSegment.text.trim().split(" ")

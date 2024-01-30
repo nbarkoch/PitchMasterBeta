@@ -8,6 +8,7 @@ import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
@@ -65,10 +66,8 @@ data class MediaInfo(
                     mmr.release()
                 }
 
-
                 voiceSampleRate = mf.getInteger(MediaFormat.KEY_SAMPLE_RATE) * 2
                 audioFloatBuffer = AudioRecord.getMinBufferSize(voiceSampleRate, 16, 2)
-                // Init your pitch sounds here or do other actions with the extracted data
             }
         }
     }
@@ -94,19 +93,31 @@ data class MediaInfo(
         }
     }
 
-
-    suspend fun downloadAndExtractMedia(
+    suspend fun getAudioBufferedInputStream(
         context: Context,
-        url: URL,
-        outputFile: File
-    ): BufferedInputStream? {
+        audioFile: File,
+        musicFile: File
+    ): BufferedInputStream {
+        return withContext(Dispatchers.IO) {
+            val audioFileUri = Uri.fromFile(audioFile)
+            val wavFileUri = Uri.fromFile(musicFile)
+            return@withContext transformAndPrepareAudio(
+                context,
+                audioFileUri,
+                wavFileUri
+            )
+        }
+    }
+
+    fun downloadAudioFile(url: URL): File? {
         try {
             val connection = url.openConnection() as HttpURLConnection
             connection.connect()
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 // Create a temporary file to store the downloaded content
-                val mp3TempFile = File.createTempFile("media", null)
-                val outputStream = FileOutputStream(mp3TempFile)
+                val audioFile =
+                    File.createTempFile(url.path.replace("/", "").replace(".", "_"), null)
+                val outputStream = FileOutputStream(audioFile)
 
                 // Download the content
                 val inputStream = connection.inputStream
@@ -120,28 +131,47 @@ data class MediaInfo(
                 inputStream.close()
                 outputStream.close()
 
-                // Get the Uri reference to the downloaded file
-                val inputUri = Uri.fromFile(mp3TempFile)
-                val inputUriPath = FFmpegKitConfig.getSafParameterForRead(context, inputUri)
-
-                val outputUri = Uri.fromFile(outputFile)
-                val outputUriPath = FFmpegKitConfig.getSafParameterForWrite(context, outputUri)
-
-                FFmpegKit.execute(" -i $inputUriPath -acodec pcm_s16le -ar 44100 -ac 2 -f wav $outputUriPath")
-                mp3TempFile.delete()
-                max(context, outputUri)
-                return BufferedInputStream(context.contentResolver.openInputStream(outputUri))
-                // Rest of your code...
+                return audioFile
             } else {
                 // Handle the case when the connection fails
             }
-
 
         } catch (e: IOException) {
             e.printStackTrace()
             // Handle any errors that occur during download or extraction
         }
         return null
+    }
+
+    private fun transformToWAV(context: Context, inputUri: Uri, outputUri: Uri) {
+        val inputUriPath = FFmpegKitConfig.getSafParameterForRead(context, inputUri)
+        val outputUriPath = FFmpegKitConfig.getSafParameterForWrite(context, outputUri)
+        FFmpegKit.execute(" -i $inputUriPath -acodec pcm_s16le -ar 44100 -ac 2 -f wav $outputUriPath")
+        Log.d(
+            "FFMPEG",
+            "executing: ffmpeg -i ${inputUri.path} -acodec pcm_s16le -ar 44100 -ac 2 -f wav ${outputUri.path}"
+        )
+    }
+
+    /**
+     * Function that gets a context, audio file uri, and output WAV file uri
+     * and do the following:
+     * 1. transform the audio file to a WAV file
+     * 2. prepare the WAV file to be streamed properly in the studio
+     * 3. create a bufferInputStream to the referenced WAV file, and returns it
+     * **/
+    private suspend fun transformAndPrepareAudio(
+        context: Context,
+        anyAudioFileUri: Uri,
+        wavFileUri: Uri
+    ): BufferedInputStream {
+
+        // first, turn the audio file to a WAV file
+        transformToWAV(context, anyAudioFileUri, wavFileUri)
+
+        // then, init the studio, and turn to buffer input stream
+        max(context, wavFileUri)
+        return BufferedInputStream(context.contentResolver.openInputStream(wavFileUri))
     }
 
     fun closeStreams() {

@@ -30,7 +30,7 @@ fun WorkspaceSurface(
     if (viewModelStore["workspace"] == null) {
         val viewModel = WorkspaceViewModel()
         appContext?.run {
-            viewModel.initTempFiles(this)
+            viewModel.init(this)
         }
         viewModelStore.put("workspace", viewModel)
     }
