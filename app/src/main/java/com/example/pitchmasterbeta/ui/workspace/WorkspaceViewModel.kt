@@ -42,6 +42,7 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.lang.reflect.Type
 import java.net.URL
+import java.util.concurrent.CancellationException
 
 
 class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
@@ -52,6 +53,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var lyricsProvider: LyricsProvider? = null
     private lateinit var sharedKaraokePreferences: StudioSharedPreferences
     private var audioUri: Uri? = null
+    private var loadKaraokeJob: Job? = null
 
     private val devTestMode: Boolean = false
 
@@ -257,8 +259,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         return (audioProcessor?.pitchFactor ?: 1f) - 0.5f
     }
 
-    private val FACTOR_EFFECT = 0.5f
-    private val DEFAULT_FACTOR_VALUE = 0.5f
+    companion object {
+        private const val FACTOR_EFFECT = 0.5f
+        private const val DEFAULT_FACTOR_VALUE = 0.5f
+    }
+
     fun setPitchFactor(pitchFactor: Float) {
         audioProcessor?.pitchFactor =
             pitchFactor * FACTOR_EFFECT + (1 - FACTOR_EFFECT * DEFAULT_FACTOR_VALUE)
@@ -447,7 +452,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     reset()
                 }
             }
-
             if (!jobsCompleted) {
                 jobsCompleted = true
                 runBlocking {
@@ -522,7 +526,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         accompanimentUrl: URL,
     ) {
         appContext?.let { context ->
-            viewModelScope.launch(Dispatchers.IO) {
+            loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val lyricsObservable: suspend () -> List<LyricsTimestampedSegment>?
                     val songName = _songFullName.value
@@ -602,7 +606,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         val singerFile = tempSingerFile
         val musicFile = tempMusicFile
         appContext?.let { context ->
-            viewModelScope.launch(Dispatchers.IO) {
+            loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
                 try {
                     sharedKaraokePreferences.getKaraoke(audioPath = audioUri.toString())
                         .let { karaokeStudio ->
@@ -644,6 +648,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                 audioUri?.let { beginGenerateKaraoke(context, it) }
                             }
                         }
+                } catch (e: CancellationException) {
+                    e.printStackTrace()
                 } catch (e: Exception) {
                     e.printStackTrace()
                     forgetKaraoke()
@@ -666,6 +672,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _songFullName.value = ""
         _workspaceState.value = WorkspaceState.PICK
         notification?.hideNotification()
+    }
+
+    fun stopLoadKaraoke() {
+        loadKaraokeJob?.cancel(CancellationException("interrupted"))
     }
 
     private val _notificationMessage = MutableStateFlow(LyricsSegment("", 0.0, 0.0))

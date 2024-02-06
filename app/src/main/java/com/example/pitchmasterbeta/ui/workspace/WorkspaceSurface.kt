@@ -35,7 +35,7 @@ fun WorkspaceSurface(
         viewModelStore.put("workspace", viewModel)
     }
     // Create or retrieve the ViewModel associated with the ViewModelStore
-    BackPressHandler()
+    WorkspaceBackHandler()
     Box(
         modifier = modifier
             .fillMaxSize()
