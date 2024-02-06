@@ -81,8 +81,10 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
 
         const val OCTAVE_SIZE = 12
 
-        val sortedPlayerFrequencies = floatArrayOf( /* nothing */
-            0.0f,  /*C4*/
+        val sortedPlayerFrequencies = floatArrayOf(
+            /* nothing */
+            0.0f,
+            /*C4*/
             261.63f,  //131.87
             /*C#4/Db4*/
             277.18f,  //124.47
@@ -107,8 +109,10 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
             /*B3*/
             246.94f
         )
-        private val sortedFrequencies = floatArrayOf( /* nothing */
-            0.0f,  /*C0 */
+        private val sortedFrequencies = floatArrayOf(
+            /* nothing */
+            0.0f,
+            /*C0 */
             16.35f,  //2109.89
             /*C#0/Db0 */
             17.32f,  //1991.47
@@ -448,6 +452,7 @@ val colorMap = hashMapOf(
     AudioProcessor.NotesSimilarity.Equal to Color(0xff27d57e),
     AudioProcessor.NotesSimilarity.Wrong to Color(0xffd52737)
 )
+
 fun getColor(notesSimilarity: AudioProcessor.NotesSimilarity?): Color {
     return colorMap[notesSimilarity]!!
 }

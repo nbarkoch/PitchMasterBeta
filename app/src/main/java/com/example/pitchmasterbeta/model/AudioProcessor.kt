@@ -242,14 +242,16 @@ class AudioProcessor {
 
         musicDispatcher?.addAudioProcessor(object : SongAudioDispatcher.MicAudioProcessor {
             override fun process(audioEvent: AudioEvent, musicBuffer: ByteArray): Boolean {
-                playbackParams.pitch = pitchFactor
-                mainAudioTrack?.playbackParams = playbackParams
+                pitchFactor.takeIf { it in 0.5..2.0 }?.let {
+                    playbackParams.pitch = it
+                    mainAudioTrack?.playbackParams = playbackParams
+                }
                 p.process(audioEvent)
                 var singerBuffer = ByteArray(musicBuffer.size)
-                if (volumeFactor > 0.05f) {
+                volumeFactor.takeIf { it > 0.0f }?.let {
                     singerBuffer =
                         if (computeAndPlaySingerSoundMode) generatedSingerByteSound else audioEvent.byteBuffer
-                    singerBuffer = adjustVolume(singerBuffer, volumeFactor)
+                    singerBuffer = adjustVolume(singerBuffer, it)
                 }
                 val soundBuffer = mixedBuffers(
                     musicBuffer,

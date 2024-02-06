@@ -257,12 +257,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         return (audioProcessor?.pitchFactor ?: 1f) - 0.5f
     }
 
+    private val FACTOR_EFFECT = 0.5f
+    private val DEFAULT_FACTOR_VALUE = 0.5f
     fun setPitchFactor(pitchFactor: Float) {
-        if (pitchFactor > 0.06f) {
-            audioProcessor?.pitchFactor = pitchFactor + 0.5f
-        } else {
-            audioProcessor?.pitchFactor = 0.5f
-        }
+        audioProcessor?.pitchFactor =
+            pitchFactor * FACTOR_EFFECT + (1 - FACTOR_EFFECT * DEFAULT_FACTOR_VALUE)
     }
 
 
