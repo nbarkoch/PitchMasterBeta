@@ -78,6 +78,8 @@ data class MediaInfo(
             mmr.setDataSource(context, uri)
             sponsorArtist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: ""
             sponsorTitle = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: ""
+            val durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            durationStr?.let { timeStampDuration = it.toDouble() / 1000.0 }
             if (sponsorTitle.isEmpty()) {
                 val returnCursor: Cursor =
                     context.contentResolver.query(uri, null, null, null, null)!!

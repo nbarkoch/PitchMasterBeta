@@ -115,7 +115,7 @@ fun LyricsText(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 10.dp, vertical = 7.dp)
-                    .clickable(onClick=onClick),
+                    .clickable(onClick = onClick),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -140,7 +140,7 @@ fun LyricsText(
                             val offset by transition.animateFloat(
                                 transitionSpec = {
                                     tween(
-                                        durationMillis = (word.duration * 900).toInt(),
+                                        durationMillis = ((word.end - word.start) * 900).toInt(),
                                         easing = LinearEasing
                                     )
                                 },

@@ -13,7 +13,6 @@ import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.model.AudioProcessor
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
-import com.example.pitchmasterbeta.model.LyricsWord
 import com.example.pitchmasterbeta.model.MediaInfo
 import com.example.pitchmasterbeta.model.SongAudioDispatcher
 import com.example.pitchmasterbeta.model.StudioSharedPreferences
@@ -22,8 +21,7 @@ import com.example.pitchmasterbeta.model.getColor
 import com.example.pitchmasterbeta.notifications.SpleeterProgressNotification
 import com.example.pitchmasterbeta.services.LyricsProvider
 import com.example.pitchmasterbeta.services.SpleeterService
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.example.pitchmasterbeta.utils.Mocks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -37,11 +35,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.File
-import java.lang.reflect.Type
 import java.net.URL
+import java.util.UUID
 import java.util.concurrent.CancellationException
 
 
@@ -73,24 +70,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val lyricsSegments: StateFlow<List<LyricsTimestampedSegment>> = _lyricsSegments
 
     fun mockupLyrics() {
-        val payloadString =
-            "{  \"statusCode\": 200,  \"body\": \"[{\\\"start\\\": 12.9524, \\\"end\\\": 25.6667, \\\"text\\\": \\\" There ain't no gold in this river That I've been washing my hands in forever\\\"}, {\\\"start\\\": 26.5, \\\"end\\\": 39.94, \\\"text\\\": \\\" I know there is hope in these waters But I can't bring myself to swim when I am drowning\\\"}, {\\\"start\\\": 39.94, \\\"end\\\": 53.7, \\\"text\\\": \\\" In this silence, baby, let me in Go easy on me, baby\\\"}, {\\\"start\\\": 53.7, \\\"end\\\": 66.74000000000001, \\\"text\\\": \\\" I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 66.74000000000001, \\\"end\\\": 78.18, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 83.7, \\\"end\\\": 100.34, \\\"text\\\": \\\" There ain't no room for things to change When we are both so deeply stuck in our ways\\\"}, {\\\"start\\\": 100.82000000000001, \\\"end\\\": 113.14, \\\"text\\\": \\\" You can't deny how hard I've tried I changed who I was to put you both first\\\"}, {\\\"start\\\": 113.14, \\\"end\\\": 124.66, \\\"text\\\": \\\" But now I give up Go easy on me, baby\\\"}, {\\\"start\\\": 124.66, \\\"end\\\": 137.94, \\\"text\\\": \\\" I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 137.94, \\\"end\\\": 159.06, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}, {\\\"start\\\": 159.06, \\\"end\\\": 175.14000000000001, \\\"text\\\": \\\" I had good intentions and the highest hopes But I know right now that probably doesn't even show\\\"}, {\\\"start\\\": 175.22, \\\"end\\\": 195.14, \\\"text\\\": \\\" Go easy on me, baby I was still a child, didn't get the chance to Feel the world around me\\\"}, {\\\"start\\\": 195.14, \\\"end\\\": 215.14, \\\"text\\\": \\\" I had no time to choose what I chose to do So go easy on me\\\"}]\"}"
-        //val payloadString ="{ \"statusCode\": 200, \"body\": \"[{\\\"start\\\": 1.0, \\\"end\\\": 2.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8 \\\\u05d8\\\\u05d5\\\\u05d1!\\\"}, {\\\"start\\\": 2.0, \\\"end\\\": 4.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8 \\\\u05d8\\\\u05d5\\\\u05d1, \\\\u05de\\\\u05d4 \\\\u05e7\\\\u05d5\\\\u05e8\\\\u05d4?\\\"}, {\\\"start\\\": 4.0, \\\"end\\\": 6.0, \\\"text\\\": \\\" \\\\u05d0\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d9 \\\\u05dc\\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05d6\\\\u05e8\\\\u05d4 \\\\u05dc\\\\u05d0\\\\u05db\\\\u05d5\\\\u05dc \\\\u05de\\\\u05e9\\\\u05d4\\\\u05d5?\\\"}, {\\\"start\\\": 6.0, \\\"end\\\": 8.0, \\\"text\\\": \\\" \\\\u05de\\\\u05d4 \\\\u05d0\\\\u05d5\\\\u05db\\\\u05dc\\\\u05d9\\\\u05dd \\\\u05e9\\\\u05dd?\\\"}, {\\\"start\\\": 8.0, \\\"end\\\": 11.0, \\\"text\\\": \\\" \\\\u05d4\\\\u05db\\\\u05dc \\\\u05d1\\\\u05ea\\\\u05d5\\\\u05da \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d4 \\\\u05de\\\\u05d5\\\\u05df \\\\u05e4\\\\u05dc\\\\u05e4\\\\u05dc \\\\u05ea\\\\u05e9\\\\u05d5\\\\u05de\\\\u05d4\\\"}, {\\\"start\\\": 11.0, \\\"end\\\": 14.0, \\\"text\\\": \\\" \\\\u05e9\\\\u05e7\\\\u05e9\\\\u05d5\\\\u05e7 \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05e7\\\\u05d1\\\\u05d1 \\\\u05de\\\\u05e8\\\\u05d2\\\\u05d6\\\"}, {\\\"start\\\": 14.0, \\\"end\\\": 18.0, \\\"text\\\": \\\" \\\\u05ea\\\\u05d8\\\\u05e2\\\\u05d1 \\\\u05d5\\\\u05ea\\\\u05ea\\\\u05de\\\\u05e7\\\\u05e8 \\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05db\\\\u05dc \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8\\\"}, {\\\"start\\\": 18.0, \\\"end\\\": 21.0, \\\"text\\\": \\\" \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05e1\\\\u05d1\\\\u05d9\\\\u05e8 \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d0\\\\u05d9\\\\u05da \\\\u05d6\\\\u05d4 \\\\u05e2\\\\u05d5\\\\u05d1\\\\u05d3\\\"}, {\\\"start\\\": 21.0, \\\"end\\\": 24.0, \\\"text\\\": \\\" \\\\u05d6\\\\u05d4 \\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05d6\\\\u05e8\\\\u05d4 \\\\u05de\\\\u05e1\\\\u05ea\\\\u05d5\\\\u05d1\\\\u05d1 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 24.0, \\\"end\\\": 27.0, \\\"text\\\": \\\" \\\\u05d5\\\\u05db\\\\u05dc \\\\u05d4\\\\u05d0\\\\u05d9\\\\u05e0\\\\u05e1\\\\u05d8\\\\u05d2\\\\u05e8\\\\u05dd \\\\u05e9\\\\u05dc\\\\u05d5\\\"}, {\\\"start\\\": 27.0, \\\"end\\\": 30.0, \\\"text\\\": \\\" \\\\u05d6\\\\u05d4 \\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05d6\\\\u05e8\\\\u05d4 \\\\u05de\\\\u05e1\\\\u05ea\\\\u05d5\\\\u05d1\\\\u05d1 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 30.0, \\\"end\\\": 33.0, \\\"text\\\": \\\" \\\\u05d5\\\\u05db\\\\u05dc \\\\u05d4\\\\u05e2\\\\u05d9\\\\u05e8 \\\\u05de\\\\u05ea\\\\u05dc\\\\u05db\\\\u05e9\\\\u05e9\\\\u05d9\\\\u05dd \\\\u05d6\\\\u05d4 \\\\u05d4\\\\u05d0\\\\u05d9\\\\u05e9\\\"}, {\\\"start\\\": 33.0, \\\"end\\\": 36.0, \\\"text\\\": \\\" \\\\u05e9\\\\u05d0\\\\u05ea \\\\u05d0\\\\u05d4\\\\u05d1\\\\u05ea\\\\u05d5 \\\\u05de\\\\u05db\\\\u05e0\\\\u05d9\\\\u05e1 \\\\u05dc\\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd\\\"}, {\\\"start\\\": 36.0, \\\"end\\\": 41.0, \\\"text\\\": \\\" \\\\u05d2\\\\u05dd \\\\u05dc\\\\u05e6\\\\u05e2\\\\u05d9\\\\u05e8 \\\\u05d5\\\\u05d2\\\\u05dd \\\\u05dc\\\\u05e7\\\\u05e9\\\\u05d9\\\"}, {\\\"start\\\": 41.0, \\\"end\\\": 45.0, \\\"text\\\": \\\" \\\\u05db\\\\u05df \\\\u05d6\\\\u05d4\\\\u05d5 \\\\u05d4\\\\u05d0\\\\u05d9\\\\u05e9\\\"}, {\\\"start\\\": 45.0, \\\"end\\\": 48.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 48.0, \\\"end\\\": 51.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 51.0, \\\"end\\\": 54.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 54.0, \\\"end\\\": 57.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 57.0, \\\"end\\\": 60.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 60.0, \\\"end\\\": 63.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 63.0, \\\"end\\\": 66.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 66.0, \\\"end\\\": 73.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 85.0, \\\"end\\\": 88.0, \\\"text\\\": \\\" \\\\u05e2\\\\u05e1\\\\u05e7\\\\u05ea \\\\u05d1\\\\u05e0\\\\u05d3\\\\u05dc\\\\u05df \\\\u05ea\\\\u05d5\\\\u05e4\\\\u05e4\\\\u05ea \\\\u05ea\\\\u05e8\\\\u05d1\\\\u05d5\\\\u05e7\\\\u05d4\\\"}, {\\\"start\\\": 88.0, \\\"end\\\": 91.0, \\\"text\\\": \\\" \\\\u05d3\\\\u05de\\\\u05d9\\\\u05d9\\\\u05e0\\\\u05ea \\\\u05e9\\\\u05e8\\\\u05d0\\\\u05d9\\\\u05ea \\\\u05db\\\\u05d1\\\\u05e8 \\\\u05d0\\\\u05ea \\\\u05d4\\\\u05db\\\\u05dc\\\"}, {\\\"start\\\": 91.0, \\\"end\\\": 94.0, \\\"text\\\": \\\" \\\\u05d4\\\\u05d2\\\\u05e2\\\\u05ea \\\\u05dc\\\\u05de\\\\u05e7\\\\u05d5\\\\u05dd \\\\u05e9\\\\u05db\\\\u05dc\\\\u05dc \\\\u05dc\\\\u05d0 \\\\u05e6\\\\u05d9\\\\u05e4\\\\u05d9\\\\u05ea\\\"}, {\\\"start\\\": 94.0, \\\"end\\\": 98.0, \\\"text\\\": \\\" \\\\u05d7\\\\u05d6\\\\u05e8\\\\u05ea \\\\u05d5\\\\u05d9\\\\u05e7\\\\u05d9 \\\\u05e2\\\\u05dd \\\\u05e2\\\\u05d5\\\\u05e8\\\\u05e7\\\\u05d5 \\\\u05d2\\\\u05d3\\\\u05d5\\\\u05dc\\\"}, {\\\"start\\\": 98.0, \\\"end\\\": 101.0, \\\"text\\\": \\\" \\\\u05e8\\\\u05e7 \\\\u05d0\\\\u05ea \\\\u05e4\\\\u05e0\\\\u05d9\\\\u05de\\\\u05da \\\\u05d6\\\\u05d4 \\\\u05d8\\\\u05e2\\\\u05dd \\\\u05e9\\\\u05dc \\\\u05e2\\\\u05d5\\\\u05e9\\\\u05e8\\\"}, {\\\"start\\\": 101.0, \\\"end\\\": 104.0, \\\"text\\\": \\\" \\\\u05ea\\\\u05d4\\\\u05d9\\\\u05d4 \\\\u05e8\\\\u05e7 \\\\u05e2\\\\u05d5\\\\u05d3 \\\\u05d1\\\\u05e6\\\\u05e2 \\\\u05ea\\\\u05de\\\\u05d9\\\\u05d3 \\\\u05de\\\\u05e2\\\\u05e0\\\\u05d9\\\\u05d9\\\\u05df\\\"}, {\\\"start\\\": 104.0, \\\"end\\\": 107.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05ea\\\\u05d2\\\\u05d9\\\\u05e2 \\\\u05db\\\\u05dc \\\\u05d1\\\\u05d5\\\\u05e7\\\\u05e8\\\"}, {\\\"start\\\": 107.0, \\\"end\\\": 111.0, \\\"text\\\": \\\" \\\\u05d5\\\\u05d4\\\\u05e9\\\\u05d9\\\\u05e8 \\\\u05d4\\\\u05d6\\\\u05d4 \\\\u05ea\\\\u05de\\\\u05d9\\\\u05d3 \\\\u05d9\\\\u05ea\\\\u05e0\\\\u05d2\\\\u05d3\\\"}, {\\\"start\\\": 112.0, \\\"end\\\": 115.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 115.0, \\\"end\\\": 118.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 118.0, \\\"end\\\": 122.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 122.0, \\\"end\\\": 139.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 141.0, \\\"end\\\": 154.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 154.0, \\\"end\\\": 157.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 157.0, \\\"end\\\": 160.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 160.0, \\\"end\\\": 164.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}, {\\\"start\\\": 164.0, \\\"end\\\": 167.0, \\\"text\\\": \\\" \\\\u05dc\\\\u05db\\\\u05dd \\\\u05d7\\\\u05d1\\\\u05d9\\\\u05ea\\\\u05d4 \\\\u05d1\\\\u05e0\\\\u05ea\\\\u05e0\\\\u05d9\\\\u05d4\\\"}, {\\\"start\\\": 167.0, \\\"end\\\": 170.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d9\\\\u05d1\\\\u05d5\\\\u05d0\\\\u05d9 \\\\u05d9\\\\u05e9\\\\u05e8\\\\u05d0\\\\u05dc 24\\\"}, {\\\"start\\\": 170.0, \\\"end\\\": 173.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d2\\\\u05d8\\\\u05d9\\\\u05dd \\\\u05dc\\\\u05e9\\\\u05de\\\\u05d4 \\\\u05e2\\\\u05db\\\\u05e9\\\\u05d9\\\\u05d5 \\\\u05d0\\\\u05db\\\\u05dc\\\\u05ea\\\"}, {\\\"start\\\": 173.0, \\\"end\\\": 176.0, \\\"text\\\": \\\" \\\\u05d1\\\\u05d8\\\\u05d5\\\\u05d7 \\\\u05e9\\\\u05ea\\\\u05d7\\\\u05d6\\\\u05d5\\\\u05e8 \\\\u05d1\\\\u05d7\\\\u05d6\\\\u05e8\\\\u05d4\\\"}]\" }"
-        val lyricsSegmentListType: Type = object : TypeToken<List<LyricsSegment?>?>() {}.type
-        val lyricsSegments: List<LyricsSegment> =
-            Gson().fromJson(JSONObject(payloadString).getString("body"), lyricsSegmentListType)
-        _lyricsSegments.value = lyricsSegments.map { lyricsSegment ->
-            val words = lyricsSegment.text.trim().split(" ")
-            val segmentDuration = lyricsSegment.end - lyricsSegment.start
-            val totalLength = words.joinToString("").length
-            var offsetDuration = lyricsSegment.start
-            val lyricsWords = words.map { word ->
-                val wordDuration = segmentDuration * (word.length.toDouble() / totalLength)
-                val lw = LyricsWord(word, start = offsetDuration, duration = wordDuration)
-                offsetDuration += wordDuration
-                lw
-            }
-            LyricsTimestampedSegment(text = lyricsWords)
+        lyricsProvider?.apply {
+            _lyricsSegments.value = extractData(Mocks.breadOmelet, mediaInfo.timeStampDuration)
         }
     }
 
@@ -152,6 +133,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                         setWorkspaceState(WorkspaceState.IDLE)
                         resetAudio()
+                        lyricsProvider = LyricsProvider(context)
                         mockupLyrics()
                     }
                 } else {
@@ -178,8 +160,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             notification = SpleeterProgressNotification(context)
             val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
-            // TODO: UUID.randomUUID().toString()
-            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, "mashu")
+            val fileName = UUID.randomUUID().toString() // "mashu"
+            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
             context.startService(serviceSpleeterIntent)
             notification?.showNotification()
         } catch (e: Exception) {
@@ -355,40 +337,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     _sinNoteActive.value = false
                 }
 
-                _lyricsSegments.value.let { thisLyricsSegments ->
-                    if (thisLyricsSegments.isNotEmpty()) {
-                        _lyricsScrollToPosition.value.let { currentPosition ->
-                            _lyricsActiveWordIndex.value.let { index ->
-                                if (index > -1) {
-                                    thisLyricsSegments[currentPosition].text[index].let {
-                                        if (!(it.start < musicTimeStamp && musicTimeStamp <= it.duration + it.start)) {
-                                            _lyricsActiveWordIndex.value =
-                                                thisLyricsSegments[currentPosition].text.indexOfFirst { w ->
-                                                    w.start < musicTimeStamp && musicTimeStamp <= w.start + w.duration
-                                                }
-                                        }
-                                    }
-                                } else {
-                                    val firstWord = thisLyricsSegments[currentPosition].text.first()
-                                    if (firstWord.start < musicTimeStamp && musicTimeStamp <= firstWord.start + firstWord.duration) {
-                                        _lyricsActiveWordIndex.value = 0
-                                    }
-                                }
-                            }
-
-                            val nextPosition = (currentPosition + 1) % thisLyricsSegments.size
-                            val segmentBoundaries = Pair(
-                                thisLyricsSegments[nextPosition].text.first().start,
-                                thisLyricsSegments[nextPosition].text.last().start + thisLyricsSegments[nextPosition].text.last().duration
-                            )
-                            if (segmentBoundaries.first <= musicTimeStamp && musicTimeStamp < segmentBoundaries.second) {
-                                _lyricsScrollToPosition.value = nextPosition
-                                _lyricsActiveWordIndex.value = -1
-                            }
-                        }
-                    }
-
-                }
+                updateActiveSegmentIndex(
+                    musicTimeStamp, _lyricsScrollToPosition.value, _lyricsActiveWordIndex.value
+                )
 
             }
             val onCompletion: () -> Unit = {
@@ -404,6 +355,38 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             musicAudioDispatcher?.run()
         }
         jobsCompleted = false
+    }
+
+    private fun updateActiveSegmentIndex(musicTimeStamp: Double, currentPosition: Int, index: Int) {
+        _lyricsSegments.value.takeIf { it.isNotEmpty() }?.let { thisLyricsSegments ->
+            updateActiveWordIndex(thisLyricsSegments[currentPosition], index, musicTimeStamp)
+            val nextSegmentPosition = (currentPosition + 1) % thisLyricsSegments.size
+            val nextSegmentBoundaries = thisLyricsSegments[nextSegmentPosition].text
+            if (musicTimeStamp in nextSegmentBoundaries.first().start..nextSegmentBoundaries.last().end) {
+                _lyricsScrollToPosition.value = nextSegmentPosition
+                _lyricsActiveWordIndex.value = -1
+            }
+        }
+    }
+
+    private fun updateActiveWordIndex(
+        currentSegment: LyricsTimestampedSegment,
+        currentActiveWordIndex: Int,
+        musicTimeStamp: Double
+    ) {
+        if (currentActiveWordIndex > -1) {
+            val nextActiveIndex = currentSegment.text.indexOfLast { word ->
+                musicTimeStamp in word.start..word.end
+            }
+            if (nextActiveIndex != -1 && nextActiveIndex != _lyricsActiveWordIndex.value) {
+                _lyricsActiveWordIndex.value = nextActiveIndex
+            }
+        } else {
+            val firstWord = currentSegment.text.first()
+            if (musicTimeStamp in firstWord.start..firstWord.end) {
+                _lyricsActiveWordIndex.value = 0
+            }
+        }
     }
 
     fun pauseAudioDispatchers() {
@@ -495,14 +478,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         if (_playingState.value == PlayerState.PLAYING) {
                             it.resume()
                         }
-                        val segmentIndex = _lyricsSegments.value.indexOfFirst { lyricsSegments ->
-                            lyricsSegments.text.first().start <= time && lyricsSegments.text.last().start > time
+                        val segmentIndex = _lyricsSegments.value.indexOfLast { lyricsSegments ->
+                            time in lyricsSegments.text.first().start..lyricsSegments.text.last().start
                         }
                         _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
                         val wordIndex =
-                            if (segmentIndex > -1) _lyricsSegments.value[segmentIndex].text.indexOfFirst { word ->
-                                word.start <= time && word.start + word.duration > time
-                            } else -1
+                            if (segmentIndex > -1) _lyricsSegments.value[segmentIndex].text.indexOfLast { word ->
+                                word.start <= time && word.end > time
+                            } else _lyricsActiveWordIndex.value
                         _lyricsActiveWordIndex.value = wordIndex
                     }
                 }
@@ -532,7 +515,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     val songName = _songFullName.value
                     lyricsObservable = {
                         lyricsProvider?.invokeLyricsLambdaFunction(
-                            songName, vocalsUrl.toString()
+                            songName, vocalsUrl.toString(), mediaInfo.timeStampDuration
                         )
                     }
 
@@ -542,11 +525,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                 val lyricsList = (async { lyricsObservable.invoke() }).await()
                                 val (downloadedVocalFile, downloadedAccompanimentFile) = awaitAll(
                                     async { mediaInfo.downloadAudioFile(vocalsUrl) },
-                                    async { mediaInfo.downloadAudioFile(accompanimentUrl) }
-                                )
-                                if (downloadedVocalFile == null || downloadedAccompanimentFile == null || lyricsList == null
-                                    || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())
-                                ) {
+                                    async { mediaInfo.downloadAudioFile(accompanimentUrl) })
+                                if (downloadedVocalFile == null || downloadedAccompanimentFile == null || lyricsList == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
                                     throw Exception()
                                 }
 
@@ -559,14 +539,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                     ),
                                     streams = StudioSharedPreferences.KaraokeStreams(
                                         vocal = mediaInfo.getAudioBufferedInputStream(
-                                            context,
-                                            downloadedVocalFile,
-                                            singerFile
-                                        ),
-                                        music = mediaInfo.getAudioBufferedInputStream(
-                                            context,
-                                            downloadedAccompanimentFile,
-                                            musicFile
+                                            context, downloadedVocalFile, singerFile
+                                        ), music = mediaInfo.getAudioBufferedInputStream(
+                                            context, downloadedAccompanimentFile, musicFile
                                         )
                                     ),
                                 )
@@ -610,22 +585,16 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 try {
                     sharedKaraokePreferences.getKaraoke(audioPath = audioUri.toString())
                         .let { karaokeStudio ->
-                            if (karaokeStudio != null && audioUri != null
-                                && singerFile != null && musicFile != null
-                            ) {
+                            if (karaokeStudio != null && audioUri != null && singerFile != null && musicFile != null) {
                                 val downloadedVocalFile = Uri.parse(karaokeStudio.vocal).toFile()
                                 val downloadedAccompanimentFile =
                                     Uri.parse(karaokeStudio.music).toFile()
                                 if (downloadedVocalFile.exists() && downloadedAccompanimentFile.exists()) {
                                     val singerStream = mediaInfo.getAudioBufferedInputStream(
-                                        context,
-                                        downloadedVocalFile,
-                                        singerFile
+                                        context, downloadedVocalFile, singerFile
                                     )
                                     val musicStream = mediaInfo.getAudioBufferedInputStream(
-                                        context,
-                                        downloadedAccompanimentFile,
-                                        musicFile
+                                        context, downloadedAccompanimentFile, musicFile
                                     )
                                     mediaInfo.closeStreams()
                                     mediaInfo.singerInputStream = singerStream

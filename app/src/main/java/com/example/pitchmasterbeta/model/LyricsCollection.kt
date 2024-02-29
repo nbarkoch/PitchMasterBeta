@@ -18,6 +18,6 @@ data class LyricsTimestampedSegment(
 data class LyricsWord(
     val word: String,
     val start: Double,
-    val duration: Double,
+    val end: Double,
 )
 
