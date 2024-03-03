@@ -1,5 +1,6 @@
 package com.example.pitchmasterbeta.utils
 
+@Suppress("unused")
 class Mocks {
     companion object {
         const val andHow = """{
@@ -4087,6 +4088,5 @@ class Mocks {
    }
 }
         """
-
     }
 }
