@@ -71,7 +71,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun mockupLyrics() {
         lyricsProvider?.apply {
-            _lyricsSegments.value = extractData(Mocks.breadOmelet, mediaInfo.timeStampDuration)
+            _lyricsSegments.value = extractData(Mocks.hereWithoutYou, mediaInfo.timeStampDuration)
         }
     }
 
