@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
@@ -36,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -46,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
 import com.example.pitchmasterbeta.MainActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -159,6 +162,14 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
     val colorState = viewModel.similarityColor.collectAsState()
     val color =
         animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
+
+    val micNoteActive = viewModel.micNoteActive.collectAsState()
+    val sinNoteActive = viewModel.sinNoteActive.collectAsState()
+    val animatedSmallScoreScale by animateFloatAsState(
+        if (micNoteActive.value && sinNoteActive.value) 0.05f else 0f,
+        label = ""
+    )
+
     val score by rememberUpdatedState(viewModel.score.collectAsState())
     val playState = viewModel.playingState.collectAsState()
 
@@ -210,7 +221,12 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 Modifier
-                    .border(color = color.value, shape = CircleShape, width = 3.dp)
+                    .scale(animatedSmallScoreScale + 1f)
+                    .border(
+                        color = color.value,
+                        shape = CircleShape,
+                        width = (animatedSmallScoreScale * 4 + 1) * 3.dp
+                    )
                     .padding(7.5.dp)
                     .widthIn(50.dp, 300.dp)
                     .heightIn(50.dp, 300.dp),
