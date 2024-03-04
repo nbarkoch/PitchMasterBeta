@@ -181,6 +181,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var lastWindowPosition: Int = 0
     private var goodForThisWindowWatch: Boolean = false
     private var goodForOpinionWatch: Boolean = false
+    private var lyricsNowActive: Boolean = false
     private var expectedScore = 0
     fun getExpectedScore(): Int {
         return expectedScore
@@ -284,7 +285,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             val handlePitch: (Double, Int, Int, AudioProcessor.NotesSimilarity) -> Unit =
                 { _, noteI, volume, similarity ->
                     _similarityColor.value = getColor(similarity)
-                    if (noteI > 0) {
+                    if (noteI > 0 && lyricsNowActive) {
                         if (similarity == AudioProcessor.NotesSimilarity.Equal || similarity == AudioProcessor.NotesSimilarity.Close) {
                             goodForThisWindowWatch = true
                             _micNote.value = _sinNote.value
@@ -374,18 +375,24 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         currentActiveWordIndex: Int,
         musicTimeStamp: Double
     ) {
-        if (currentActiveWordIndex > -1) {
+        if (currentActiveWordIndex != -1) {
             val nextActiveIndex = currentSegment.text.indexOfLast { word ->
                 musicTimeStamp in word.start..word.end
             }
             if (nextActiveIndex != -1 && nextActiveIndex != _lyricsActiveWordIndex.value) {
                 _lyricsActiveWordIndex.value = nextActiveIndex
+                lyricsNowActive = true
             }
         } else {
             val firstWord = currentSegment.text.first()
             if (musicTimeStamp in firstWord.start..firstWord.end) {
                 _lyricsActiveWordIndex.value = 0
+                lyricsNowActive = true
             }
+        }
+        // Set lyricsNowActive to false if the conditions are not met
+        if (currentActiveWordIndex == -1 || musicTimeStamp !in currentSegment.text.first().start..currentSegment.text.last().end) {
+            lyricsNowActive = false
         }
     }
 
@@ -482,11 +489,16 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             time in lyricsSegments.text.first().start..lyricsSegments.text.last().start
                         }
                         _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
-                        val wordIndex =
-                            if (segmentIndex > -1) _lyricsSegments.value[segmentIndex].text.indexOfLast { word ->
-                                word.start <= time && word.end > time
-                            } else _lyricsActiveWordIndex.value
-                        _lyricsActiveWordIndex.value = wordIndex
+
+                        if (segmentIndex > -1) {
+                            _lyricsActiveWordIndex.value =
+                                _lyricsSegments.value[segmentIndex].text.indexOfLast { word ->
+                                    word.start <= time && word.end > time
+                                }
+                            lyricsNowActive = true
+                        } else {
+                            lyricsNowActive = false
+                        }
                     }
                 }
                 jumpInProgress = false
@@ -640,6 +652,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         deleteTempFiles()
         _songFullName.value = ""
         _workspaceState.value = WorkspaceState.PICK
+        _displaySingerVolume.value = false
+        _displayPitchFactor.value = false
         notification?.hideNotification()
     }
 

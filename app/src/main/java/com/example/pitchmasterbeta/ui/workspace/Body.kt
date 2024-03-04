@@ -12,10 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.ui.lyrics.LyricsLazyColumn
 import com.example.pitchmasterbeta.ui.lyrics.LyricsText
+import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 
 @Composable
 fun WorkspaceBody(modifier: Modifier) {
@@ -35,7 +37,7 @@ fun WorkspaceBody(modifier: Modifier) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Pick a song from gallery",
+                    text = "Please Wait",
                     color = Color.White,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center,
@@ -60,5 +62,14 @@ fun WorkspaceBody(modifier: Modifier) {
         else -> {
 
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WorkspaceBodyPreview(
+) {
+    PitchMasterBetaTheme {
+        WorkspaceBody(Modifier.fillMaxSize())
     }
 }
