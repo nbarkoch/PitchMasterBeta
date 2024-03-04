@@ -1,3 +1,4 @@
+# Pitch Master (Mic Magic)
 Mobile Application that generate a Karaoke for any audio file.  
 The app generate timestamped lyrics, with feature that allow you to mute the singer while playing the song (like in Apple music).  
 Main Feature of the app is the score, you get higher score once you sing according to the singer pitch.  
