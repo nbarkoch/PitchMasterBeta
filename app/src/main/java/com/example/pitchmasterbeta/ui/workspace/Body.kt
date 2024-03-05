@@ -37,7 +37,7 @@ fun WorkspaceBody(modifier: Modifier) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Please Wait",
+                    text = "Pick a song from gallery",
                     color = Color.White,
                     fontSize = 18.sp,
                     textAlign = TextAlign.Center,
