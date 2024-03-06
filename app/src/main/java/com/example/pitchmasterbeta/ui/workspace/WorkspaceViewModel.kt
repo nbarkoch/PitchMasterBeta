@@ -142,6 +142,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
                     }"
                     audioUri = uri
+                    _notificationMessage.value = LyricsSegment("Loading Karaoke", 0.0, 0.75)
                     setWorkspaceState(WorkspaceState.WAITING)
                     if (sharedKaraokePreferences.getKaraoke(uri.toString()) != null) {
                         loadKaraokeFromStorage()
@@ -485,8 +486,13 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         if (_playingState.value == PlayerState.PLAYING) {
                             it.resume()
                         }
-                        val segmentIndex = _lyricsSegments.value.indexOfLast { lyricsSegments ->
-                            time in lyricsSegments.text.first().start..lyricsSegments.text.last().start
+
+                        val segmentIndex = _lyricsSegments.value.let { lyricsSegments ->
+                            (0 until lyricsSegments.size - 1).indexOfLast { i ->
+                                val currentStart = lyricsSegments[i].text.first().start
+                                val nextStart = lyricsSegments[i + 1].text.first().start
+                                currentStart <= time && time < nextStart
+                            }
                         }
                         _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
 
