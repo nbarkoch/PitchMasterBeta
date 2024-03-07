@@ -488,23 +488,19 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         }
 
                         val segmentIndex = _lyricsSegments.value.let { lyricsSegments ->
-                            (0 until lyricsSegments.size - 1).indexOfLast { i ->
+                            val index = (0 until lyricsSegments.size - 1).indexOfLast { i ->
                                 val currentStart = lyricsSegments[i].text.first().start
                                 val nextStart = lyricsSegments[i + 1].text.first().start
                                 currentStart <= time && time < nextStart
                             }
+                            if (index > -1) index else lyricsSegments.size - 1
                         }
-                        _lyricsScrollToPosition.value = if (segmentIndex > -1) segmentIndex else 0
-
-                        if (segmentIndex > -1) {
-                            _lyricsActiveWordIndex.value =
-                                _lyricsSegments.value[segmentIndex].text.indexOfLast { word ->
-                                    word.start <= time && word.end > time
-                                }
-                            lyricsNowActive = true
-                        } else {
-                            lyricsNowActive = false
-                        }
+                        _lyricsScrollToPosition.value = segmentIndex
+                        _lyricsActiveWordIndex.value =
+                            _lyricsSegments.value[segmentIndex].text.indexOfLast { word ->
+                                word.start <= time && word.end > time
+                            }
+                        lyricsNowActive = true
                     }
                 }
                 jumpInProgress = false
