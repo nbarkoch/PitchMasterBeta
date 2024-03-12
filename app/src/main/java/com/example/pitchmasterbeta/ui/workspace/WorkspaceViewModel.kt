@@ -38,7 +38,6 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.net.URL
-import java.util.UUID
 import java.util.concurrent.CancellationException
 
 
@@ -161,7 +160,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             notification = SpleeterProgressNotification(context)
             val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
-            val fileName = UUID.randomUUID().toString() // "mashu"
+            val fileName = "mashu"//UUID.randomUUID().toString() // "mashu"
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
             context.startService(serviceSpleeterIntent)
             notification?.showNotification()
@@ -487,20 +486,23 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             it.resume()
                         }
 
-                        val segmentIndex = _lyricsSegments.value.let { lyricsSegments ->
-                            val index = (0 until lyricsSegments.size - 1).indexOfLast { i ->
-                                val currentStart = lyricsSegments[i].text.first().start
-                                val nextStart = lyricsSegments[i + 1].text.first().start
-                                currentStart <= time && time < nextStart
+                        _lyricsSegments.value.let { lyricsSegments ->
+                            if (lyricsSegments.isNotEmpty()) {
+                                val index = (0 until lyricsSegments.size - 1).indexOfLast { i ->
+                                    val currentStart = lyricsSegments[i].text.first().start
+                                    val nextStart = lyricsSegments[i + 1].text.first().start
+                                    currentStart <= time && time < nextStart
+                                }
+                                val segmentIndex =
+                                    if (index > -1) index else lyricsSegments.size - 1
+                                _lyricsScrollToPosition.value = segmentIndex
+                                _lyricsActiveWordIndex.value =
+                                    _lyricsSegments.value[segmentIndex].text.indexOfLast { word ->
+                                        word.start <= time && word.end > time
+                                    }
+                                lyricsNowActive = true
                             }
-                            if (index > -1) index else lyricsSegments.size - 1
                         }
-                        _lyricsScrollToPosition.value = segmentIndex
-                        _lyricsActiveWordIndex.value =
-                            _lyricsSegments.value[segmentIndex].text.indexOfLast { word ->
-                                word.start <= time && word.end > time
-                            }
-                        lyricsNowActive = true
                     }
                 }
                 jumpInProgress = false
