@@ -63,6 +63,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 import com.example.pitchmasterbeta.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,7 +74,7 @@ fun WorkspaceFooter(
     modifier: Modifier = Modifier,
 ) {
     val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+        viewModelProvider[WorkspaceViewModel::class.java]
     val context = LocalContext.current.applicationContext
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val showNotificationDialog by rememberUpdatedState(viewModel.showNotificationDialog.collectAsState())
@@ -425,7 +426,7 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
 @Composable
 fun DurationRow() {
     val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+        viewModelProvider[WorkspaceViewModel::class.java]
     val current = viewModel.currentTime.collectAsState()
     val duration = viewModel.durationTime.collectAsState()
     Box(
@@ -443,8 +444,7 @@ fun DurationRow() {
 
 @Composable
 fun ControlsRow() {
-    val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+    val viewModel: WorkspaceViewModel = viewModelProvider[WorkspaceViewModel::class.java]
     val displaySingerVolume by rememberUpdatedState(viewModel.displaySingerVolume.collectAsState())
     val displayPitchFactor by rememberUpdatedState(viewModel.displayPitchFactor.collectAsState())
 //    val displayPitchControls by rememberUpdatedState(viewModel.displayPitchControls.collectAsState())
@@ -514,7 +514,7 @@ fun ControlsRow() {
 @Composable
 fun PitchControls(modifier: Modifier) {
     val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+        viewModelProvider[WorkspaceViewModel::class.java]
     val isComputingPitchMic by rememberUpdatedState(viewModel.isComputingPitchMic.collectAsState())
     val isComputingPitchSinger by rememberUpdatedState(viewModel.isComputingPitchSinger.collectAsState())
 
@@ -544,9 +544,6 @@ fun PitchControls(modifier: Modifier) {
 @Preview
 @Composable
 fun WorkspaceFooterPreview() {
-    if (MainActivity.viewModelStore["workspace"] == null) {
-        MainActivity.viewModelStore.put("workspace", WorkspaceViewModel())
-    }
     MaterialTheme {
         WorkspaceFooter(modifier = Modifier.fillMaxWidth())
     }

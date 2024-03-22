@@ -49,7 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
-import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -60,7 +60,7 @@ fun WorkspaceHeader(
     modifier: Modifier = Modifier,
 ) {
     val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+        viewModelProvider[WorkspaceViewModel::class.java]
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
     val songFullName = viewModel.songFullName.collectAsState()

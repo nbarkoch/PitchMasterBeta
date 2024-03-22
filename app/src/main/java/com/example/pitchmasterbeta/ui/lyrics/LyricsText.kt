@@ -41,7 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.model.LyricsWord
@@ -49,6 +49,7 @@ import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import com.example.pitchmasterbeta.utils.math.findSubArrayListIndices
 import kotlinx.coroutines.delay
 import kotlin.math.floor
+import kotlin.math.max
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
@@ -140,7 +141,10 @@ fun LyricsText(
                             val offset by transition.animateFloat(
                                 transitionSpec = {
                                     tween(
-                                        durationMillis = ((word.end - word.start) * 900).toInt(),
+                                        durationMillis = (max(
+                                            word.end - word.start,
+                                            0.1
+                                        ) * 900).toInt(),
                                         easing = LinearEasing
                                     )
                                 },
@@ -334,11 +338,8 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
 @Preview
 @Composable
 fun LyricsTextPreview() {
-    if (MainActivity.viewModelStore["workspace"] == null) {
-        val viewModel = WorkspaceViewModel()
-        viewModel.mockupLyrics()
-        MainActivity.viewModelStore.put("workspace", viewModel)
-    }
+    val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+    viewModel.mockupLyrics()
     MaterialTheme {
         LyricsText(LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))), true, 1f, 2) {}
     }

@@ -77,6 +77,7 @@ class LyricsProvider(context: Context?) {
         val responseJson = JSONObject(payloadString)
         val gson = Gson()
         val jsonBody = JSONObject(responseJson.getString("body"))
+
         val timestampedSegments: MutableList<LyricsTimestampedSegment> = gson.fromJson(
             jsonBody.getString("timestamped_segments"),
             object : TypeToken<List<LyricsTimestampedSegment>>() {}.type

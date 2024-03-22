@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelProvider
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
@@ -23,8 +23,11 @@ import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewModelProvider = ViewModelProvider(this)
         appContentResolver = contentResolver
         appContext = applicationContext
+        val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+        viewModel.init(this)
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr ) {
                 PitchMasterBetaTheme {
@@ -41,7 +44,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        val viewModelStore by lazy { ViewModelStore() }
+        lateinit var viewModelProvider: ViewModelProvider
         var appContentResolver: ContentResolver? = null
         var appContext: Context? = null
     }
@@ -66,9 +69,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainActivityPreview(
 ) {
-    val viewModel = WorkspaceViewModel()
-    viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.IDLE)
-    MainActivity.viewModelStore.put("workspace", viewModel)
     PitchMasterBetaTheme {
         WorkspaceSurface()
     }

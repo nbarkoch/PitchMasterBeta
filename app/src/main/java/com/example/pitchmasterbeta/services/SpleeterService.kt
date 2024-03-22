@@ -18,7 +18,8 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.CannedAccessControlList
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
-import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -64,12 +65,12 @@ class SpleeterService : Service() {
 
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        serviceNotifier = MainActivity.viewModelStore["workspace"] as ServiceNotifier?
-
-        if (!isActive && serviceNotifier != null) {
+        serviceNotifier = viewModelProvider[WorkspaceViewModel::class.java]
+        if (!isActive) {
             val fileUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(KEYS.EXTRA_FILE_URI, Uri::class.java)
             } else {
+                @Suppress("DEPRECATION")
                 intent.getParcelableExtra(KEYS.EXTRA_FILE_URI)
             }
 

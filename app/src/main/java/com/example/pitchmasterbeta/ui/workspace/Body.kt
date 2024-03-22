@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 import com.example.pitchmasterbeta.ui.lyrics.LyricsLazyColumn
 import com.example.pitchmasterbeta.ui.lyrics.LyricsText
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
@@ -22,7 +22,7 @@ import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 @Composable
 fun WorkspaceBody(modifier: Modifier) {
     val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+        viewModelProvider[WorkspaceViewModel::class.java]
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val loadingMessage by rememberUpdatedState(viewModel.notificationMessage.collectAsState())
 

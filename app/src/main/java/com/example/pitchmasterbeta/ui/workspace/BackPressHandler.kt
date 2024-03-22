@@ -4,13 +4,13 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
-import com.example.pitchmasterbeta.MainActivity
+import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 
 
 @Composable
 fun WorkspaceBackHandler() {
     val viewModel: WorkspaceViewModel =
-        MainActivity.viewModelStore["workspace"] as WorkspaceViewModel
+        viewModelProvider[WorkspaceViewModel::class.java]
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
     val context = LocalContext.current.applicationContext
