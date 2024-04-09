@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
+import android.util.Log
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.CognitoCachingCredentialsProvider
 import com.amazonaws.event.ProgressEvent
@@ -19,11 +20,16 @@ import com.amazonaws.services.s3.model.CannedAccessControlList
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.io.InputStream
 import java.net.URL
 import java.nio.ByteBuffer
@@ -42,13 +48,17 @@ class SpleeterService : Service() {
     private var putObjectRequest: PutObjectRequest? = null
     private var uploadedInputStream: InputStream? = null
 
-
+    private var lyricsProvider: LyricsProvider? = null
     private var vocalsUrl: URL? = null
     private var accompanimentUrl: URL? = null
     private var isActive: Boolean = false
 
     interface ServiceNotifier {
-        fun notifyCompletion(vocalsUrl: URL, accompanimentUrl: URL)
+        fun notifyCompletion(
+            vocalsUrl: URL,
+            accompanimentUrl: URL,
+            lyrics: List<LyricsTimestampedSegment>
+        )
 
         fun notifyFailed()
 
@@ -61,6 +71,7 @@ class SpleeterService : Service() {
     object KEYS {
         const val EXTRA_FILE_URI = "EXTRA_FILE_URI"
         const val EXTRA_OBJECT_KEY = "EXTRA_OBJECT_KEY"
+        const val EXTRA_FILE_NAME = "EXTRA_FILE_NAME"
     }
 
 
@@ -75,9 +86,10 @@ class SpleeterService : Service() {
             }
 
             val objectKey = intent.getStringExtra(KEYS.EXTRA_OBJECT_KEY)
+            val songName = intent.getStringExtra(KEYS.EXTRA_FILE_NAME)
 
-            if (fileUri != null && objectKey != null) {
-                startBackgroundThread(fileUri, objectKey)
+            if (fileUri != null && objectKey != null && songName != null) {
+                startBackgroundThread(fileUri, objectKey, songName)
             }
         }
         return START_STICKY
@@ -96,6 +108,8 @@ class SpleeterService : Service() {
             clientConfiguration
         )
 
+        lyricsProvider = LyricsProvider(applicationContext)
+
         s3Client = AmazonS3Client(sCredProvider, clientConfiguration).apply {
             setRegion(AWSKeys.MY_REGION)
         }
@@ -106,7 +120,7 @@ class SpleeterService : Service() {
     }
 
 
-    private fun startUploadToS3(fileUri: Uri, objectKey: String) {
+    private fun startUploadToS3(fileUri: Uri, objectKey: String, songName: String) {
         try {
             StrictMode.setThreadPolicy(ThreadPolicy.Builder().permitAll().build())
 
@@ -122,24 +136,38 @@ class SpleeterService : Service() {
                 cannedAcl = CannedAccessControlList.PublicRead
                 setGeneralProgressListener { progressEvent ->
                     when (progressEvent.eventCode) {
-
                         ProgressEvent.COMPLETED_EVENT_CODE -> {
                             checkItself()
                             serviceNotifier?.notifyProgressChanged(60, "Separating..", 40.0)
-                            val lambdaExecutionResult = invokeLambdaFunction(objectKey)
-                            serviceNotifier?.notifyProgressChanged(100, "Extracting results", 35.0)
-                            checkItself()
-                            vocalsUrl?.takeIf { lambdaExecutionResult }
-                                ?.let { vocalsUrl ->
-                                    accompanimentUrl
-                                        ?.let { accompanimentUrl ->
-                                            serviceNotifier?.notifyCompletion(
-                                                vocalsUrl,
-                                                accompanimentUrl
-                                            )
-                                        }
-                                } ?: serviceNotifier?.notifyFailed()
-                            stopSelf()
+                            val spleeterObservable = { invokeSpleeterLambdaFunction(objectKey) }
+                            val lyricsObservable = {
+                                invokeLyricsLambdaFunction(
+                                    songName,
+                                    "https://${AWSKeys.BUCKET_NAME}.s3.us-east-2.amazonaws.com/input/$objectKey"
+                                )
+                            }
+                            apiCoroutineScope.launch(Dispatchers.IO) {
+                                val audioResult = (async { spleeterObservable.invoke() }).await()
+                                val lyricsList = (async { lyricsObservable.invoke() }).await()
+                                serviceNotifier?.notifyProgressChanged(
+                                    100,
+                                    "Extracting results",
+                                    35.0
+                                )
+                                checkItself()
+                                vocalsUrl?.takeIf { audioResult }
+                                    ?.let { vocalsUrl ->
+                                        accompanimentUrl
+                                            ?.let { accompanimentUrl ->
+                                                serviceNotifier?.notifyCompletion(
+                                                    vocalsUrl,
+                                                    accompanimentUrl,
+                                                    lyricsList
+                                                )
+                                            }
+                                    } ?: serviceNotifier?.notifyFailed()
+                                stopSelf()
+                            }
                         }
 
                         ProgressEvent.FAILED_EVENT_CODE -> serviceNotifier?.notifyFailed()
@@ -166,11 +194,11 @@ class SpleeterService : Service() {
     }
 
 
-    private fun invokeLambdaFunction(objectKey: String): Boolean {
+    private fun invokeSpleeterLambdaFunction(objectKey: String): Boolean {
         val payload = "{\"inputFile\": \"$objectKey\"}"
         val payloadBuffer = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
         val invokeRequest: InvokeRequest = InvokeRequest()
-            .withFunctionName(AWSKeys.LAMBDA_NAME)
+            .withFunctionName(AWSKeys.SPLEETER_LAMBDA_NAME)
             .withPayload(payloadBuffer)
         try {
             val invokeResult: InvokeResult? = lambdaClient.invoke(invokeRequest)
@@ -192,17 +220,54 @@ class SpleeterService : Service() {
         return false
     }
 
+    private fun invokeLyricsLambdaFunction(
+        songName: String, objectKey: String
+    ): List<LyricsTimestampedSegment> {
+        var result = listOf<LyricsTimestampedSegment>()
+        val payload = "{\"song\": \"$songName\", \"url\":\"$objectKey\"}"
+        val payloadBuffer = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
+        val invokeRequest =
+            InvokeRequest().withFunctionName(AWSKeys.LYRICS_LAMBDA_NAME).withPayload(payloadBuffer)
+        try {
+            lambdaClient.run {
+                val invokeResult = this.invoke(invokeRequest)
+                val statusCode = invokeResult.statusCode
+                if (statusCode == 200) {
+                    val responseJson = JSONObject(String(invokeResult.payload.array()))
+                    val gson = Gson()
+                    val jsonBody = JSONObject(responseJson.getString("body"))
+                    result = gson.fromJson(
+                        jsonBody.getString("timestamped_segments"),
+                        object : TypeToken<List<LyricsTimestampedSegment>>() {}.type
+                    )
+                    if (result.isEmpty()) {
+                        Log.e("LyricsProvider", " - bad response - lyrics are empty :(")
+                    } else {
+                        Log.i("LyricsProvider", " - response: \n $result")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.e(
+                "LyricsProvider",
+                " - bad response - something went wrong :(\n ${e.message}\n" + "${e.localizedMessage}\n" + "${e.cause}"
+            )
+        }
+        return result
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()
         stopBackgroundThread()
     }
 
-    private fun startBackgroundThread(uri: Uri, objectKey: String) {
+    private fun startBackgroundThread(uri: Uri, objectKey: String, songName: String) {
         isActive = true
         apiCoroutineScope.launch {
             initServices()
-            startUploadToS3(uri, objectKey)
+            startUploadToS3(uri, objectKey, songName)
         }
     }
 

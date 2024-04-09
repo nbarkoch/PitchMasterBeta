@@ -1,3 +1,5 @@
+import com.android.sdklib.AndroidVersion.VersionCodes.UPSIDE_DOWN_CAKE
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -10,7 +12,7 @@ android {
     defaultConfig {
         applicationId = "com.nbarkoch.pitchmaster"
         minSdk = 24
-        targetSdk = 33
+        targetSdk = UPSIDE_DOWN_CAKE
         versionCode = 1
         versionName = "1.0"
 

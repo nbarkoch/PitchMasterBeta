@@ -46,7 +46,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var mediaInfo = MediaInfo()
     private var audioProcessor: AudioProcessor? = null
     private var notification: SpleeterProgressNotification? = null
-    private var lyricsProvider: LyricsProvider? = null
+
+    //    private var lyricsProvider: LyricsProvider? = null
     private lateinit var sharedKaraokePreferences: StudioSharedPreferences
     private var audioUri: Uri? = null
     private var loadKaraokeJob: Job? = null
@@ -69,9 +70,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val lyricsSegments: StateFlow<List<LyricsTimestampedSegment>> = _lyricsSegments
 
     fun mockupLyrics() {
-        lyricsProvider?.apply {
-            _lyricsSegments.value = extractData(Mocks.hereWithoutYou, mediaInfo.timeStampDuration)
-        }
+        _lyricsSegments.value = LyricsProvider.extractData(Mocks.hereWithoutYou)
     }
 
     enum class WorkspaceState {
@@ -132,7 +131,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                         setWorkspaceState(WorkspaceState.IDLE)
                         resetAudio()
-                        lyricsProvider = LyricsProvider(context)
+//                        lyricsProvider = LyricsProvider(context)
                         mockupLyrics()
                     }
                 } else {
@@ -146,7 +145,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     if (sharedKaraokePreferences.getKaraoke(uri.toString()) != null) {
                         loadKaraokeFromStorage()
                     } else {
-                        beginGenerateKaraoke(context, uri)
+                        beginGenerateKaraoke(context, uri, _songFullName.value)
                     }
                 }
             }
@@ -154,14 +153,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     }
 
-    private fun beginGenerateKaraoke(context: Context, fileUri: Uri) {
+    private fun beginGenerateKaraoke(context: Context, fileUri: Uri, songName: String) {
         try {
-            lyricsProvider = LyricsProvider(context)
             notification = SpleeterProgressNotification(context)
             val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
             val fileName = "mashu"//UUID.randomUUID().toString() // "mashu"
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
+            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_NAME, songName)
             context.startService(serviceSpleeterIntent)
             notification?.showNotification()
         } catch (e: Exception) {
@@ -523,26 +522,18 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     override fun notifyCompletion(
         vocalsUrl: URL,
         accompanimentUrl: URL,
+        lyrics: List<LyricsTimestampedSegment>
     ) {
         appContext?.let { context ->
             loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val lyricsObservable: suspend () -> List<LyricsTimestampedSegment>?
-                    val songName = _songFullName.value
-                    lyricsObservable = {
-                        lyricsProvider?.invokeLyricsLambdaFunction(
-                            songName, vocalsUrl.toString(), mediaInfo.timeStampDuration
-                        )
-                    }
-
                     val studioDataNullable = tempSingerFile?.let { singerFile ->
                         tempMusicFile?.let { musicFile ->
                             try {
-                                val lyricsList = (async { lyricsObservable.invoke() }).await()
                                 val (downloadedVocalFile, downloadedAccompanimentFile) = awaitAll(
                                     async { mediaInfo.downloadAudioFile(vocalsUrl) },
                                     async { mediaInfo.downloadAudioFile(accompanimentUrl) })
-                                if (downloadedVocalFile == null || downloadedAccompanimentFile == null || lyricsList == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
+                                if (downloadedVocalFile == null || downloadedAccompanimentFile == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
                                     throw Exception()
                                 }
 
@@ -551,7 +542,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                         vocal = Uri.fromFile(downloadedVocalFile).toString(),
                                         music = Uri.fromFile(downloadedAccompanimentFile)
                                             .toString(),
-                                        lyrics = lyricsList
+                                        lyrics = lyrics
                                     ),
                                     streams = StudioSharedPreferences.KaraokeStreams(
                                         vocal = mediaInfo.getAudioBufferedInputStream(
@@ -626,11 +617,23 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                     resetAudio()
                                 } else {
                                     forgetKaraoke()
-                                    audioUri?.let { beginGenerateKaraoke(context, it) }
+                                    audioUri?.let {
+                                        beginGenerateKaraoke(
+                                            context,
+                                            it,
+                                            _songFullName.value
+                                        )
+                                    }
                                 }
                             } else {
                                 forgetKaraoke()
-                                audioUri?.let { beginGenerateKaraoke(context, it) }
+                                audioUri?.let {
+                                    beginGenerateKaraoke(
+                                        context,
+                                        it,
+                                        _songFullName.value
+                                    )
+                                }
                             }
                         }
                 } catch (e: CancellationException) {
@@ -638,7 +641,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 } catch (e: Exception) {
                     e.printStackTrace()
                     forgetKaraoke()
-                    audioUri?.let { beginGenerateKaraoke(context, it) }
+                    audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
                 }
             }
         }

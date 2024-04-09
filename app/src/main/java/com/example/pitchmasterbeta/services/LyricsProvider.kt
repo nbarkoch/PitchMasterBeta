@@ -47,7 +47,7 @@ class LyricsProvider(context: Context?) {
     }
 
     fun invokeLyricsLambdaFunction(
-        songName: String, objectKey: String, audioDuration: Double
+        songName: String, objectKey: String
     ): List<LyricsTimestampedSegment> {
         initLambda()
         var result = listOf<LyricsTimestampedSegment>()
@@ -60,7 +60,7 @@ class LyricsProvider(context: Context?) {
                 val invokeResult = this.invoke(invokeRequest)
                 val statusCode = invokeResult.statusCode
                 if (statusCode == 200) {
-                    result = extractData(String(invokeResult.payload.array()), audioDuration)
+                    result = extractData(String(invokeResult.payload.array()))
                 }
             }
         } catch (e: Exception) {
@@ -73,28 +73,24 @@ class LyricsProvider(context: Context?) {
         return result
     }
 
-    fun extractData(payloadString: String, audioDuration: Double): List<LyricsTimestampedSegment> {
-        val responseJson = JSONObject(payloadString)
-        val gson = Gson()
-        val jsonBody = JSONObject(responseJson.getString("body"))
-
-        val timestampedSegments: MutableList<LyricsTimestampedSegment> = gson.fromJson(
-            jsonBody.getString("timestamped_segments"),
-            object : TypeToken<List<LyricsTimestampedSegment>>() {}.type
-        )
-        if (timestampedSegments.isEmpty()) {
-            Log.e("LyricsProvider", " - bad response - lyrics are empty :(")
-        } else {
-            Log.i("LyricsProvider", " - response: \n $timestampedSegments")
-        }
-        for (i in timestampedSegments.indices) {
-            timestampedSegments[i] =
-                timestampedSegments[i].copy(text = timestampedSegments[i].text.filter { w -> w.start < audioDuration && w.end < audioDuration })
-        }
-        return timestampedSegments
-    }
-
     companion object {
         private var sCredProvider: CognitoCachingCredentialsProvider? = null
+
+        fun extractData(payloadString: String): List<LyricsTimestampedSegment> {
+            val responseJson = JSONObject(payloadString)
+            val gson = Gson()
+            val jsonBody = JSONObject(responseJson.getString("body"))
+
+            val timestampedSegments: MutableList<LyricsTimestampedSegment> = gson.fromJson(
+                jsonBody.getString("timestamped_segments"),
+                object : TypeToken<List<LyricsTimestampedSegment>>() {}.type
+            )
+            if (timestampedSegments.isEmpty()) {
+                Log.e("LyricsProvider", " - bad response - lyrics are empty :(")
+            } else {
+                Log.i("LyricsProvider", " - response: \n $timestampedSegments")
+            }
+            return timestampedSegments
+        }
     }
 }
