@@ -524,6 +524,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         accompanimentUrl: URL,
         lyrics: List<LyricsTimestampedSegment>
     ) {
+        notifyProgressChanged(100, "Extracting results", 35.0)
         appContext?.let { context ->
             loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
                 try {
