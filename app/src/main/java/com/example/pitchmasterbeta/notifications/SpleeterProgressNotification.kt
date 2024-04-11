@@ -37,6 +37,7 @@ class SpleeterProgressNotification(context: Context) {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Progress Notification").setContentText("Upload in progress")
             .setDefaults(Notification.DEFAULT_LIGHTS or Notification.DEFAULT_VIBRATE)
+            .setTimeoutAfter(1000)
             .setProgress(MAX_PROGRESS, lastProgress, true).setSound(null)
     }
 
@@ -88,7 +89,7 @@ class SpleeterProgressNotification(context: Context) {
 
     companion object {
         private const val CHANNEL_ID = "spleeter_service_process"
-        private const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_ID = 8172
         private const val MAX_PROGRESS = 100
     }
 }
