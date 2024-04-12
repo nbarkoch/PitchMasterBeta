@@ -37,7 +37,7 @@ class SpleeterProgressNotification(context: Context) {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Progress Notification").setContentText("Upload in progress")
             .setDefaults(Notification.DEFAULT_LIGHTS or Notification.DEFAULT_VIBRATE)
-            .setTimeoutAfter(1000)
+            .setTimeoutAfter(2000)
             .setProgress(MAX_PROGRESS, lastProgress, true).setSound(null)
     }
 

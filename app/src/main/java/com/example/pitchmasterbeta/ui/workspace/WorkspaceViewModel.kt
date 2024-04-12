@@ -43,6 +43,7 @@ import java.util.concurrent.CancellationException
 
 class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
+    private var initialized = false
     private var mediaInfo = MediaInfo()
     private var audioProcessor: AudioProcessor? = null
     private var notification: SpleeterProgressNotification? = null
@@ -98,10 +99,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val songFullName: StateFlow<String> = _songFullName
 
     suspend fun handleResultUriForAudioIntent(
-        context: Context, contentResolver: ContentResolver?, uri: Uri?
+        context: Context, uri: Uri?
     ) {
         uri?.let {
-            contentResolver?.let {
+            context.contentResolver?.let {contentResolver ->
                 if (devTestMode) {
 
                     // resetting the streams because we are starting a new work
@@ -131,7 +132,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                         setWorkspaceState(WorkspaceState.IDLE)
                         resetAudio()
-//                        lyricsProvider = LyricsProvider(context)
                         mockupLyrics()
                     }
                 } else {
@@ -686,6 +686,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         sharedKaraokePreferences = StudioSharedPreferences(context)
         initTempFiles(context)
         resetWorkspace()
+        initialized = true
     }
 
     private fun initTempFiles(context: Context) {
@@ -771,5 +772,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             // Handle specific exceptions as needed
             e.printStackTrace()
         }
+    }
+
+    fun getIsInitialized(): Boolean {
+        return initialized
     }
 }

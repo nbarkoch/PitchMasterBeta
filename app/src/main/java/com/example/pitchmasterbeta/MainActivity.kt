@@ -24,10 +24,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewModelProvider = ViewModelProvider(this)
-        appContentResolver = contentResolver
         appContext = applicationContext
         val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
-        viewModel.init(this)
+        if (!viewModel.getIsInitialized()) {
+            viewModel.init(this)
+        }
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr ) {
                 PitchMasterBetaTheme {
@@ -45,13 +46,12 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         lateinit var viewModelProvider: ViewModelProvider
-        var appContentResolver: ContentResolver? = null
         var appContext: Context? = null
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModelStore.clear()
+//        viewModelStore.clear()
     }
 
     fun keepAwake(flag: Boolean) {
