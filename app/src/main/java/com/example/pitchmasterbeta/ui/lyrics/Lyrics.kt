@@ -14,7 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -44,7 +44,7 @@ fun LyricsLazyColumn(
 
     // Create element height in pixel state
     var columnMidpoint by remember {
-        mutableStateOf(0f)
+        mutableFloatStateOf(0f)
     }
 
 

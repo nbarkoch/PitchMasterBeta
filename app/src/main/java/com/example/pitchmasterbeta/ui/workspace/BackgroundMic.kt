@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -84,8 +86,8 @@ fun BubbleAnimation(active: Boolean) {
     val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp.value
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp.value
     var bubbleSizeDp by remember { mutableStateOf(50.dp) }
-    var bubbleOpacity by remember { mutableStateOf(0.6f) }
-    var duration by remember { mutableStateOf(3000) }
+    var bubbleOpacity by remember { mutableFloatStateOf(0.6f) }
+    var duration by remember { mutableIntStateOf(3000) }
     var isVisible by remember { mutableStateOf(false) }
     var initialX by remember {
         mutableStateOf(
@@ -97,8 +99,8 @@ fun BubbleAnimation(active: Boolean) {
             (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
         )
     }
-    var initialY by remember { mutableStateOf(screenHeightDp) }
-    var targetY by remember { mutableStateOf(bubbleSizeDp.value) }
+    var initialY by remember { mutableFloatStateOf(screenHeightDp) }
+    var targetY by remember { mutableFloatStateOf(bubbleSizeDp.value) }
     val transition = updateTransition(
         targetState = isVisible,
         label = ""

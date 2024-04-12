@@ -20,18 +20,11 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 
-class AudioProcessor {
+class AudioProcessor(private val mediaInfo: MediaInfo) {
 
     enum class NotesSimilarity {
         Wrong, Neutral, Idle, Close, Equal
     }
-
-    constructor(mediaInfo: MediaInfo) {
-        this.mediaInfo = mediaInfo
-        playSound = PitchSoundPlayer(mediaInfo.voiceSampleRate, 1)
-    }
-
-    private val mediaInfo: MediaInfo
 
     private var microphoneDispatcher: VocalAudioDispatcher? = null
     private var musicDispatcher: SongAudioDispatcher? = null
@@ -45,7 +38,7 @@ class AudioProcessor {
     private var generatedSingerByteSound: ByteArray = byteArrayOf()
     private var generatedRecordByteSound: ByteArray = byteArrayOf()
 
-    private val playSound: PitchSoundPlayer
+    private val playSound: PitchSoundPlayer = PitchSoundPlayer(mediaInfo.voiceSampleRate, 1)
 
     private var singNoteI = 0
     private var micNoteI = 0
@@ -277,6 +270,7 @@ class AudioProcessor {
         })
         musicDispatcher
     }
+
 }
 
 

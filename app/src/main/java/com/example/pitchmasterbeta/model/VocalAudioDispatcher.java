@@ -23,7 +23,7 @@ public class VocalAudioDispatcher implements Runnable {
     private final TarsosDSPAudioInputStream audioInputStream;
     private float[] audioFloatBuffer;
     private byte[] audioByteBuffer;
-    private final List<AudioProcessor> audioProcessors = new CopyOnWriteArrayList();
+    private final List<AudioProcessor> audioProcessors = new CopyOnWriteArrayList<>();
     private final TarsosDSPAudioFloatConverter converter;
     private final TarsosDSPAudioFormat format;
     private int floatOverlap;

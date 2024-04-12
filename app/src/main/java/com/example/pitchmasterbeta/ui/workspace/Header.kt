@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -173,7 +174,7 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
     val score by rememberUpdatedState(viewModel.score.collectAsState())
     val playState = viewModel.playingState.collectAsState()
 
-    var grade by remember { mutableStateOf(0) }
+    var grade by remember { mutableIntStateOf(0) }
 
     var opinion by remember { mutableStateOf("") }
     LaunchedEffect(playState.value) {

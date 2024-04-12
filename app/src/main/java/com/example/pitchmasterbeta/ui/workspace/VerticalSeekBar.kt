@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,8 +33,8 @@ fun VerticalSeekBar(
     onProgressChanged: (Float) -> Unit,
 ) {
 
-    var percent by remember { mutableStateOf(initialOffsetPercent.coerceIn(.05f, 1f)) }
-    var height by remember { mutableStateOf(0f) }
+    var percent by remember { mutableFloatStateOf(initialOffsetPercent.coerceIn(.05f, 1f)) }
+    var height by remember { mutableFloatStateOf(0f) }
 
     Box(
         modifier = modifier

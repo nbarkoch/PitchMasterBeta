@@ -26,11 +26,9 @@ fun WorkspaceSurface(
 
     // Create or retrieve the ViewModel associated with the ViewModelStore
     WorkspaceBackHandler()
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(brush = gradientBrush)
-    )
+    Box(modifier = modifier
+        .fillMaxSize()
+        .background(brush = gradientBrush))
     {
         BackgroundMic()
         WorkspaceBody(Modifier.fillMaxSize())

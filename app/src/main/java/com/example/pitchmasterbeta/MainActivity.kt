@@ -1,6 +1,5 @@
 package com.example.pitchmasterbeta
 
-import android.content.ContentResolver
 import android.content.Context
 import android.os.Bundle
 import android.view.WindowManager
@@ -49,10 +48,7 @@ class MainActivity : ComponentActivity() {
         var appContext: Context? = null
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-//        viewModelStore.clear()
-    }
+    //viewModelStore.clear()
 
     fun keepAwake(flag: Boolean) {
         window.apply {

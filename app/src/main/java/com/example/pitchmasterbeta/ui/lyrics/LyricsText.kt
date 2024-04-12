@@ -17,6 +17,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,7 +33,6 @@ import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -51,7 +51,6 @@ import kotlinx.coroutines.delay
 import kotlin.math.floor
 import kotlin.math.max
 
-@OptIn(ExperimentalTextApi::class)
 @Composable
 fun LyricsText(
     segment: LyricsTimestampedSegment,
@@ -198,12 +197,11 @@ fun LyricsText(
 }
 
 
-@OptIn(ExperimentalTextApi::class)
 @Composable
 fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
     var lines: List<String> by remember { mutableStateOf(emptyList()) }
     var visibleLines by remember { mutableStateOf(emptyList<Boolean>()) }
-    var timeForLine by remember { mutableStateOf(0) }
+    var timeForLine by remember { mutableIntStateOf(0) }
     var isRTL by remember { mutableStateOf(false) }
 
     DisposableEffect(segment) {
