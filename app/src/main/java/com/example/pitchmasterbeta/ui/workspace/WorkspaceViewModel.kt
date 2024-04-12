@@ -34,6 +34,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedInputStream
 import java.io.File
 import java.net.URL
@@ -531,12 +532,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         tempMusicFile?.let { musicFile ->
                             try {
                                 val (downloadedVocalFile, downloadedAccompanimentFile) = awaitAll(
-                                    async { mediaInfo.downloadAudioFile(vocalsUrl) },
-                                    async { mediaInfo.downloadAudioFile(accompanimentUrl) })
+                                    async { withTimeoutOrNull(12000) { mediaInfo.downloadAudioFile(vocalsUrl) } },
+                                    async { withTimeoutOrNull(12000) { mediaInfo.downloadAudioFile(accompanimentUrl) } })
                                 if (downloadedVocalFile == null || downloadedAccompanimentFile == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
                                     throw Exception()
                                 }
-
                                 StudioSharedPreferences.KaraokeStudioRef(
                                     ref = StudioSharedPreferences.KaraokeRef(
                                         vocal = Uri.fromFile(downloadedVocalFile).toString(),
@@ -553,6 +553,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                                     ),
                                 )
                             } catch (e: Exception) {
+                                e.printStackTrace()
                                 null
                             }
                         }

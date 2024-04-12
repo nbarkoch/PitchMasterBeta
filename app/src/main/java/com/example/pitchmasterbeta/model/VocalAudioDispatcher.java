@@ -74,13 +74,13 @@ public class VocalAudioDispatcher implements Runnable {
 
     public void addAudioProcessor(AudioProcessor var1) {
         this.audioProcessors.add(var1);
-        LOG.fine("Added an audioprocessor to the list of processors: " + var1.toString());
+        LOG.fine("Added an audioprocessor to the list of processors: " + var1);
     }
 
     public void removeAudioProcessor(AudioProcessor var1) {
         this.audioProcessors.remove(var1);
         var1.processingFinished();
-        LOG.fine("Remove an audioprocessor to the list of processors: " + var1.toString());
+        LOG.fine("Remove an audioprocessor to the list of processors: " + var1);
     }
 
     public void run() {
