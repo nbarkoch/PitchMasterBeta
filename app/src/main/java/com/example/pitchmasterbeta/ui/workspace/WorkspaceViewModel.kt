@@ -1,8 +1,12 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Constraints.Companion.Infinity
 import androidx.core.net.toFile
@@ -46,7 +50,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var initialized = false
     private var mediaInfo = MediaInfo()
     private var audioProcessor: AudioProcessor? = null
-    private var notification: SpleeterProgressNotification? = null
 
     //    private var lyricsProvider: LyricsProvider? = null
     private lateinit var sharedKaraokePreferences: StudioSharedPreferences
@@ -102,7 +105,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         context: Context, uri: Uri?
     ) {
         uri?.let {
-            context.contentResolver?.let {contentResolver ->
+            context.contentResolver?.let { contentResolver ->
                 if (devTestMode) {
 
                     // resetting the streams because we are starting a new work
@@ -155,14 +158,12 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private fun beginGenerateKaraoke(context: Context, fileUri: Uri, songName: String) {
         try {
-            notification = SpleeterProgressNotification(context)
             val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
             val fileName = "mashu"//UUID.randomUUID().toString() // "mashu"
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_NAME, songName)
             context.startService(serviceSpleeterIntent)
-            notification?.showNotification()
         } catch (e: Exception) {
             e.printStackTrace()
             stopGenerateKaraoke(context)
@@ -172,7 +173,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     fun stopGenerateKaraoke(context: Context) {
         val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
         context.stopService(serviceSpleeterIntent)
-        notification?.hideNotification()
     }
 
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
@@ -192,9 +192,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     data class NoteState(var noteF: Float, val volume: Float)
 
-    private val _micNote = MutableStateFlow(NoteState(0f, 0f))
     private val _micNoteActive = MutableStateFlow(false)
     val micNoteActive: StateFlow<Boolean> = _micNoteActive
+    private val _micNote = MutableStateFlow(NoteState(0f, 0f))
     val micNote: StateFlow<NoteState> = _micNote
 
     private val _sinNote = MutableStateFlow(NoteState(0f, 0f))
@@ -520,66 +520,44 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var tempMusicFile: File? = null
 
     override fun notifyCompletion(
-        vocalsUrl: URL,
-        accompanimentUrl: URL,
-        lyrics: List<LyricsTimestampedSegment>
+        vocalsFile: File,
+        accompanimentFile: File,
+        lyrics: List<LyricsTimestampedSegment>,
+        shouldSaveData: Boolean
     ) {
-        notifyProgressChanged(100, "Extracting results", 35.0)
-        appContext?.let { context ->
-            loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val studioDataNullable = tempSingerFile?.let { singerFile ->
-                        tempMusicFile?.let { musicFile ->
-                            try {
-                                val (downloadedVocalFile, downloadedAccompanimentFile) = awaitAll(
-                                    async { withTimeoutOrNull(12000) { mediaInfo.downloadAudioFile(vocalsUrl) } },
-                                    async { withTimeoutOrNull(12000) { mediaInfo.downloadAudioFile(accompanimentUrl) } })
-                                if (downloadedVocalFile == null || downloadedAccompanimentFile == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
-                                    throw Exception()
-                                }
-                                StudioSharedPreferences.KaraokeStudioRef(
-                                    ref = StudioSharedPreferences.KaraokeRef(
-                                        vocal = Uri.fromFile(downloadedVocalFile).toString(),
-                                        music = Uri.fromFile(downloadedAccompanimentFile)
-                                            .toString(),
-                                        lyrics = lyrics
-                                    ),
-                                    streams = StudioSharedPreferences.KaraokeStreams(
-                                        vocal = mediaInfo.getAudioBufferedInputStream(
-                                            context, downloadedVocalFile, singerFile
-                                        ), music = mediaInfo.getAudioBufferedInputStream(
-                                            context, downloadedAccompanimentFile, musicFile
-                                        )
-                                    ),
-                                )
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                null
-                            }
-                        }
-                    }
-
-                    studioDataNullable?.let { studioData ->
-                        mediaInfo.closeStreams()
-                        mediaInfo.singerInputStream = studioData.streams.vocal
-                        mediaInfo.bgMusicInputStream = studioData.streams.music
-                        _lyricsSegments.value = studioData.ref.lyrics
-
-                        audioProcessor = AudioProcessor(mediaInfo)
-                        val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
-                        val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
-                        _durationTime.value =
-                            "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
-                        setWorkspaceState(WorkspaceState.IDLE)
-                        resetAudio()
-                        notification?.hideNotification()
-                        _showSaveAudioDialog.value = true
-                        saveKaraoke(studioData.ref)
-                    } ?: run {
-                        // Handle the case where the streams and lyrics are null
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+        val singerFile = tempSingerFile
+        val musicFile = tempMusicFile
+        if (singerFile == null || musicFile == null) {
+            return
+        }
+        loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
+            appContext?.let { context ->
+                val vocalStream = mediaInfo.getAudioBufferedInputStream(
+                    context, vocalsFile, singerFile
+                )
+                val musicStream = mediaInfo.getAudioBufferedInputStream(
+                    context, accompanimentFile, musicFile
+                )
+                mediaInfo.closeStreams()
+                mediaInfo.singerInputStream = vocalStream
+                mediaInfo.bgMusicInputStream = musicStream
+                _lyricsSegments.value = lyrics
+                audioProcessor = AudioProcessor(mediaInfo)
+                val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
+                val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
+                _durationTime.value =
+                    "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                setWorkspaceState(WorkspaceState.IDLE)
+                resetAudio()
+                if (shouldSaveData) {
+                    _showSaveAudioDialog.value = true
+                    saveKaraoke(
+                        StudioSharedPreferences.KaraokeRef(
+                            vocal = Uri.fromFile(vocalsFile).toString(),
+                            music = Uri.fromFile(accompanimentFile).toString(),
+                            lyrics = lyrics
+                        )
+                    )
                 }
             }
         }
@@ -591,52 +569,27 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         appContext?.let { context ->
             loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    sharedKaraokePreferences.getKaraoke(audioPath = audioUri.toString())
-                        .let { karaokeStudio ->
-                            if (karaokeStudio != null && audioUri != null && singerFile != null && musicFile != null) {
-                                val downloadedVocalFile = Uri.parse(karaokeStudio.vocal).toFile()
-                                val downloadedAccompanimentFile =
-                                    Uri.parse(karaokeStudio.music).toFile()
-                                if (downloadedVocalFile.exists() && downloadedAccompanimentFile.exists()) {
-                                    val singerStream = mediaInfo.getAudioBufferedInputStream(
-                                        context, downloadedVocalFile, singerFile
-                                    )
-                                    val musicStream = mediaInfo.getAudioBufferedInputStream(
-                                        context, downloadedAccompanimentFile, musicFile
-                                    )
-                                    mediaInfo.closeStreams()
-                                    mediaInfo.singerInputStream = singerStream
-                                    mediaInfo.bgMusicInputStream = musicStream
-                                    _lyricsSegments.value = karaokeStudio.lyrics
-
-                                    audioProcessor = AudioProcessor(mediaInfo)
-                                    val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
-                                    val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
-                                    _durationTime.value =
-                                        "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
-                                    setWorkspaceState(WorkspaceState.IDLE)
-                                    resetAudio()
-                                } else {
-                                    forgetKaraoke()
-                                    audioUri?.let {
-                                        beginGenerateKaraoke(
-                                            context,
-                                            it,
-                                            _songFullName.value
-                                        )
-                                    }
-                                }
-                            } else {
-                                forgetKaraoke()
-                                audioUri?.let {
-                                    beginGenerateKaraoke(
-                                        context,
-                                        it,
-                                        _songFullName.value
-                                    )
-                                }
-                            }
+                    val karaokeStudio =
+                        sharedKaraokePreferences.getKaraoke(audioPath = audioUri.toString())
+                    if (karaokeStudio != null && audioUri != null && singerFile != null && musicFile != null) {
+                        val downloadedVocalFile = Uri.parse(karaokeStudio.vocal).toFile()
+                        val downloadedAccompanimentFile =
+                            Uri.parse(karaokeStudio.music).toFile()
+                        if (downloadedVocalFile.exists() && downloadedAccompanimentFile.exists()) {
+                            notifyCompletion(
+                                downloadedVocalFile,
+                                downloadedAccompanimentFile,
+                                karaokeStudio.lyrics,
+                                false
+                            )
+                        } else {
+                            forgetKaraoke()
+                            audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
                         }
+                    } else {
+                        forgetKaraoke()
+                        audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
+                    }
                 } catch (e: CancellationException) {
                     e.printStackTrace()
                 } catch (e: Exception) {
@@ -662,7 +615,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _workspaceState.value = WorkspaceState.PICK
         _displaySingerVolume.value = false
         _displayPitchFactor.value = false
-        notification?.hideNotification()
     }
 
     fun stopLoadKaraoke() {
@@ -673,12 +625,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val notificationMessage: StateFlow<LyricsSegment> = _notificationMessage
 
     override fun notifyProgressChanged(progress: Int, message: String) {
-        notification?.updateProgress(progress, message)
         _notificationMessage.value = LyricsSegment(message, 0.0, 0.0)
     }
 
     override fun notifyProgressChanged(progress: Int, message: String, duration: Double) {
-        notification?.updateProgress(progress, message, duration * 1000.0)
         _notificationMessage.value = LyricsSegment(message, 0.0, duration)
     }
 

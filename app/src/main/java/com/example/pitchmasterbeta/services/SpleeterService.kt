@@ -1,6 +1,7 @@
 package com.example.pitchmasterbeta.services
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -8,6 +9,7 @@ import android.os.IBinder
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
+import androidx.lifecycle.viewModelScope
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.CognitoCachingCredentialsProvider
 import com.amazonaws.event.ProgressEvent
@@ -20,18 +22,26 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
+import com.example.pitchmasterbeta.notifications.SpleeterProgressNotification
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.io.InputStream
+import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 class SpleeterService : Service() {
@@ -47,11 +57,14 @@ class SpleeterService : Service() {
     private var uploadedInputStream: InputStream? = null
     private var isActive: Boolean = false
 
+    private var spleeterNotification: SpleeterProgressNotification? = null
+
     interface ServiceNotifier {
         fun notifyCompletion(
-            vocalsUrl: URL,
-            accompanimentUrl: URL,
-            lyrics: List<LyricsTimestampedSegment>
+            vocalsFile: File,
+            accompanimentFile: File,
+            lyrics: List<LyricsTimestampedSegment>,
+            shouldSaveData: Boolean = false
         )
 
         fun notifyFailed()
@@ -83,6 +96,8 @@ class SpleeterService : Service() {
             val songName = intent.getStringExtra(KEYS.EXTRA_FILE_NAME)
 
             if (fileUri != null && objectKey != null && songName != null) {
+                spleeterNotification = SpleeterProgressNotification(this)
+                startForeground(SpleeterProgressNotification.NOTIFICATION_ID, spleeterNotification?.buildNotification())
                 startBackgroundThread(fileUri, objectKey, songName)
             }
         }
@@ -112,45 +127,44 @@ class SpleeterService : Service() {
     }
 
 
-    private fun startUploadToS3(fileUri: Uri, objectKey: String, songName: String) {
-        try {
-            StrictMode.setThreadPolicy(ThreadPolicy.Builder().permitAll().build())
+    private suspend fun startUploadToS3(fileUri: Uri, objectKey: String): Boolean {
+        return suspendCoroutine { continuation ->
+            try {
+                StrictMode.setThreadPolicy(ThreadPolicy.Builder().permitAll().build())
 
-            uploadedInputStream = contentResolver.openInputStream(fileUri)
-            val objectMetadata = ObjectMetadata().apply {
-                contentLength = uploadedInputStream?.available()?.toLong() ?: 0L
-            }
+                uploadedInputStream = contentResolver.openInputStream(fileUri)
+                val objectMetadata = ObjectMetadata().apply {
+                    contentLength = uploadedInputStream?.available()?.toLong() ?: 0L
+                }
 
-            putObjectRequest = PutObjectRequest(
-                AWSKeys.BUCKET_NAME,
-                "input/$objectKey", uploadedInputStream, objectMetadata
-            ).apply {
-                cannedAcl = CannedAccessControlList.PublicRead
-                setGeneralProgressListener { progressEvent ->
-                    when (progressEvent.eventCode) {
-                        ProgressEvent.COMPLETED_EVENT_CODE -> {
-                            checkItself()
-                            serviceNotifier?.notifyProgressChanged(60, "Separating..", 40.0)
-                            apiCoroutineScope.launch(Dispatchers.IO) {
-                                if (!invokeLambdaFunction(songName, objectKey)) {
-                                    serviceNotifier?.notifyFailed()
-                                }
-                                stopSelf()
+                putObjectRequest = PutObjectRequest(
+                    AWSKeys.BUCKET_NAME,
+                    "input/$objectKey", uploadedInputStream, objectMetadata
+                ).apply {
+                    cannedAcl = CannedAccessControlList.PublicRead
+                    setGeneralProgressListener { progressEvent ->
+                        when (progressEvent.eventCode) {
+                            ProgressEvent.COMPLETED_EVENT_CODE -> {
+                                continuation.resume(true)
                             }
+                            ProgressEvent.FAILED_EVENT_CODE -> {
+                                serviceNotifier?.notifyFailed()
+                                continuation.resume(false)
+                            }
+                            else -> {}
                         }
-                        ProgressEvent.FAILED_EVENT_CODE -> serviceNotifier?.notifyFailed()
-                        else -> {}
                     }
                 }
+                checkItself()
+                s3Client.putObject(putObjectRequest)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                stopSelf()
+                continuation.resume(false) // Resume with false if an exception occurs
             }
-            checkItself()
-            serviceNotifier?.notifyProgressChanged(20, "Uploading The file", 5.0)
-            s3Client.putObject(putObjectRequest)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            stopSelf()
         }
     }
+
 
     private fun checkItself() {
         if (!isActive) {
@@ -161,49 +175,46 @@ class SpleeterService : Service() {
         }
     }
 
-    private fun invokeLambdaFunction(
-        songName: String, objectKey: String
-    ): Boolean {
-        var lyrics: List<LyricsTimestampedSegment>
-        var vocalsUrl: URL
-        var accompanimentUrl: URL
-        val payload = "{\"file_name\": \"$songName\", \"object_key\":\"$objectKey\"}"
-        val payloadBuffer = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
-        val invokeRequest =
-            InvokeRequest().withFunctionName(AWSKeys.KARAOKE_FUNCTION).withPayload(payloadBuffer)
-        try {
-            lambdaClient.run {
-                val invokeResult = this.invoke(invokeRequest)
-                val statusCode = invokeResult.statusCode
-                checkItself()
-                if (statusCode == 200) {
-                    val responseJson = JSONObject(String(invokeResult.payload.array()))
-                    val gson = Gson()
-                    val jsonBody = JSONObject(responseJson.getString("body"))
-                    lyrics = gson.fromJson(
-                        jsonBody.getString("timestamped_segments"),
-                        object : TypeToken<List<LyricsTimestampedSegment>>() {}.type
-                    )
-                    val urls = jsonBody.getJSONObject("urls")
-                    vocalsUrl = URL(urls.getString("vocals"))
-                    accompanimentUrl = URL(urls.getString("accompaniment"))
-                    Log.i("lambdaFunction", " - response: \n $jsonBody")
-                    serviceNotifier?.notifyCompletion(
-                        vocalsUrl,
-                        accompanimentUrl,
-                        lyrics
-                    )
-                    return true
+    data class ResultLambda(var lyrics: List<LyricsTimestampedSegment>,
+                            var vocalsUrl: URL,
+                            var accompanimentUrl: URL)
+
+    private suspend fun invokeLambdaFunction(songName: String, objectKey: String): ResultLambda? {
+        return suspendCoroutine { continuation ->
+            val payload = "{\"file_name\": \"$songName\", \"object_key\":\"$objectKey\"}"
+            val payloadBuffer = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
+            val invokeRequest = InvokeRequest()
+                .withFunctionName(AWSKeys.KARAOKE_FUNCTION)
+                .withPayload(payloadBuffer)
+
+            try {
+                lambdaClient.run {
+                    val invokeResult = this.invoke(invokeRequest)
+                    val statusCode = invokeResult.statusCode
+                    checkItself()
+                    if (statusCode == 200) {
+                        val responseJson = JSONObject(String(invokeResult.payload.array()))
+                        val gson = Gson()
+                        val jsonBody = JSONObject(responseJson.getString("body"))
+                        val lyrics = gson.fromJson<List<LyricsTimestampedSegment>>(
+                            jsonBody.getString("timestamped_segments"),
+                            object : TypeToken<List<LyricsTimestampedSegment>>() {}.type
+                        )
+                        val urls = jsonBody.getJSONObject("urls")
+                        val vocalsUrl = URL(urls.getString("vocals"))
+                        val accompanimentUrl = URL(urls.getString("accompaniment"))
+                        Log.i("lambdaFunction", " - response: \n $jsonBody")
+                        continuation.resume(ResultLambda(lyrics, vocalsUrl, accompanimentUrl))
+                    } else {
+                        continuation.resume(null)
+                    }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("lambdaFunction", "Exception occurred: ${e.message}")
+                continuation.resume(null)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Log.e(
-                "lambdaFunction",
-                "bad response :(\n ${e.message}\n" + "${e.localizedMessage}\n" + "${e.cause}"
-            )
         }
-        return false
     }
 
 
@@ -214,9 +225,35 @@ class SpleeterService : Service() {
 
     private fun startBackgroundThread(uri: Uri, objectKey: String, songName: String) {
         isActive = true
-        apiCoroutineScope.launch {
+        apiCoroutineScope.launch(Dispatchers.IO) {
             initServices()
-            startUploadToS3(uri, objectKey, songName)
+            notifyProgressChanged(20, "Uploading The file", 5.0)
+            val s3UploadResult = startUploadToS3(uri, objectKey)
+            if (!s3UploadResult) {
+                stopSelf()
+                serviceNotifier?.notifyFailed()
+                return@launch
+            }
+            checkItself()
+            notifyProgressChanged(60, "Separating..", 40.0)
+            val lambdaResult = invokeLambdaFunction(songName, objectKey)
+            if (lambdaResult == null) {
+                stopSelf()
+                serviceNotifier?.notifyFailed()
+                return@launch
+            }
+            checkItself()
+            notifyProgressChanged(100, "Extracting results", 35.0)
+            val fileResults = downloadFiles( lambdaResult.vocalsUrl, lambdaResult.accompanimentUrl)
+            if (fileResults == null) {
+                stopSelf()
+                serviceNotifier?.notifyFailed()
+                return@launch
+            }
+            serviceNotifier?.notifyCompletion( fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics,
+                true
+            )
+            stopSelf()
         }
     }
 
@@ -229,4 +266,93 @@ class SpleeterService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
+
+    private fun notifyProgressChanged(progress: Int, message: String, duration: Double) {
+        spleeterNotification?.updateProgress(progress, message, duration * 1000.0)
+        serviceNotifier?.notifyProgressChanged(progress, message, duration)
+    }
+
+    private var tempSingerFile: File? = null
+    private var tempMusicFile: File? = null
+
+
+    private fun initTempFiles(context: Context) {
+        tempSingerFile = File(context.cacheDir, "vocalFile.wav")
+        tempMusicFile = File(context.cacheDir, "musicFile.wav")
+        deleteTempFiles()
+    }
+
+    private fun deleteTempFiles() {
+        tempSingerFile?.apply {
+            if (this.exists()) {
+                this.delete()
+            }
+        }
+        tempMusicFile?.apply {
+            if (this.exists()) {
+                this.delete()
+            }
+        }
+    }
+
+    data class DownloadFilesResult(val vocalsFile: File, val accompanimentFile: File)
+    private suspend fun downloadFiles(vocalsUrl: URL, accompanimentUrl: URL): DownloadFilesResult? {
+        return suspendCoroutine { continuation ->
+            initTempFiles(this)
+            apiCoroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val (downloadedVocalFile, downloadedAccompanimentFile) = kotlinx.coroutines.awaitAll(
+                        async { downloadAudioFile(vocalsUrl) },
+                        async { downloadAudioFile(accompanimentUrl) }
+                    )
+                    if (downloadedVocalFile == null || downloadedAccompanimentFile == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
+                        //"Downloaded files not found"
+                        continuation.resume(null)
+                    } else {
+                        continuation.resume(DownloadFilesResult(downloadedVocalFile, downloadedAccompanimentFile))
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    //"Exception occurred during download: ${e.message}")
+                    continuation.resume(null)
+                }
+            }
+        }
+    }
+
+
+    private fun downloadAudioFile(url: URL): File? {
+        try {
+            val connection = url.openConnection() as HttpURLConnection
+            connection.connect()
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                // Create a temporary file to store the downloaded content
+                val audioFile =
+                    File.createTempFile(url.path.replace("/", "").replace(".", "_"), null)
+                val outputStream = FileOutputStream(audioFile)
+
+                // Download the content
+                val inputStream = connection.inputStream
+                val buffer = ByteArray(4096)
+                var bytesRead: Int
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    outputStream.write(buffer, 0, bytesRead)
+                }
+
+                // Close the streams
+                inputStream.close()
+                outputStream.close()
+
+                return audioFile
+            } else {
+                // Handle the case when the connection fails
+            }
+
+        } catch (e: IOException) {
+            e.printStackTrace()
+            // Handle any errors that occur during download or extraction
+        }
+        return null
+    }
+
 }

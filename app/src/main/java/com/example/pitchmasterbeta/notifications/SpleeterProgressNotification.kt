@@ -87,9 +87,13 @@ class SpleeterProgressNotification(context: Context) {
         notificationManager.cancel(NOTIFICATION_ID)
     }
 
+    fun buildNotification(): Notification {
+        return notificationBuilder.build()
+    }
+
     companion object {
-        private const val CHANNEL_ID = "spleeter_service_process"
-        private const val NOTIFICATION_ID = 8172
+        const val CHANNEL_ID = "spleeter_service_process"
+        const val NOTIFICATION_ID = 8172
         private const val MAX_PROGRESS = 100
     }
 }
