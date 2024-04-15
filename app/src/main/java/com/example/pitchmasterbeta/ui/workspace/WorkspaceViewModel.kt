@@ -1,12 +1,8 @@
 package com.example.pitchmasterbeta.ui.workspace
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Constraints.Companion.Infinity
 import androidx.core.net.toFile
@@ -21,15 +17,12 @@ import com.example.pitchmasterbeta.model.SongAudioDispatcher
 import com.example.pitchmasterbeta.model.StudioSharedPreferences
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
 import com.example.pitchmasterbeta.model.getColor
-import com.example.pitchmasterbeta.notifications.SpleeterProgressNotification
 import com.example.pitchmasterbeta.services.LyricsProvider
 import com.example.pitchmasterbeta.services.SpleeterService
 import com.example.pitchmasterbeta.utils.Mocks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.joinAll
@@ -38,11 +31,11 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedInputStream
 import java.io.File
-import java.net.URL
 import java.util.concurrent.CancellationException
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
@@ -525,30 +518,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         lyrics: List<LyricsTimestampedSegment>,
         shouldSaveData: Boolean
     ) {
-        val singerFile = tempSingerFile
-        val musicFile = tempMusicFile
-        if (singerFile == null || musicFile == null) {
-            return
-        }
-        loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
-            appContext?.let { context ->
-                val vocalStream = mediaInfo.getAudioBufferedInputStream(
-                    context, vocalsFile, singerFile
-                )
-                val musicStream = mediaInfo.getAudioBufferedInputStream(
-                    context, accompanimentFile, musicFile
-                )
-                mediaInfo.closeStreams()
-                mediaInfo.singerInputStream = vocalStream
-                mediaInfo.bgMusicInputStream = musicStream
-                _lyricsSegments.value = lyrics
-                audioProcessor = AudioProcessor(mediaInfo)
-                val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
-                val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
-                _durationTime.value =
-                    "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
-                setWorkspaceState(WorkspaceState.IDLE)
-                resetAudio()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
+                    ?: throw Exception("mp3 to wav-stream transformation failed")
+                setStudioData(streams.vocalStream, streams.musicStream, lyrics)
                 if (shouldSaveData) {
                     _showSaveAudioDialog.value = true
                     saveKaraoke(
@@ -559,44 +533,89 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         )
                     )
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun setStudioData(
+        vocalStream: BufferedInputStream,
+        musicStream: BufferedInputStream,
+        lyrics: List<LyricsTimestampedSegment>
+    ) {
+        mediaInfo.singerInputStream = vocalStream
+        mediaInfo.bgMusicInputStream = musicStream
+        _lyricsSegments.value = lyrics
+        audioProcessor = AudioProcessor(mediaInfo)
+        val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
+        val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
+        _durationTime.value =
+            "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+        setWorkspaceState(WorkspaceState.IDLE)
+        resetAudio()
+    }
+
+
+    data class GeneratedStreams(
+        val vocalStream: BufferedInputStream,
+        val musicStream: BufferedInputStream
+    )
+
+    private suspend fun transformMp3FilesToStreams(
+        vocalsFile: File,
+        accompanimentFile: File
+    ): GeneratedStreams? {
+        val singerFile = tempSingerFile
+        val musicFile = tempMusicFile
+        if (singerFile == null || musicFile == null) {
+            return null
+        }
+        return suspendCoroutine { continuation ->
+            viewModelScope.launch(Dispatchers.IO) {
+                appContext?.let { context ->
+                    try {
+                        val vocalStream = mediaInfo.getAudioBufferedInputStream(
+                            context, vocalsFile, singerFile
+                        )
+                        val musicStream = mediaInfo.getAudioBufferedInputStream(
+                            context, accompanimentFile, musicFile
+                        )
+                        continuation.resume(GeneratedStreams(vocalStream, musicStream))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        continuation.resume(null)
+                    }
+                }
             }
         }
     }
 
     private fun loadKaraokeFromStorage() {
-        val singerFile = tempSingerFile
-        val musicFile = tempMusicFile
-        appContext?.let { context ->
-            loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val karaokeStudio =
-                        sharedKaraokePreferences.getKaraoke(audioPath = audioUri.toString())
-                    if (karaokeStudio != null && audioUri != null && singerFile != null && musicFile != null) {
-                        val downloadedVocalFile = Uri.parse(karaokeStudio.vocal).toFile()
-                        val downloadedAccompanimentFile =
-                            Uri.parse(karaokeStudio.music).toFile()
-                        if (downloadedVocalFile.exists() && downloadedAccompanimentFile.exists()) {
-                            notifyCompletion(
-                                downloadedVocalFile,
-                                downloadedAccompanimentFile,
-                                karaokeStudio.lyrics,
-                                false
-                            )
-                        } else {
-                            forgetKaraoke()
-                            audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
-                        }
-                    } else {
-                        forgetKaraoke()
-                        audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
-                    }
-                } catch (e: CancellationException) {
-                    e.printStackTrace()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    forgetKaraoke()
-                    audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
+        val context = appContext ?: return
+        loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val karaokeStudio =
+                    sharedKaraokePreferences.getKaraoke(audioPath = audioUri.toString())
+                if (karaokeStudio == null || audioUri == null) {
+                    throw Exception("loadKaraoke - karaokeStudio not exists")
                 }
+                val vocalsFile = Uri.parse(karaokeStudio.vocal).toFile()
+                val accompanimentFile =
+                    Uri.parse(karaokeStudio.music).toFile()
+                val lyrics = karaokeStudio.lyrics
+                if (!vocalsFile.exists() || !accompanimentFile.exists()) {
+                    throw Exception("loadKaraoke - one or more of the files doesn't exist")
+                }
+                val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
+                    ?: throw Exception("loadKaraoke - mp3 to wav-stream transformation failed")
+                setStudioData(streams.vocalStream, streams.musicStream, lyrics)
+            } catch (e: CancellationException) {
+                e.printStackTrace()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                forgetKaraoke()
+                audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.example.pitchmasterbeta.services
 
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -9,7 +8,6 @@ import android.os.IBinder
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
-import androidx.lifecycle.viewModelScope
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.CognitoCachingCredentialsProvider
 import com.amazonaws.event.ProgressEvent
@@ -136,6 +134,7 @@ class SpleeterService : Service() {
                 val objectMetadata = ObjectMetadata().apply {
                     contentLength = uploadedInputStream?.available()?.toLong() ?: 0L
                 }
+                var totalTransferred = 0L
 
                 putObjectRequest = PutObjectRequest(
                     AWSKeys.BUCKET_NAME,
@@ -143,6 +142,8 @@ class SpleeterService : Service() {
                 ).apply {
                     cannedAcl = CannedAccessControlList.PublicRead
                     setGeneralProgressListener { progressEvent ->
+                        totalTransferred += progressEvent.bytesTransferred
+                        Log.d("Upload Progress", "${(100 * totalTransferred.toDouble() / objectMetadata.contentLength).toInt()}%")
                         when (progressEvent.eventCode) {
                             ProgressEvent.COMPLETED_EVENT_CODE -> {
                                 continuation.resume(true)
@@ -155,7 +156,6 @@ class SpleeterService : Service() {
                         }
                     }
                 }
-                checkItself()
                 s3Client.putObject(putObjectRequest)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -168,11 +168,15 @@ class SpleeterService : Service() {
 
     private fun checkItself() {
         if (!isActive) {
-            s3Client.shutdown()
-            lambdaClient.shutdown()
             serviceNotifier?.notifyFailed()
-            throw Exception("Spleeter Interrupted")
+            endSelf()
         }
+    }
+
+    private fun endSelf() {
+        s3Client.shutdown()
+        lambdaClient.shutdown()
+        stopSelf()
     }
 
     data class ResultLambda(var lyrics: List<LyricsTimestampedSegment>,
@@ -230,30 +234,30 @@ class SpleeterService : Service() {
             notifyProgressChanged(20, "Uploading The file", 5.0)
             val s3UploadResult = startUploadToS3(uri, objectKey)
             if (!s3UploadResult) {
-                stopSelf()
                 serviceNotifier?.notifyFailed()
+                endSelf()
                 return@launch
             }
             checkItself()
             notifyProgressChanged(60, "Separating..", 40.0)
             val lambdaResult = invokeLambdaFunction(songName, objectKey)
             if (lambdaResult == null) {
-                stopSelf()
                 serviceNotifier?.notifyFailed()
+                endSelf()
                 return@launch
             }
             checkItself()
             notifyProgressChanged(100, "Extracting results", 35.0)
             val fileResults = downloadFiles( lambdaResult.vocalsUrl, lambdaResult.accompanimentUrl)
             if (fileResults == null) {
-                stopSelf()
                 serviceNotifier?.notifyFailed()
+                endSelf()
                 return@launch
             }
             serviceNotifier?.notifyCompletion( fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics,
                 true
             )
-            stopSelf()
+            endSelf()
         }
     }
 
@@ -272,33 +276,9 @@ class SpleeterService : Service() {
         serviceNotifier?.notifyProgressChanged(progress, message, duration)
     }
 
-    private var tempSingerFile: File? = null
-    private var tempMusicFile: File? = null
-
-
-    private fun initTempFiles(context: Context) {
-        tempSingerFile = File(context.cacheDir, "vocalFile.wav")
-        tempMusicFile = File(context.cacheDir, "musicFile.wav")
-        deleteTempFiles()
-    }
-
-    private fun deleteTempFiles() {
-        tempSingerFile?.apply {
-            if (this.exists()) {
-                this.delete()
-            }
-        }
-        tempMusicFile?.apply {
-            if (this.exists()) {
-                this.delete()
-            }
-        }
-    }
-
     data class DownloadFilesResult(val vocalsFile: File, val accompanimentFile: File)
     private suspend fun downloadFiles(vocalsUrl: URL, accompanimentUrl: URL): DownloadFilesResult? {
         return suspendCoroutine { continuation ->
-            initTempFiles(this)
             apiCoroutineScope.launch(Dispatchers.IO) {
                 try {
                     val (downloadedVocalFile, downloadedAccompanimentFile) = kotlinx.coroutines.awaitAll(
@@ -333,10 +313,16 @@ class SpleeterService : Service() {
 
                 // Download the content
                 val inputStream = connection.inputStream
+                val fileSize = connection.contentLength
+                var totalBytesRead = 0
                 val buffer = ByteArray(4096)
                 var bytesRead: Int
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                     outputStream.write(buffer, 0, bytesRead)
+                    totalBytesRead += bytesRead
+                    // Log the progress
+                    val progress = (totalBytesRead * 100.0 / fileSize).toInt()
+                    Log.d("Download Progress", "$progress%")
                 }
 
                 // Close the streams
