@@ -95,7 +95,10 @@ class SpleeterService : Service() {
 
             if (fileUri != null && objectKey != null && songName != null) {
                 spleeterNotification = SpleeterProgressNotification(this)
-                startForeground(SpleeterProgressNotification.NOTIFICATION_ID, spleeterNotification?.buildNotification())
+                startForeground(
+                    SpleeterProgressNotification.NOTIFICATION_ID,
+                    spleeterNotification?.buildNotification()
+                )
                 startBackgroundThread(fileUri, objectKey, songName)
             }
         }
@@ -135,15 +138,13 @@ class SpleeterService : Service() {
                     contentLength = uploadedInputStream?.available()?.toLong() ?: 0L
                 }
                 var totalTransferred = 0L
-
+                val progressChunk = 20
                 putObjectRequest = PutObjectRequest(
                     AWSKeys.BUCKET_NAME,
                     "input/$objectKey", uploadedInputStream, objectMetadata
                 ).apply {
                     cannedAcl = CannedAccessControlList.PublicRead
                     setGeneralProgressListener { progressEvent ->
-                        totalTransferred += progressEvent.bytesTransferred
-                        Log.d("Upload Progress", "${(100 * totalTransferred.toDouble() / objectMetadata.contentLength).toInt()}%")
                         when (progressEvent.eventCode) {
                             ProgressEvent.COMPLETED_EVENT_CODE -> {
                                 continuation.resume(true)
@@ -152,7 +153,16 @@ class SpleeterService : Service() {
                                 serviceNotifier?.notifyFailed()
                                 continuation.resume(false)
                             }
-                            else -> {}
+                            else -> {
+                                totalTransferred += progressEvent.bytesTransferred
+                                val progress = totalTransferred.toDouble() / objectMetadata.contentLength
+                                Log.d("Upload Progress", "${(100 * progress).toInt()}%")
+                                notifyProgressChanged(
+                                    (progressChunk * progress).toInt(),
+                                    "Uploading The file",
+                                    1.0
+                                )
+                            }
                         }
                     }
                 }
@@ -179,9 +189,11 @@ class SpleeterService : Service() {
         stopSelf()
     }
 
-    data class ResultLambda(var lyrics: List<LyricsTimestampedSegment>,
-                            var vocalsUrl: URL,
-                            var accompanimentUrl: URL)
+    data class ResultLambda(
+        var lyrics: List<LyricsTimestampedSegment>,
+        var vocalsUrl: URL,
+        var accompanimentUrl: URL
+    )
 
     private suspend fun invokeLambdaFunction(songName: String, objectKey: String): ResultLambda? {
         return suspendCoroutine { continuation ->
@@ -198,6 +210,7 @@ class SpleeterService : Service() {
                     checkItself()
                     if (statusCode == 200) {
                         val responseJson = JSONObject(String(invokeResult.payload.array()))
+                        Log.i("lambdaFunction", "200 - response: \n $responseJson")
                         val gson = Gson()
                         val jsonBody = JSONObject(responseJson.getString("body"))
                         val lyrics = gson.fromJson<List<LyricsTimestampedSegment>>(
@@ -207,7 +220,6 @@ class SpleeterService : Service() {
                         val urls = jsonBody.getJSONObject("urls")
                         val vocalsUrl = URL(urls.getString("vocals"))
                         val accompanimentUrl = URL(urls.getString("accompaniment"))
-                        Log.i("lambdaFunction", " - response: \n $jsonBody")
                         continuation.resume(ResultLambda(lyrics, vocalsUrl, accompanimentUrl))
                     } else {
                         continuation.resume(null)
@@ -231,7 +243,6 @@ class SpleeterService : Service() {
         isActive = true
         apiCoroutineScope.launch(Dispatchers.IO) {
             initServices()
-            notifyProgressChanged(20, "Uploading The file", 5.0)
             val s3UploadResult = startUploadToS3(uri, objectKey)
             if (!s3UploadResult) {
                 serviceNotifier?.notifyFailed()
@@ -239,7 +250,7 @@ class SpleeterService : Service() {
                 return@launch
             }
             checkItself()
-            notifyProgressChanged(60, "Separating..", 40.0)
+            notifyProgressChanged(60, "Separating..", 45.0)
             val lambdaResult = invokeLambdaFunction(songName, objectKey)
             if (lambdaResult == null) {
                 serviceNotifier?.notifyFailed()
@@ -247,14 +258,14 @@ class SpleeterService : Service() {
                 return@launch
             }
             checkItself()
-            notifyProgressChanged(100, "Extracting results", 35.0)
-            val fileResults = downloadFiles( lambdaResult.vocalsUrl, lambdaResult.accompanimentUrl)
+            val fileResults = downloadFiles(lambdaResult.vocalsUrl, lambdaResult.accompanimentUrl)
             if (fileResults == null) {
                 serviceNotifier?.notifyFailed()
                 endSelf()
                 return@launch
             }
-            serviceNotifier?.notifyCompletion( fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics,
+            serviceNotifier?.notifyCompletion(
+                fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics,
                 true
             )
             endSelf()
@@ -264,6 +275,9 @@ class SpleeterService : Service() {
     private fun stopBackgroundThread() {
         apiCoroutineScope.cancel()
         isActive = false
+        spleeterNotification?.hideNotification()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
 
@@ -277,19 +291,50 @@ class SpleeterService : Service() {
     }
 
     data class DownloadFilesResult(val vocalsFile: File, val accompanimentFile: File)
+
     private suspend fun downloadFiles(vocalsUrl: URL, accompanimentUrl: URL): DownloadFilesResult? {
         return suspendCoroutine { continuation ->
             apiCoroutineScope.launch(Dispatchers.IO) {
                 try {
+                    val progressChunk = 40
+                    var progress1 = 0f
+                    var progress2 = 0f
                     val (downloadedVocalFile, downloadedAccompanimentFile) = kotlinx.coroutines.awaitAll(
-                        async { downloadAudioFile(vocalsUrl) },
-                        async { downloadAudioFile(accompanimentUrl) }
+                        async {
+                            downloadAudioFile(vocalsUrl) { progress ->
+                                progress1 = progress
+                                notifyProgressChanged(
+                                    (progressChunk * (progress1 + progress2) / 2f).toInt() + 60,
+                                    "Extracting results",
+                                    1.0
+                                )
+                                // Log the progress
+                                Log.d("Download Progress", "file1: ${progress*100}%")
+                            }
+                        },
+                        async {
+                            downloadAudioFile(accompanimentUrl) { progress ->
+                                progress2 = progress
+                                notifyProgressChanged(
+                                    (progressChunk * (progress1 + progress2) / 2f).toInt() + 60,
+                                    "Extracting results",
+                                    1.0
+                                )
+                                // Log the progress
+                                Log.d("Download Progress", "file2: ${progress*100}%")
+                            }
+                        }
                     )
                     if (downloadedVocalFile == null || downloadedAccompanimentFile == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
                         //"Downloaded files not found"
                         continuation.resume(null)
                     } else {
-                        continuation.resume(DownloadFilesResult(downloadedVocalFile, downloadedAccompanimentFile))
+                        continuation.resume(
+                            DownloadFilesResult(
+                                downloadedVocalFile,
+                                downloadedAccompanimentFile
+                            )
+                        )
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -301,7 +346,7 @@ class SpleeterService : Service() {
     }
 
 
-    private fun downloadAudioFile(url: URL): File? {
+    private fun downloadAudioFile(url: URL, onProgressChanged: (progress: Float) -> Unit): File? {
         try {
             val connection = url.openConnection() as HttpURLConnection
             connection.connect()
@@ -320,9 +365,7 @@ class SpleeterService : Service() {
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                     outputStream.write(buffer, 0, bytesRead)
                     totalBytesRead += bytesRead
-                    // Log the progress
-                    val progress = (totalBytesRead * 100.0 / fileSize).toInt()
-                    Log.d("Download Progress", "$progress%")
+                    onProgressChanged(totalBytesRead.toFloat() / fileSize)
                 }
 
                 // Close the streams

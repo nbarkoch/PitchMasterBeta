@@ -35,6 +35,7 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.util.concurrent.CancellationException
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 
@@ -100,7 +101,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         uri?.let {
             context.contentResolver?.let { contentResolver ->
                 if (devTestMode) {
-
                     // resetting the streams because we are starting a new work
                     if (mediaInfo.bgMusicInputStream != null && mediaInfo.singerInputStream != null) {
                         mediaInfo.bgMusicInputStream?.close()
@@ -108,7 +108,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         mediaInfo.bgMusicInputStream = null
                         mediaInfo.singerInputStream = null
                     }
-
                     if (mediaInfo.bgMusicInputStream == null && mediaInfo.singerInputStream == null) {
                         mediaInfo.bgMusicInputStream =
                             BufferedInputStream(contentResolver.openInputStream(uri))
@@ -151,6 +150,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private fun beginGenerateKaraoke(context: Context, fileUri: Uri, songName: String) {
         try {
+            stopGenerateKaraoke(context)
             val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
             val fileName = "mashu"//UUID.randomUUID().toString() // "mashu"
@@ -521,7 +521,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
-                    ?: throw Exception("mp3 to wav-stream transformation failed")
                 setStudioData(streams.vocalStream, streams.musicStream, lyrics)
                 if (shouldSaveData) {
                     _showSaveAudioDialog.value = true
@@ -565,11 +564,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private suspend fun transformMp3FilesToStreams(
         vocalsFile: File,
         accompanimentFile: File
-    ): GeneratedStreams? {
+    ): GeneratedStreams {
         val singerFile = tempSingerFile
         val musicFile = tempMusicFile
         if (singerFile == null || musicFile == null) {
-            return null
+            throw Exception("files doesn't exists")
         }
         return suspendCoroutine { continuation ->
             viewModelScope.launch(Dispatchers.IO) {
@@ -583,8 +582,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         )
                         continuation.resume(GeneratedStreams(vocalStream, musicStream))
                     } catch (e: Exception) {
-                        e.printStackTrace()
-                        continuation.resume(null)
+                        continuation.resumeWithException(e)
                     }
                 }
             }
@@ -608,14 +606,17 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     throw Exception("loadKaraoke - one or more of the files doesn't exist")
                 }
                 val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
-                    ?: throw Exception("loadKaraoke - mp3 to wav-stream transformation failed")
                 setStudioData(streams.vocalStream, streams.musicStream, lyrics)
-            } catch (e: CancellationException) {
-                e.printStackTrace()
             } catch (e: Exception) {
                 e.printStackTrace()
-                forgetKaraoke()
-                audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
+            }
+        }
+        loadKaraokeJob?.run {
+            invokeOnCompletion {
+                if (!isCompleted && !isCancelled) {
+                    forgetKaraoke()
+                    audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
+                }
             }
         }
     }
