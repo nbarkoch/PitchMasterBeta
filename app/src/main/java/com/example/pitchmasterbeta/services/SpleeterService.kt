@@ -3,6 +3,7 @@ package com.example.pitchmasterbeta.services
 import android.app.Service
 import android.content.Intent
 import android.net.Uri
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.StrictMode
@@ -57,6 +58,18 @@ class SpleeterService : Service() {
 
     private var spleeterNotification: SpleeterProgressNotification? = null
 
+    // Binder class for clients to access public methods of the service
+    inner class LocalBinder : Binder() {
+        val service: SpleeterService
+            get() = this@SpleeterService
+    }
+
+    private val binder = LocalBinder()
+
+    override fun onBind(intent: Intent): IBinder {
+        return binder
+    }
+
     interface ServiceNotifier {
         fun notifyCompletion(
             vocalsFile: File,
@@ -81,7 +94,6 @@ class SpleeterService : Service() {
 
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        serviceNotifier = viewModelProvider[WorkspaceViewModel::class.java]
         if (!isActive) {
             val fileUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(KEYS.EXTRA_FILE_URI, Uri::class.java)
@@ -280,11 +292,6 @@ class SpleeterService : Service() {
         stopSelf()
     }
 
-
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
-
     private fun notifyProgressChanged(progress: Int, message: String, duration: Double) {
         spleeterNotification?.updateProgress(progress, message, duration * 1000.0)
         serviceNotifier?.notifyProgressChanged(progress, message, duration)
@@ -382,6 +389,10 @@ class SpleeterService : Service() {
             // Handle any errors that occur during download or extraction
         }
         return null
+    }
+
+    fun setServiceNotifier(notifier: ServiceNotifier) {
+        serviceNotifier = notifier
     }
 
 }

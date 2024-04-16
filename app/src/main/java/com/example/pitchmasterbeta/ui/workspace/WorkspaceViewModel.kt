@@ -1,8 +1,11 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.net.Uri
+import android.os.IBinder
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Constraints.Companion.Infinity
 import androidx.core.net.toFile
@@ -157,6 +160,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_NAME, songName)
             context.startService(serviceSpleeterIntent)
+            context.bindService(serviceSpleeterIntent, serviceConnection, Context.BIND_AUTO_CREATE)
         } catch (e: Exception) {
             e.printStackTrace()
             stopGenerateKaraoke(context)
@@ -166,6 +170,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     fun stopGenerateKaraoke(context: Context) {
         val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
         context.stopService(serviceSpleeterIntent)
+        if (serviceConnection.isServiceBound()) {
+            context.unbindService(serviceConnection)
+        }
     }
 
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
@@ -535,6 +542,25 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+
+    // Service connection object
+    private val serviceConnection = object : ServiceConnection {
+        private var isBound = false
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as SpleeterService.LocalBinder
+            binder.service.setServiceNotifier(this@WorkspaceViewModel)
+            isBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            isBound = false
+        }
+
+        fun isServiceBound(): Boolean {
+            return isBound
         }
     }
 
