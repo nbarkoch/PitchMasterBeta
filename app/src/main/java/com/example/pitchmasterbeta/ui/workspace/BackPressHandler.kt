@@ -3,7 +3,6 @@ package com.example.pitchmasterbeta.ui.workspace
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.platform.LocalContext
 import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 
 
@@ -13,7 +12,6 @@ fun WorkspaceBackHandler() {
         viewModelProvider[WorkspaceViewModel::class.java]
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
-    val context = LocalContext.current.applicationContext
     BackHandler(
         enabled = !(workspaceState.value == WorkspaceViewModel.WorkspaceState.PICK ||
                 workspaceState.value == WorkspaceViewModel.WorkspaceState.INTRO)
@@ -37,7 +35,7 @@ fun WorkspaceBackHandler() {
             }
 
             WorkspaceViewModel.WorkspaceState.WAITING -> {
-                viewModel.stopGenerateKaraoke(context)
+                viewModel.stopGenerateKaraoke()
                 viewModel.stopLoadKaraoke()
                 viewModel.resetWorkspace()
             }

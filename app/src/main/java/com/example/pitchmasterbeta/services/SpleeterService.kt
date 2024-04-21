@@ -19,10 +19,9 @@ import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.CannedAccessControlList
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
-import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
+import com.example.pitchmasterbeta.model.StudioSharedPreferences
 import com.example.pitchmasterbeta.notifications.SpleeterProgressNotification
-import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
@@ -72,11 +71,8 @@ class SpleeterService : Service() {
 
     interface ServiceNotifier {
         fun notifyCompletion(
-            vocalsFile: File,
-            accompanimentFile: File,
-            lyrics: List<LyricsTimestampedSegment>,
-            shouldSaveData: Boolean = false
-        )
+            vocalsFile: File, accompanimentFile: File, lyrics: List<LyricsTimestampedSegment>
+        ): Boolean
 
         fun notifyFailed()
 
@@ -98,17 +94,16 @@ class SpleeterService : Service() {
             val fileUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(KEYS.EXTRA_FILE_URI, Uri::class.java)
             } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(KEYS.EXTRA_FILE_URI)
+                @Suppress("DEPRECATION") intent.getParcelableExtra(KEYS.EXTRA_FILE_URI)
             }
 
             val objectKey = intent.getStringExtra(KEYS.EXTRA_OBJECT_KEY)
             val songName = intent.getStringExtra(KEYS.EXTRA_FILE_NAME)
 
             if (fileUri != null && objectKey != null && songName != null) {
-                spleeterNotification = SpleeterProgressNotification(this)
+                spleeterNotification = SpleeterProgressNotification(this, fileUri.toString())
                 startForeground(
-                    SpleeterProgressNotification.NOTIFICATION_ID,
+                    SpleeterProgressNotification.PROGRESS_NOTIFICATION_ID,
                     spleeterNotification?.buildNotification()
                 )
                 startBackgroundThread(fileUri, objectKey, songName)
@@ -124,10 +119,7 @@ class SpleeterService : Service() {
         }
 
         sCredProvider = CognitoCachingCredentialsProvider(
-            applicationContext,
-            AWSKeys.COGNITO_POOL_ID,
-            AWSKeys.MY_REGIONS,
-            clientConfiguration
+            applicationContext, AWSKeys.COGNITO_POOL_ID, AWSKeys.MY_REGIONS, clientConfiguration
         )
 
         s3Client = AmazonS3Client(sCredProvider, clientConfiguration).apply {
@@ -144,37 +136,38 @@ class SpleeterService : Service() {
         return suspendCoroutine { continuation ->
             try {
                 StrictMode.setThreadPolicy(ThreadPolicy.Builder().permitAll().build())
-
                 uploadedInputStream = contentResolver.openInputStream(fileUri)
                 val objectMetadata = ObjectMetadata().apply {
                     contentLength = uploadedInputStream?.available()?.toLong() ?: 0L
                 }
                 var totalTransferred = 0L
                 val progressChunk = 20
+                var notificationCallback: (transferred: Long) -> Unit = { transferred ->
+                    val progress = transferred.toDouble() / objectMetadata.contentLength
+                    Log.d("Upload Progress", "${(100 * progress).toInt()}%")
+                    notifyProgressChanged(
+                        (progressChunk * progress).toInt(), "Uploading The file"
+                    )
+                }
                 putObjectRequest = PutObjectRequest(
-                    AWSKeys.BUCKET_NAME,
-                    "input/$objectKey", uploadedInputStream, objectMetadata
+                    AWSKeys.BUCKET_NAME, "input/$objectKey", uploadedInputStream, objectMetadata
                 ).apply {
                     cannedAcl = CannedAccessControlList.PublicRead
                     setGeneralProgressListener { progressEvent ->
+                        totalTransferred += progressEvent.bytesTransferred
+                        notificationCallback(totalTransferred)
                         when (progressEvent.eventCode) {
                             ProgressEvent.COMPLETED_EVENT_CODE -> {
+                                notificationCallback = {}
                                 continuation.resume(true)
                             }
+
                             ProgressEvent.FAILED_EVENT_CODE -> {
+                                notificationCallback = {}
                                 serviceNotifier?.notifyFailed()
                                 continuation.resume(false)
                             }
-                            else -> {
-                                totalTransferred += progressEvent.bytesTransferred
-                                val progress = totalTransferred.toDouble() / objectMetadata.contentLength
-                                Log.d("Upload Progress", "${(100 * progress).toInt()}%")
-                                notifyProgressChanged(
-                                    (progressChunk * progress).toInt(),
-                                    "Uploading The file",
-                                    1.0
-                                )
-                            }
+                            else -> {}
                         }
                     }
                 }
@@ -187,39 +180,26 @@ class SpleeterService : Service() {
         }
     }
 
-
-    private fun checkItself() {
-        if (!isActive) {
-            serviceNotifier?.notifyFailed()
-            endSelf()
-        }
-    }
-
-    private fun endSelf() {
-        s3Client.shutdown()
-        lambdaClient.shutdown()
+    private fun processFailed() {
+        serviceNotifier?.notifyFailed()
         stopSelf()
     }
 
     data class ResultLambda(
-        var lyrics: List<LyricsTimestampedSegment>,
-        var vocalsUrl: URL,
-        var accompanimentUrl: URL
+        var lyrics: List<LyricsTimestampedSegment>, var vocalsUrl: URL, var accompanimentUrl: URL
     )
 
     private suspend fun invokeLambdaFunction(songName: String, objectKey: String): ResultLambda? {
         return suspendCoroutine { continuation ->
             val payload = "{\"file_name\": \"$songName\", \"object_key\":\"$objectKey\"}"
             val payloadBuffer = ByteBuffer.wrap(payload.toByteArray(StandardCharsets.UTF_8))
-            val invokeRequest = InvokeRequest()
-                .withFunctionName(AWSKeys.KARAOKE_FUNCTION)
+            val invokeRequest = InvokeRequest().withFunctionName(AWSKeys.KARAOKE_FUNCTION)
                 .withPayload(payloadBuffer)
 
             try {
                 lambdaClient.run {
                     val invokeResult = this.invoke(invokeRequest)
                     val statusCode = invokeResult.statusCode
-                    checkItself()
                     if (statusCode == 200) {
                         val responseJson = JSONObject(String(invokeResult.payload.array()))
                         Log.i("lambdaFunction", "200 - response: \n $responseJson")
@@ -256,31 +236,35 @@ class SpleeterService : Service() {
         apiCoroutineScope.launch(Dispatchers.IO) {
             initServices()
             val s3UploadResult = startUploadToS3(uri, objectKey)
-            if (!s3UploadResult) {
-                serviceNotifier?.notifyFailed()
-                endSelf()
+            if (!isActive || !s3UploadResult) {
+                processFailed()
                 return@launch
             }
-            checkItself()
             notifyProgressChanged(60, "Separating..", 45.0)
             val lambdaResult = invokeLambdaFunction(songName, objectKey)
-            if (lambdaResult == null) {
-                serviceNotifier?.notifyFailed()
-                endSelf()
+            if (!isActive || lambdaResult == null) {
+                processFailed()
                 return@launch
             }
-            checkItself()
             val fileResults = downloadFiles(lambdaResult.vocalsUrl, lambdaResult.accompanimentUrl)
-            if (fileResults == null) {
-                serviceNotifier?.notifyFailed()
-                endSelf()
+            if (!isActive || fileResults == null) {
+                processFailed()
                 return@launch
             }
-            serviceNotifier?.notifyCompletion(
-                fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics,
-                true
-            )
-            endSelf()
+            isActive = false
+            val isBounded = serviceNotifier?.notifyCompletion(
+                fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics
+            ) ?: false
+            if (!isBounded) {
+                spleeterNotification?.newNotificationIntent(
+                    deepLink = "12", karaokeRef = StudioSharedPreferences.KaraokeRef(
+                        vocal = Uri.fromFile(fileResults.vocalsFile).toString(),
+                        music = Uri.fromFile(fileResults.accompanimentFile).toString(),
+                        lyrics = lambdaResult.lyrics
+                    )
+                )
+            }
+            stopSelf()
         }
     }
 
@@ -289,12 +273,18 @@ class SpleeterService : Service() {
         isActive = false
         spleeterNotification?.hideNotification()
         stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        s3Client.shutdown()
+        lambdaClient.shutdown()
     }
 
     private fun notifyProgressChanged(progress: Int, message: String, duration: Double) {
         spleeterNotification?.updateProgress(progress, message, duration * 1000.0)
         serviceNotifier?.notifyProgressChanged(progress, message, duration)
+    }
+
+    private fun notifyProgressChanged(progress: Int, message: String) {
+        spleeterNotification?.updateProgress(progress, message)
+        serviceNotifier?.notifyProgressChanged(progress, message, 3.0)
     }
 
     data class DownloadFilesResult(val vocalsFile: File, val accompanimentFile: File)
@@ -306,40 +296,33 @@ class SpleeterService : Service() {
                     val progressChunk = 40
                     var progress1 = 0f
                     var progress2 = 0f
-                    val (downloadedVocalFile, downloadedAccompanimentFile) = kotlinx.coroutines.awaitAll(
-                        async {
-                            downloadAudioFile(vocalsUrl) { progress ->
-                                progress1 = progress
-                                notifyProgressChanged(
-                                    (progressChunk * (progress1 + progress2) / 2f).toInt() + 60,
-                                    "Extracting results",
-                                    1.0
-                                )
-                                // Log the progress
-                                Log.d("Download Progress", "file1: ${progress*100}%")
+                    var notificationCallback: (progresses: Float) -> Unit = { progresses ->
+                        val percent = (progressChunk * (progresses) / 2f).toInt() + 60
+                        notifyProgressChanged(percent, "Extracting results")
+                    }
+                    val (downloadedVocalFile, downloadedAccompanimentFile) = kotlinx.coroutines.awaitAll(async {
+                            downloadAudioFile(vocalsUrl) { p ->
+                                progress1 = p
+                                notificationCallback(p + progress2)
+                                Log.d("Download Progress", "file1: ${p * 100}%")
                             }
                         },
                         async {
-                            downloadAudioFile(accompanimentUrl) { progress ->
-                                progress2 = progress
-                                notifyProgressChanged(
-                                    (progressChunk * (progress1 + progress2) / 2f).toInt() + 60,
-                                    "Extracting results",
-                                    1.0
-                                )
-                                // Log the progress
-                                Log.d("Download Progress", "file2: ${progress*100}%")
+                            downloadAudioFile(accompanimentUrl) { p ->
+                                progress2 = p
+                                notificationCallback(progress1 + p)
+                                Log.d("Download Progress", "file2: ${p * 100}%")
                             }
-                        }
-                    )
-                    if (downloadedVocalFile == null || downloadedAccompanimentFile == null || !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
+                        })
+                    notificationCallback = {}
+                    if (downloadedVocalFile == null || downloadedAccompanimentFile == null ||
+                        !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
                         //"Downloaded files not found"
                         continuation.resume(null)
                     } else {
                         continuation.resume(
                             DownloadFilesResult(
-                                downloadedVocalFile,
-                                downloadedAccompanimentFile
+                                downloadedVocalFile, downloadedAccompanimentFile
                             )
                         )
                     }

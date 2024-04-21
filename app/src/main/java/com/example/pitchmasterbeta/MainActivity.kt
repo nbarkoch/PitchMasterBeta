@@ -1,6 +1,7 @@
 package com.example.pitchmasterbeta
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -22,12 +23,14 @@ import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         viewModelProvider = ViewModelProvider(this)
         appContext = applicationContext
         val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
         if (!viewModel.getIsInitialized()) {
             viewModel.init(this)
         }
+        handleIntent(intent = intent, isAlive = false)
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr ) {
                 PitchMasterBetaTheme {
@@ -58,6 +61,40 @@ class MainActivity : ComponentActivity() {
                 clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
+    }
+
+    private fun handleIntent(intent: Intent?, isAlive: Boolean) {
+        val extras = intent?.extras
+        if (extras != null) {
+            val dl = extras.getString("DL", "")
+            when (dl) {
+                "12" -> {
+                    val jsonString = extras.getString("ref")
+                    val audioPath = extras.getString("audioPath")
+                    if (jsonString != null && audioPath != null) {
+                        val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+                        viewModel.loadFromKaraokeFromIntent(jsonString, audioPath)
+                    }
+                }
+                "11" -> {
+                    if (!isAlive) {
+                        val message = extras.getString("message")
+                        val progress = extras.getInt("progress")
+                        val duration = extras.getDouble("duration")
+                        val audioPath = extras.getString("audioPath")
+                        if (message != null && audioPath != null) {
+                            val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+                            viewModel.loadProgressFromIntent(progress, message, duration, audioPath)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent, isAlive = true)
     }
 }
 

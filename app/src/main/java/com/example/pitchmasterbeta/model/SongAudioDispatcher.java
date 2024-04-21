@@ -2,8 +2,8 @@ package com.example.pitchmasterbeta.model;
 
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 
@@ -97,7 +97,6 @@ public class SongAudioDispatcher implements Runnable {
     }
 
     public void run() {
-        boolean var1 = false;
         if (this.bytesToSkip != 0L) {
             this.skipToStart();
         }
@@ -116,17 +115,14 @@ public class SongAudioDispatcher implements Runnable {
         while (var6 != 0 && !this.stopped) {
             if (paused) continue;
 
-            Iterator var2 = this.audioProcessors.iterator();
-
-            while (var2.hasNext()) {
-                MicAudioProcessor var7 = (MicAudioProcessor) var2.next();
+            for (MicAudioProcessor var7 : this.audioProcessors) {
                 if (!var7.process(this.audioEvent, this.audioByteBuffer2)) {
                     break;
                 }
             }
 
             if (!this.paused && !this.stopped) {
-                this.bytesProcessed += (long) var6;
+                this.bytesProcessed += var6;
                 this.audioEvent.setBytesProcessed(this.bytesProcessed);
 
                 try {
@@ -157,7 +153,7 @@ public class SongAudioDispatcher implements Runnable {
                 this.bytesProcessed += this.bytesToSkip;
             }
         } catch (IOException var5) {
-            String var4 = String.format("Did not skip the expected amount of bytes,  %d skipped, %d expected!", var1, this.bytesToSkip);
+            String var4 = String.format(Locale.US, "Did not skip the expected amount of bytes,  %d skipped, %d expected!", var1, this.bytesToSkip);
             LOG.warning(var4);
             throw new Error(var4);
         }
@@ -173,10 +169,8 @@ public class SongAudioDispatcher implements Runnable {
 
     public void stop() {
         this.stopped = true;
-        Iterator var1 = this.audioProcessors.iterator();
 
-        while (var1.hasNext()) {
-            AudioProcessor var2 = (AudioProcessor) var1.next();
+        for (AudioProcessor var2 : this.audioProcessors) {
             var2.processingFinished();
         }
 
@@ -212,7 +206,6 @@ public class SongAudioDispatcher implements Runnable {
         }
 
         int var5 = 0;
-        boolean var6 = false;
         boolean var7 = false;
 
         while (!this.paused && !this.stopped && !var7 && var5 < byteStepSize) {

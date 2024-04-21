@@ -16,10 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 
 
 @Immutable
@@ -109,40 +105,6 @@ data class MediaInfo(
                 wavFileUri
             )
         }
-    }
-
-    fun downloadAudioFile(url: URL): File? {
-        try {
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connect()
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                // Create a temporary file to store the downloaded content
-                val audioFile =
-                    File.createTempFile(url.path.replace("/", "").replace(".", "_"), null)
-                val outputStream = FileOutputStream(audioFile)
-
-                // Download the content
-                val inputStream = connection.inputStream
-                val buffer = ByteArray(4096)
-                var bytesRead: Int
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    outputStream.write(buffer, 0, bytesRead)
-                }
-
-                // Close the streams
-                inputStream.close()
-                outputStream.close()
-
-                return audioFile
-            } else {
-                // Handle the case when the connection fails
-            }
-
-        } catch (e: IOException) {
-            e.printStackTrace()
-            // Handle any errors that occur during download or extraction
-        }
-        return null
     }
 
     private fun transformToWAV(context: Context, inputUri: Uri, outputUri: Uri) {

@@ -6,6 +6,7 @@ import android.media.AudioRecord;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,7 +33,7 @@ public class VocalAudioDispatcher implements Runnable {
     private int byteStepSize;
     private long bytesToSkip;
     private long bytesProcessed;
-    private AudioEvent audioEvent;
+    private final AudioEvent audioEvent;
     private boolean stopped;
     private boolean paused;
     private boolean zeroPadFirstBuffer;
@@ -84,7 +85,6 @@ public class VocalAudioDispatcher implements Runnable {
     }
 
     public void run() {
-        boolean var1 = false;
         if (this.bytesToSkip != 0L) {
             this.skipToStart();
         }
@@ -103,17 +103,14 @@ public class VocalAudioDispatcher implements Runnable {
         while (var6 != 0 && !this.stopped) {
             if (paused) continue;
 
-            Iterator var2 = this.audioProcessors.iterator();
-
-            while (var2.hasNext()) {
-                AudioProcessor var7 = (AudioProcessor) var2.next();
+            for (AudioProcessor var7 : this.audioProcessors) {
                 if (!var7.process(this.audioEvent)) {
                     break;
                 }
             }
 
             if (!this.paused && !this.stopped) {
-                this.bytesProcessed += (long) var6;
+                this.bytesProcessed += var6;
                 this.audioEvent.setBytesProcessed(this.bytesProcessed);
 
                 try {
@@ -144,7 +141,7 @@ public class VocalAudioDispatcher implements Runnable {
                 this.bytesProcessed += this.bytesToSkip;
             }
         } catch (IOException var5) {
-            String var4 = String.format("Did not skip the expected amount of bytes,  %d skipped, %d expected!", var1, this.bytesToSkip);
+            String var4 = String.format(Locale.US, "Did not skip the expected amount of bytes,  %d skipped, %d expected!", var1, this.bytesToSkip);
             LOG.warning(var4);
             throw new Error(var4);
         }

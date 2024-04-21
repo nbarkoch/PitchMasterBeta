@@ -1,5 +1,6 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -23,6 +24,8 @@ import com.example.pitchmasterbeta.model.getColor
 import com.example.pitchmasterbeta.services.LyricsProvider
 import com.example.pitchmasterbeta.services.SpleeterService
 import com.example.pitchmasterbeta.utils.Mocks
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -143,7 +146,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                     if (sharedKaraokePreferences.getKaraoke(uri.toString()) != null) {
                         loadKaraokeFromStorage()
                     } else {
-                        beginGenerateKaraoke(context, uri, _songFullName.value)
+                        beginGenerateKaraoke(uri, _songFullName.value)
                     }
                 }
             }
@@ -151,27 +154,47 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     }
 
-    private fun beginGenerateKaraoke(context: Context, fileUri: Uri, songName: String) {
+    private fun beginGenerateKaraoke(fileUri: Uri, songName: String) {
+        val context = appContext ?: return
         try {
-            stopGenerateKaraoke(context)
+            stopGenerateKaraoke()
             val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_URI, fileUri)
             val fileName = "mashu"//UUID.randomUUID().toString() // "mashu"
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_NAME, songName)
             context.startService(serviceSpleeterIntent)
-            context.bindService(serviceSpleeterIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            context.bindService(
+                serviceSpleeterIntent,
+                serviceConnection,
+                Context.BIND_AUTO_CREATE
+            )
         } catch (e: Exception) {
             e.printStackTrace()
-            stopGenerateKaraoke(context)
+            stopGenerateKaraoke()
         }
     }
 
-    fun stopGenerateKaraoke(context: Context) {
+    fun stopGenerateKaraoke() {
+        val context = appContext ?: return
+        tryToUnbindService()
         val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
         context.stopService(serviceSpleeterIntent)
-        if (serviceConnection.isServiceBound()) {
-            context.unbindService(serviceConnection)
+    }
+
+    private fun finishGenerateKaraoke() {
+        stopGenerateKaraoke()
+    }
+
+    private fun tryToUnbindService() {
+        val context = appContext ?: return
+        try {
+            if (serviceConnection.isServiceBound()) {
+                context.unbindService(serviceConnection)
+                serviceConnection.forceUnBound()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -433,11 +456,13 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             }
             mediaInfo.singerInputStream?.run {
                 if (markSupported()) {
+                    mark(Int.MAX_VALUE)
                     reset()
                 }
             }
             mediaInfo.bgMusicInputStream?.run {
                 if (markSupported()) {
+                    mark(Int.MAX_VALUE)
                     reset()
                 }
             }
@@ -518,13 +543,13 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private var tempSingerFile: File? = null
     private var tempMusicFile: File? = null
+    private var shouldSaveData = true
 
     override fun notifyCompletion(
         vocalsFile: File,
         accompanimentFile: File,
         lyrics: List<LyricsTimestampedSegment>,
-        shouldSaveData: Boolean
-    ) {
+    ): Boolean {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
@@ -539,10 +564,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         )
                     )
                 }
+                finishGenerateKaraoke()
             } catch (e: Exception) {
                 e.printStackTrace()
+                // we had an error, sorry..
+                setWorkspaceState(WorkspaceState.PICK)
             }
         }
+        return serviceConnection.isServiceBound()
     }
 
 
@@ -561,6 +590,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         fun isServiceBound(): Boolean {
             return isBound
+        }
+
+        fun forceUnBound() {
+            isBound = false
         }
     }
 
@@ -616,32 +649,23 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     private fun loadKaraokeFromStorage() {
-        val context = appContext ?: return
+        val uri = audioUri ?: return
+        var exceptionWasThrown = false
         loadKaraokeJob = viewModelScope.launch(Dispatchers.IO) {
             try {
-                val karaokeStudio =
-                    sharedKaraokePreferences.getKaraoke(audioPath = audioUri.toString())
-                if (karaokeStudio == null || audioUri == null) {
-                    throw Exception("loadKaraoke - karaokeStudio not exists")
-                }
-                val vocalsFile = Uri.parse(karaokeStudio.vocal).toFile()
-                val accompanimentFile =
-                    Uri.parse(karaokeStudio.music).toFile()
-                val lyrics = karaokeStudio.lyrics
-                if (!vocalsFile.exists() || !accompanimentFile.exists()) {
-                    throw Exception("loadKaraoke - one or more of the files doesn't exist")
-                }
-                val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
-                setStudioData(streams.vocalStream, streams.musicStream, lyrics)
+                val karaokeRef = sharedKaraokePreferences.getKaraoke(audioPath = uri.toString())
+                    ?: throw Exception("loadKaraoke - karaokeStudio not exists")
+                loadFromKaraokeRef(karaokeRef)
             } catch (e: Exception) {
                 e.printStackTrace()
+                exceptionWasThrown = true
             }
         }
         loadKaraokeJob?.run {
             invokeOnCompletion {
-                if (!isCompleted && !isCancelled) {
+                if (exceptionWasThrown && !isCancelled) {
                     forgetKaraoke()
-                    audioUri?.let { beginGenerateKaraoke(context, it, _songFullName.value) }
+                    beginGenerateKaraoke(uri, _songFullName.value)
                 }
             }
         }
@@ -708,6 +732,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         super.onCleared()
         mediaInfo.closeStreams()
         deleteTempFiles()
+        tryToUnbindService()
     }
 
     fun giveOpinionForScore(givenScore: Int): String {
@@ -772,5 +797,75 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun getIsInitialized(): Boolean {
         return initialized
+    }
+
+    fun loadFromKaraokeFromIntent(jsonString: String, audioPath: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val gson = Gson()
+                val karaokeRef: StudioSharedPreferences.KaraokeRef = gson.fromJson(
+                    jsonString,
+                    object : TypeToken<StudioSharedPreferences.KaraokeRef>() {}.type
+                )
+                audioUri = Uri.parse(audioPath)
+                loadFromKaraokeRef(karaokeRef)
+                if (shouldSaveData) {
+                    _showSaveAudioDialog.value = true
+                    saveKaraoke(karaokeRef)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // sorry, we had a problem..
+                setWorkspaceState(WorkspaceState.PICK)
+            }
+        }
+    }
+
+    fun loadProgressFromIntent(progress: Int, message: String, duration: Double, audioPath: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val context = appContext ?: return@launch
+                val uri = Uri.parse(audioPath) ?: return@launch
+                if (isServiceRunning(context, SpleeterService::class.java) && !serviceConnection.isServiceBound()) {
+                    context.bindService(
+                        Intent(context, SpleeterService::class.java),
+                        serviceConnection,
+                        Context.BIND_AUTO_CREATE
+                    )
+                }
+                mediaInfo.getSongInfo(context, uri)
+                _songFullName.value = "${mediaInfo.sponsorTitle}${
+                    if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
+                }"
+                audioUri = uri
+                setWorkspaceState(WorkspaceState.WAITING)
+                notifyProgressChanged(progress, message, duration)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                setWorkspaceState(WorkspaceState.INTRO)
+            }
+        }
+    }
+
+    private  suspend fun loadFromKaraokeRef(karaokeRef: StudioSharedPreferences.KaraokeRef) {
+        val vocalsFile = Uri.parse(karaokeRef.vocal).toFile()
+        val accompanimentFile =
+            Uri.parse(karaokeRef.music).toFile()
+        val lyrics = karaokeRef.lyrics
+        if (!vocalsFile.exists() || !accompanimentFile.exists()) {
+            throw Exception("loadKaraoke - one or more of the files doesn't exist")
+        }
+        val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
+        setStudioData(streams.vocalStream, streams.musicStream, lyrics)
+    }
+
+    private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
     }
 }

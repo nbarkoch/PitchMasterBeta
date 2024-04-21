@@ -1,12 +1,12 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -92,7 +92,7 @@ fun WorkspaceFooter(
     val loadMusicFromGalleryResultLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        if (result.resultCode == ComponentActivity.RESULT_OK) {
+        if (result.resultCode == Activity.RESULT_OK) {
             viewModel.viewModelScope.launch(Dispatchers.IO) {
                 viewModel.handleResultUriForAudioIntent(
                     context,
@@ -127,7 +127,6 @@ fun WorkspaceFooter(
         if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
             ControlsRow()
         }
-
         Column(
             modifier = modifier
                 .background(gradientBrush)

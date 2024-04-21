@@ -90,12 +90,12 @@ fun BubbleAnimation(active: Boolean) {
     var duration by remember { mutableIntStateOf(3000) }
     var isVisible by remember { mutableStateOf(false) }
     var initialX by remember {
-        mutableStateOf(
+        mutableFloatStateOf(
             (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
         )
     }
     var targetX by remember {
-        mutableStateOf(
+        mutableFloatStateOf(
             (0..screenWidthDp.toInt() - bubbleSizeDp.value.toInt()).random().toFloat()
         )
     }
