@@ -39,9 +39,9 @@ fun WorkspaceBody(modifier: Modifier) {
                 Text(
                     text = "Pick a song from gallery",
                     color = Color.White,
-                    fontSize = 18.sp,
+                    fontSize = 23.sp,
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.W400
+                    fontWeight = FontWeight.W700
                 )
             }
         }

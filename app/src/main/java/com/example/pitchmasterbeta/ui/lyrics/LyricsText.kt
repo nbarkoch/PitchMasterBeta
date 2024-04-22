@@ -77,9 +77,9 @@ fun LyricsText(
                 .alpha(0f),
             style = TextStyle(
                 color = Color(0xABFFFFFF),
-                fontSize = 23.sp,
+                fontSize = 25.sp,
                 textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight(700)
             ),
             onTextLayout = { textLayoutResult: TextLayoutResult ->
                 val lineCount = textLayoutResult.lineCount
@@ -136,57 +136,62 @@ fun LyricsText(
                                 targetState = activeWord >= lineOffset + index,
                                 label = ""
                             )
-
-                            val offset by transition.animateFloat(
-                                transitionSpec = {
-                                    tween(
-                                        durationMillis = (max(
-                                            word.end - word.start,
-                                            0.1
-                                        ) * 900).toInt(),
-                                        easing = LinearEasing
-                                    )
-                                },
-                                label = "",
-                                targetValueByState = {
-                                    if (it) 1f else 0f
-                                }
-                            )
-
-                            val brush = remember(offset) {
-                                object : ShaderBrush() {
-                                    override fun createShader(size: Size): Shader {
-                                        val colors = listOf(Color.White, Color(0x90CACACA))
-                                        val lineActiveOffset =
-                                            (if(activeWord == lineOffset + index) {
-                                                size.width * offset
-                                            } else if (activeWord > lineOffset + index) {
-                                                size.width
-                                            } else {
-                                                0.0f
-                                            }).let { if (isRTL) size.width - it else it }
-
-                                        return LinearGradientShader(
-                                            colors = if (isRTL) colors.reversed() else colors,
-                                            from = Offset(lineActiveOffset, 0f),
-                                            to = Offset(lineActiveOffset + 1f, 0f),
-                                            tileMode = TileMode.Clamp
+                            val textStyle = if (!isActive) {
+                                val offset by transition.animateFloat(
+                                    transitionSpec = {
+                                        tween(
+                                            durationMillis = (max(
+                                                word.end - word.start,
+                                                0.1
+                                            ) * 900).toInt(),
+                                            easing = LinearEasing
                                         )
+                                    },
+                                    label = "",
+                                    targetValueByState = {
+                                        if (it) 1f else 0f
+                                    }
+                                )
+                                val colors = listOf(Color.White, Color(0x90CACACA))
+                                val brush = remember(offset) {
+                                    object : ShaderBrush() {
+                                        override fun createShader(size: Size): Shader {
+                                            val lineActiveOffset =
+                                                (if (activeWord == lineOffset + index) {
+                                                    size.width * offset
+                                                } else if (activeWord > lineOffset + index) {
+                                                    size.width
+                                                } else {
+                                                    0.0f
+                                                }).let { if (isRTL) size.width - it else it }
+
+                                            return LinearGradientShader(
+                                                colors = if (isRTL) colors.reversed() else colors,
+                                                from = Offset(lineActiveOffset, 0f),
+                                                to = Offset(lineActiveOffset + 1f, 0f),
+                                                tileMode = TileMode.Clamp
+                                            )
+                                        }
                                     }
                                 }
+                                TextStyle(
+                                    brush = brush,
+                                    fontSize = 24.sp,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight(700)
+                                )
+                            } else {
+                                TextStyle(
+                                    color = Color(0x90f2f2f2),
+                                    fontSize = 24.sp,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight(700)
+                                )
                             }
-
                             Text(
                                 text = "${if (index == 0) "" else " "}${word.word}",
-                                modifier = Modifier.alpha(scale * 4f - 3f),
-                                style = TextStyle(
-                                    brush = brush,
-                                    fontSize = 22.sp,
-                                    textAlign = TextAlign.Center,
-                                    fontWeight = if (offset > 0 || isActive) FontWeight.Bold else FontWeight(
-                                        400
-                                    )
-                                )
+                                modifier = Modifier.alpha(scale * 5f - 4f),
+                                style = textStyle
                             )
                         }
                     }
@@ -243,9 +248,9 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
                 .alpha(0f),
             style = TextStyle(
                 color = Color(0xABFFFFFF),
-                fontSize = 19.sp,
+                fontSize = 24.sp,
                 textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight(700)
             ),
             onTextLayout = { textLayoutResult: TextLayoutResult ->
                 val lineCount = textLayoutResult.lineCount
@@ -320,12 +325,12 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
                     text = line,
                     modifier = Modifier
                         .scale(scale)
-                        .alpha(scale * 4f - 3f),
+                        .alpha(scale * 3f - 2f),
                     style = TextStyle(
                         brush = brush,
-                        fontSize = 18.sp,
+                        fontSize = 23.sp,
                         textAlign = TextAlign.Center,
-                        fontWeight = if (offset > 0 || isActive) FontWeight.Bold else FontWeight(400)
+                        fontWeight = FontWeight(700)
                     )
                 )
             }
@@ -339,6 +344,11 @@ fun LyricsTextPreview() {
     val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
     viewModel.mockupLyrics()
     MaterialTheme {
-        LyricsText(LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))), true, 1f, 2) {}
+        LyricsText(
+            LyricsTimestampedSegment(listOf(LyricsWord("hello", 0.0, 2000.0))),
+            true,
+            1f,
+            2
+        ) {}
     }
 }

@@ -70,12 +70,12 @@ fun LyricsLazyColumn(
                     val itemMidpoint = (currentItemInfo.size / 2f) + currentItemInfo.offset
                     (1f - minOf(
                         1f, abs(columnMidpoint / divider - itemMidpoint) / currentMidpoint
-                    ) * 0.75f)
+                    ))
                 }
             }
             LyricsText(
                 segment = item,
-                isActive = scrollToPosition.value >= i,
+                isActive = scrollToPosition.value > i,
                 scale = opacity,
                 activeWord = if (scrollToPosition.value == i) activeWordIndex.value else -1
             ) {

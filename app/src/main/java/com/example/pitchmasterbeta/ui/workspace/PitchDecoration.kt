@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -164,13 +165,13 @@ fun LazyWindowScroller(
 }
 
 
+val argbEvaluator = ArgbEvaluator()
+val firstColor = Color(0xFF9830dd).toArgb()
+val secondColor = Color(0xFFdd308f).toArgb()
 private fun interpolateColor(position: Int, totalItems: Int): Color {
-    val fraction = position.toFloat() / (totalItems - 1)
     return Color(
-        ArgbEvaluator().evaluate(
-            fraction,
-            android.graphics.Color.BLUE,
-            android.graphics.Color.RED
+        argbEvaluator.evaluate(
+            position.toFloat() / (totalItems - 1), firstColor, secondColor
         ) as Int
     )
 }

@@ -75,9 +75,11 @@ fun BubbleMaker() {
     val viewModel: WorkspaceViewModel =
         viewModelProvider[WorkspaceViewModel::class.java]
     val playState by rememberUpdatedState(viewModel.playingState.collectAsState())
+    val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
 
     repeat(10) {
-        BubbleAnimation(playState.value == WorkspaceViewModel.PlayerState.PLAYING)
+        BubbleAnimation(playState.value == WorkspaceViewModel.PlayerState.PLAYING ||
+                workspaceState.value == WorkspaceViewModel.WorkspaceState.WAITING)
     }
 }
 
