@@ -419,13 +419,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private fun resetStreams() {
         mediaInfo.singerInputStream?.run {
             if (markSupported()) {
-                mark(Int.MAX_VALUE)
                 reset()
             }
         }
         mediaInfo.bgMusicInputStream?.run {
             if (markSupported()) {
-                mark(Int.MAX_VALUE)
                 reset()
             }
         }
