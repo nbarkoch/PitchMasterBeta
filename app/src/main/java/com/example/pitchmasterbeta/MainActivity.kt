@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
                     val audioPath = extras.getString("audioPath")
                     if (jsonString != null && audioPath != null) {
                         val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
-                        viewModel.loadFromKaraokeFromIntent(jsonString, audioPath)
+                        viewModel.loadKaraokeFromIntent(jsonString, audioPath)
                     }
                 }
                 "11" -> {

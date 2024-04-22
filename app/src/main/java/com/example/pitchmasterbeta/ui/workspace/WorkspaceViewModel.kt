@@ -164,11 +164,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_NAME, songName)
             context.startService(serviceSpleeterIntent)
-            context.bindService(
-                serviceSpleeterIntent,
-                serviceConnection,
-                Context.BIND_AUTO_CREATE
-            )
+            serviceConnection.bindService()
         } catch (e: Exception) {
             e.printStackTrace()
             stopGenerateKaraoke()
@@ -177,7 +173,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun stopGenerateKaraoke() {
         val context = appContext ?: return
-        tryToUnbindService()
+        serviceConnection.unbindService()
         val serviceSpleeterIntent = Intent(context, SpleeterService::class.java)
         context.stopService(serviceSpleeterIntent)
     }
@@ -186,17 +182,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         stopGenerateKaraoke()
     }
 
-    private fun tryToUnbindService() {
-        val context = appContext ?: return
-        try {
-            if (serviceConnection.isServiceBound()) {
-                context.unbindService(serviceConnection)
-                serviceConnection.forceUnBound()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
 
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
     private var musicAudioDispatcher: SongAudioDispatcher? = null
@@ -363,7 +348,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 updateActiveSegmentIndex(
                     musicTimeStamp, _lyricsScrollToPosition.value, _lyricsActiveWordIndex.value
                 )
-
             }
             val onCompletion: () -> Unit = {
                 if (_playingState.value == PlayerState.PLAYING) {
@@ -432,6 +416,34 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         setPlayingState(PlayerState.PLAYING)
     }
 
+    private fun resetStreams() {
+        mediaInfo.singerInputStream?.run {
+            if (markSupported()) {
+                mark(Int.MAX_VALUE)
+                reset()
+            }
+        }
+        mediaInfo.bgMusicInputStream?.run {
+            if (markSupported()) {
+                mark(Int.MAX_VALUE)
+                reset()
+            }
+        }
+    }
+
+    private fun resetDispatchers() {
+        musicAudioDispatcher?.run {
+            if (!this.isStopped) {
+                this.stop()
+            }
+        }
+        microphoneAudioDispatcher?.run {
+            if (!this.isStopped) {
+                this.stop()
+            }
+        }
+    }
+
     private fun resetAudio() {
         _lyricsScrollToPosition.value = 0
         _lyricsActiveWordIndex.value = -1
@@ -444,35 +456,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _micNoteActive.value = false
         _sinNoteActive.value = false
         try {
-            musicAudioDispatcher?.run {
-                if (!this.isStopped) {
-                    this.stop()
-                }
-            }
-            microphoneAudioDispatcher?.run {
-                if (!this.isStopped) {
-                    this.stop()
-                }
-            }
-            mediaInfo.singerInputStream?.run {
-                if (markSupported()) {
-                    mark(Int.MAX_VALUE)
-                    reset()
-                }
-            }
-            mediaInfo.bgMusicInputStream?.run {
-                if (markSupported()) {
-                    mark(Int.MAX_VALUE)
-                    reset()
-                }
-            }
+            resetDispatchers()
+            resetStreams()
             if (!jobsCompleted) {
                 jobsCompleted = true
                 runBlocking {
                     joinAll(*listOfNotNull(musicJob, micJob).toTypedArray())
                 }
             }
-
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -495,16 +486,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         if (_playingState.value == PlayerState.PLAYING) {
                             it.pause()
                         }
-                        mediaInfo.singerInputStream?.run {
-                            if (markSupported()) {
-                                reset()
-                            }
-                        }
-                        mediaInfo.bgMusicInputStream?.run {
-                            if (markSupported()) {
-                                reset()
-                            }
-                        }
+                        resetStreams()
                         it.skipBytes(bytesToSkip)
                         if (_playingState.value == PlayerState.PLAYING) {
                             it.resume()
@@ -592,9 +574,35 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             return isBound
         }
 
-        fun forceUnBound() {
+        fun bindService() {
+            val context = appContext ?: return
+            if (isServiceRunning(context, SpleeterService::class.java) && !isBound) {
+                context.bindService(
+                    Intent(context, SpleeterService::class.java),
+                    this,
+                    Context.BIND_AUTO_CREATE
+                )
+                isBound = true
+            }
+        }
+
+        fun unbindService() {
+            val context = appContext ?: return
+            if (isServiceRunning(context, SpleeterService::class.java) && isBound) {
+                context.unbindService(this)
+            }
             isBound = false
         }
+    }
+
+    private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun setStudioData(
@@ -732,7 +740,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         super.onCleared()
         mediaInfo.closeStreams()
         deleteTempFiles()
-        tryToUnbindService()
+        serviceConnection.unbindService()
     }
 
     fun giveOpinionForScore(givenScore: Int): String {
@@ -799,7 +807,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         return initialized
     }
 
-    fun loadFromKaraokeFromIntent(jsonString: String, audioPath: String) {
+    fun loadKaraokeFromIntent(jsonString: String, audioPath: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val gson = Gson()
@@ -826,13 +834,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             try {
                 val context = appContext ?: return@launch
                 val uri = Uri.parse(audioPath) ?: return@launch
-                if (isServiceRunning(context, SpleeterService::class.java) && !serviceConnection.isServiceBound()) {
-                    context.bindService(
-                        Intent(context, SpleeterService::class.java),
-                        serviceConnection,
-                        Context.BIND_AUTO_CREATE
-                    )
-                }
+                serviceConnection.bindService()
                 mediaInfo.getSongInfo(context, uri)
                 _songFullName.value = "${mediaInfo.sponsorTitle}${
                     if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
@@ -857,15 +859,5 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
         val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
         setStudioData(streams.vocalStream, streams.musicStream, lyrics)
-    }
-
-    private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
-        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                return true
-            }
-        }
-        return false
     }
 }

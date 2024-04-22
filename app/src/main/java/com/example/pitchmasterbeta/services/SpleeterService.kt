@@ -251,7 +251,6 @@ class SpleeterService : Service() {
                 processFailed()
                 return@launch
             }
-            isActive = false
             val isBounded = serviceNotifier?.notifyCompletion(
                 fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics
             ) ?: false
@@ -264,6 +263,7 @@ class SpleeterService : Service() {
                     )
                 )
             }
+            isActive = false
             stopSelf()
         }
     }
