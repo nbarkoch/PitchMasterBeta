@@ -90,7 +90,7 @@ class SpleeterProgressNotification(private val context: Context, private val aud
     fun updateProgress(finalProgress: Int, message: String? = null, duration: Double) {
         tempJob?.run { cancel() }
         tempJob = CoroutineScope(Dispatchers.IO).launch {
-            val progressChunkDuration = 100L // milliseconds
+            val progressChunkDuration = 1000L // milliseconds
             var currentDuration = 0L
             val oldProgress = lastProgress
             val progressStep = ((finalProgress - lastProgress) / (duration / progressChunkDuration))

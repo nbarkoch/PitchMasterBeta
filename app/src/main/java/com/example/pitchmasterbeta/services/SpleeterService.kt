@@ -167,6 +167,7 @@ class SpleeterService : Service() {
                                 serviceNotifier?.notifyFailed()
                                 continuation.resume(false)
                             }
+
                             else -> {}
                         }
                     }
@@ -234,37 +235,50 @@ class SpleeterService : Service() {
     private fun startBackgroundThread(uri: Uri, objectKey: String, songName: String) {
         isActive = true
         apiCoroutineScope.launch(Dispatchers.IO) {
-            initServices()
-            val s3UploadResult = startUploadToS3(uri, objectKey)
-            if (!isActive || !s3UploadResult) {
-                processFailed()
-                return@launch
-            }
-            notifyProgressChanged(60, "Separating..", 45.0)
-            val lambdaResult = invokeLambdaFunction(songName, objectKey)
-            if (!isActive || lambdaResult == null) {
-                processFailed()
-                return@launch
-            }
-            val fileResults = downloadFiles(lambdaResult.vocalsUrl, lambdaResult.accompanimentUrl)
-            if (!isActive || fileResults == null) {
-                processFailed()
-                return@launch
-            }
-            val isBounded = serviceNotifier?.notifyCompletion(
-                fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics
-            ) ?: false
-            if (!isBounded) {
-                spleeterNotification?.newNotificationIntent(
-                    deepLink = "12", karaokeRef = StudioSharedPreferences.KaraokeRef(
-                        vocal = Uri.fromFile(fileResults.vocalsFile).toString(),
-                        music = Uri.fromFile(fileResults.accompanimentFile).toString(),
-                        lyrics = lambdaResult.lyrics
+            try {
+                initServices()
+                val s3UploadResult = startUploadToS3(uri, objectKey)
+                if (!isActive || !s3UploadResult) {
+                    if (!s3UploadResult) {
+                        throw Exception("s3Upload failed")
+                    }
+                    throw Exception("service is down")
+                }
+                notifyProgressChanged(60, "Separating..", 45.0)
+                val lambdaResult = invokeLambdaFunction(songName, objectKey)
+                if (!isActive || lambdaResult == null) {
+                    if (lambdaResult == null) {
+                        throw Exception("Lambda invocation failed")
+                    }
+                    throw Exception("service is down")
+                }
+                val fileResults =
+                    downloadFiles(lambdaResult.vocalsUrl, lambdaResult.accompanimentUrl)
+                if (!isActive || fileResults == null) {
+                    if (fileResults == null) {
+                        throw Exception("files download failed")
+                    }
+                    throw Exception("service is down")
+                }
+                val isBounded = serviceNotifier?.notifyCompletion(
+                    fileResults.vocalsFile, fileResults.accompanimentFile, lambdaResult.lyrics
+                ) ?: false
+                if (!isBounded) {
+                    spleeterNotification?.newNotificationIntent(
+                        deepLink = "12", karaokeRef = StudioSharedPreferences.KaraokeRef(
+                            vocal = Uri.fromFile(fileResults.vocalsFile).toString(),
+                            music = Uri.fromFile(fileResults.accompanimentFile).toString(),
+                            lyrics = lambdaResult.lyrics
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                serviceNotifier?.notifyFailed()
+            } finally {
+                isActive = false
+                stopSelf()
             }
-            isActive = false
-            stopSelf()
         }
     }
 
@@ -294,29 +308,35 @@ class SpleeterService : Service() {
             apiCoroutineScope.launch(Dispatchers.IO) {
                 try {
                     val progressChunk = 40
+                    val restChunk = 60
                     var progress1 = 0f
                     var progress2 = 0f
-                    var notificationCallback: (progresses: Float) -> Unit = { progresses ->
-                        val percent = (progressChunk * (progresses) / 2f).toInt() + 60
-                        notifyProgressChanged(percent, "Extracting results")
+                    var notificationCallback: (newP: Float, oldP: Float) -> Unit = { newP, oldP ->
+                        val newPercentage = (progressChunk * (newP) / 2f).toInt()
+                        val oldPercentage = (progressChunk * (oldP) / 2f).toInt()
+                        if (newPercentage > oldPercentage) {
+                            notifyProgressChanged(newPercentage + restChunk, "Extracting results")
+                        }
                     }
-                    val (downloadedVocalFile, downloadedAccompanimentFile) = kotlinx.coroutines.awaitAll(async {
+                    val (downloadedVocalFile, downloadedAccompanimentFile) = kotlinx.coroutines.awaitAll(
+                        async {
                             downloadAudioFile(vocalsUrl) { p ->
+                                notificationCallback(p + progress2, progress1 + progress2)
                                 progress1 = p
-                                notificationCallback(p + progress2)
                                 Log.d("Download Progress", "file1: ${p * 100}%")
                             }
                         },
                         async {
                             downloadAudioFile(accompanimentUrl) { p ->
+                                notificationCallback(progress1 + p, progress1 + progress2, )
                                 progress2 = p
-                                notificationCallback(progress1 + p)
                                 Log.d("Download Progress", "file2: ${p * 100}%")
                             }
                         })
-                    notificationCallback = {}
+                    notificationCallback = {_, _ -> }
                     if (downloadedVocalFile == null || downloadedAccompanimentFile == null ||
-                        !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())) {
+                        !(downloadedVocalFile.exists() && downloadedAccompanimentFile.exists())
+                    ) {
                         //"Downloaded files not found"
                         continuation.resume(null)
                     } else {
