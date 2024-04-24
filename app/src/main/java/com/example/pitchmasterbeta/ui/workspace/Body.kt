@@ -1,6 +1,7 @@
 package com.example.pitchmasterbeta.ui.workspace
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,20 +10,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.sp
-import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
+import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.ui.lyrics.LyricsLazyColumn
 import com.example.pitchmasterbeta.ui.lyrics.LyricsText
+import com.example.pitchmasterbeta.ui.pickSong.PickAudioLayout
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 
 @Composable
 fun WorkspaceBody(modifier: Modifier) {
-    val viewModel: WorkspaceViewModel =
-        viewModelProvider[WorkspaceViewModel::class.java]
+    val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val loadingMessage by rememberUpdatedState(viewModel.notificationMessage.collectAsState())
 
@@ -32,18 +30,7 @@ fun WorkspaceBody(modifier: Modifier) {
         }
 
         WorkspaceViewModel.WorkspaceState.PICK -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Pick a song from gallery",
-                    color = Color.White,
-                    fontSize = 23.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.W700
-                )
-            }
+            PickAudioLayout(modifier.fillMaxSize())
         }
 
         WorkspaceViewModel.WorkspaceState.WAITING -> {
@@ -69,6 +56,7 @@ fun WorkspaceBody(modifier: Modifier) {
 @Composable
 fun WorkspaceBodyPreview(
 ) {
+    isPreview = true
     PitchMasterBetaTheme {
         WorkspaceBody(Modifier.fillMaxSize())
     }

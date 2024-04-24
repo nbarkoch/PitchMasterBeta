@@ -35,7 +35,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
-import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
+import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
@@ -45,8 +46,7 @@ fun PitchDecorations(
     chordHeight: Dp = 14.dp,
     maxChordWidth: Dp = 30.dp
 ) {
-    val viewModel: WorkspaceViewModel =
-        viewModelProvider[WorkspaceViewModel::class.java]
+    val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
     val numOfItems = (screenHeightDp.dp / chordHeight).toInt()
     PitchDecorationColumn(viewModel, 1, maxChordWidth, numOfItems, chordHeight)
@@ -194,6 +194,7 @@ fun PitchItem(
 @Preview(showBackground = true)
 @Composable
 fun PitchDecorationsPreview() {
+    isPreview = true
     val viewModelDummy = WorkspaceViewModel()
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
     val chordHeight: Dp = 14.dp

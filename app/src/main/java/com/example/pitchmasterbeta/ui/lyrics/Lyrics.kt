@@ -25,7 +25,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
-import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
+import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
+
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -34,8 +36,7 @@ import kotlin.math.abs
 fun LyricsLazyColumn(
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: WorkspaceViewModel =
-        viewModelProvider[WorkspaceViewModel::class.java]
+    val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     // Observe changes in scrollToPosition and trigger smooth scroll when it changes
     val listState = rememberLazyListState()
     val scrollToPosition by rememberUpdatedState(viewModel.lyricsScrollToPosition.collectAsState())
@@ -99,8 +100,7 @@ fun LyricsLazyColumn(
 @Preview
 @Composable
 fun CustomLazyColumnPreview() {
-    val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
-    viewModel.mockupLyrics()
+    isPreview = true
     MaterialTheme {
         LyricsLazyColumn(modifier = Modifier.fillMaxSize())
     }

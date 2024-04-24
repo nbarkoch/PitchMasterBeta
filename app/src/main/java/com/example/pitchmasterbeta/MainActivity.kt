@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.ViewModelProvider
+import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
@@ -26,7 +27,7 @@ class MainActivity : ComponentActivity() {
 
         viewModelProvider = ViewModelProvider(this)
         appContext = applicationContext
-        val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+        val viewModel = getWorkspaceViewModel()
         if (!viewModel.getIsInitialized()) {
             viewModel.init(this)
         }
@@ -47,8 +48,17 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        lateinit var viewModelProvider: ViewModelProvider
+        private lateinit var viewModelProvider: ViewModelProvider
+        var isPreview = false
         var appContext: Context? = null
+        fun getWorkspaceViewModel(): WorkspaceViewModel {
+            if (isPreview) {
+                val viewModel = WorkspaceViewModel()
+                viewModel.mockupLyrics()
+                return viewModel
+            }
+            return viewModelProvider[WorkspaceViewModel::class.java]
+        }
     }
 
     //viewModelStore.clear()
@@ -72,7 +82,7 @@ class MainActivity : ComponentActivity() {
                     val jsonString = extras.getString("ref")
                     val audioPath = extras.getString("audioPath")
                     if (jsonString != null && audioPath != null) {
-                        val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+                        val viewModel = getWorkspaceViewModel()
                         viewModel.loadKaraokeFromIntent(jsonString, audioPath)
                     }
                 }
@@ -83,7 +93,7 @@ class MainActivity : ComponentActivity() {
                         val duration = extras.getDouble("duration")
                         val audioPath = extras.getString("audioPath")
                         if (message != null && audioPath != null) {
-                            val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+                            val viewModel = getWorkspaceViewModel()
                             viewModel.loadProgressFromIntent(progress, message, duration, audioPath)
                         }
                     }
@@ -102,6 +112,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainActivityPreview(
 ) {
+    isPreview = true
     PitchMasterBetaTheme {
         WorkspaceSurface()
     }

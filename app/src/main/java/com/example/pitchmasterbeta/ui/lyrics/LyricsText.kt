@@ -41,11 +41,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
+
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.model.LyricsWord
-import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 import com.example.pitchmasterbeta.utils.math.findSubArrayListIndices
 import kotlinx.coroutines.delay
 import kotlin.math.floor
@@ -182,7 +182,7 @@ fun LyricsText(
                                 )
                             } else {
                                 TextStyle(
-                                    color = Color(0x90f2f2f2),
+                                    color = Color(0xFFFAFAFA),
                                     fontSize = 24.sp,
                                     textAlign = TextAlign.Center,
                                     fontWeight = FontWeight(700)
@@ -341,7 +341,7 @@ fun LyricsText(segment: LyricsSegment, isActive: Boolean, scale: Float) {
 @Preview
 @Composable
 fun LyricsTextPreview() {
-    val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+    val viewModel = getWorkspaceViewModel()
     viewModel.mockupLyrics()
     MaterialTheme {
         LyricsText(

@@ -3,13 +3,12 @@ package com.example.pitchmasterbeta.ui.workspace
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 
 
 @Composable
 fun WorkspaceBackHandler() {
-    val viewModel: WorkspaceViewModel =
-        viewModelProvider[WorkspaceViewModel::class.java]
+    val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
     BackHandler(

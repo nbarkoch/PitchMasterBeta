@@ -33,7 +33,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.pitchmasterbeta.MainActivity.Companion.viewModelProvider
+import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
+import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
+
 import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import kotlinx.coroutines.delay
@@ -41,8 +43,7 @@ import kotlin.random.Random
 
 @Composable
 fun BackgroundMic() {
-    val viewModel: WorkspaceViewModel =
-        viewModelProvider[WorkspaceViewModel::class.java]
+    val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
 
     AnimatedVisibility(
@@ -72,8 +73,7 @@ fun BackgroundMic() {
 
 @Composable
 fun BubbleMaker() {
-    val viewModel: WorkspaceViewModel =
-        viewModelProvider[WorkspaceViewModel::class.java]
+    val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     val playState by rememberUpdatedState(viewModel.playingState.collectAsState())
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
 
@@ -171,7 +171,8 @@ fun BubbleAnimation(active: Boolean) {
 @Composable
 fun BackgroundMicPreview(
 ) {
-    val viewModel = viewModelProvider[WorkspaceViewModel::class.java]
+    isPreview = true
+    val viewModel = getWorkspaceViewModel()
     viewModel.setWorkspaceState(WorkspaceViewModel.WorkspaceState.IDLE)
     viewModel.setPlayingState(WorkspaceViewModel.PlayerState.PLAYING)
     PitchMasterBetaTheme {

@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 
 @Composable
@@ -51,6 +52,7 @@ fun WorkspaceSurface(
 @Composable
 fun WorkspaceSurfacePreview(
 ) {
+    isPreview = true
     PitchMasterBetaTheme {
         WorkspaceSurface()
     }

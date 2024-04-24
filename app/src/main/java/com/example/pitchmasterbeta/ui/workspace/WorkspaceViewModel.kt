@@ -13,12 +13,15 @@ import androidx.core.net.toFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity.Companion.appContext
+import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.model.AudioProcessor
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.model.MediaInfo
 import com.example.pitchmasterbeta.model.SongAudioDispatcher
 import com.example.pitchmasterbeta.model.StudioSharedPreferences
+import com.example.pitchmasterbeta.model.StudioSharedPreferences.KaraokeRef
+import com.example.pitchmasterbeta.model.StudioSharedPreferences.AudioPrev
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
 import com.example.pitchmasterbeta.model.getColor
 import com.example.pitchmasterbeta.services.LyricsProvider
@@ -74,7 +77,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val lyricsSegments: StateFlow<List<LyricsTimestampedSegment>> = _lyricsSegments
 
     fun mockupLyrics() {
-        _lyricsSegments.value = LyricsProvider.extractData(Mocks.hereWithoutYou)
+        _lyricsSegments.value = LyricsProvider.extractData(Mocks.DIFFERENT_LOVE)
     }
 
     enum class WorkspaceState {
@@ -122,10 +125,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         mediaInfo.singerInputStream =
                             BufferedInputStream(contentResolver.openInputStream(uri))
                         mediaInfo.max(context, uri)
-                        mediaInfo.getSongInfo(context, uri)
-                        _songFullName.value = "${mediaInfo.sponsorTitle}${
-                            if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
-                        }"
+                        setSongName(context, uri)
                         audioProcessor = AudioProcessor(mediaInfo)
                         val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
                         val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
@@ -136,10 +136,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         mockupLyrics()
                     }
                 } else {
-                    mediaInfo.getSongInfo(context, uri)
-                    _songFullName.value = "${mediaInfo.sponsorTitle}${
-                        if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
-                    }"
+                    setSongName(context, uri)
                     audioUri = uri
                     _notificationMessage.value = LyricsSegment("Loading Karaoke", 0.0, 0.75)
                     setWorkspaceState(WorkspaceState.WAITING)
@@ -532,18 +529,18 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     ): Boolean {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
-                setStudioData(streams.vocalStream, streams.musicStream, lyrics)
                 if (shouldSaveData) {
                     _showSaveAudioDialog.value = true
                     saveKaraoke(
-                        StudioSharedPreferences.KaraokeRef(
+                        KaraokeRef(
                             vocal = Uri.fromFile(vocalsFile).toString(),
                             music = Uri.fromFile(accompanimentFile).toString(),
                             lyrics = lyrics
                         )
                     )
                 }
+                val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
+                setStudioData(streams.vocalStream, streams.musicStream, lyrics)
                 finishGenerateKaraoke()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -576,9 +573,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             val context = appContext ?: return
             if (isServiceRunning(context, SpleeterService::class.java) && !isBound) {
                 context.bindService(
-                    Intent(context, SpleeterService::class.java),
-                    this,
-                    Context.BIND_AUTO_CREATE
+                    Intent(context, SpleeterService::class.java), this, Context.BIND_AUTO_CREATE
                 )
                 isBound = true
             }
@@ -618,17 +613,22 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
         setWorkspaceState(WorkspaceState.IDLE)
         resetAudio()
+        audioUri?.let {
+            sharedKaraokePreferences.saveAudioPrev(
+                AudioPrev(
+                    _songFullName.value, it.toString()
+                )
+            )
+        }
     }
 
 
     data class GeneratedStreams(
-        val vocalStream: BufferedInputStream,
-        val musicStream: BufferedInputStream
+        val vocalStream: BufferedInputStream, val musicStream: BufferedInputStream
     )
 
     private suspend fun transformMp3FilesToStreams(
-        vocalsFile: File,
-        accompanimentFile: File
+        vocalsFile: File, accompanimentFile: File
     ): GeneratedStreams {
         val singerFile = tempSingerFile
         val musicFile = tempMusicFile
@@ -670,7 +670,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         loadKaraokeJob?.run {
             invokeOnCompletion {
                 if (exceptionWasThrown && !isCancelled) {
-                    forgetKaraoke()
+                    forgetKaraoke(uri.toString())
                     beginGenerateKaraoke(uri, _songFullName.value)
                 }
             }
@@ -773,7 +773,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         return progress * mediaInfo.timeStampDuration
     }
 
-    private fun saveKaraoke(karaokeRef: StudioSharedPreferences.KaraokeRef) {
+    private fun saveKaraoke(karaokeRef: KaraokeRef) {
         audioUri?.apply {
             sharedKaraokePreferences.saveKaraoke(audioUri.toString(), karaokeRef)
         }
@@ -781,12 +781,17 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun forgetKaraoke() {
         audioUri?.let {
-            sharedKaraokePreferences.getKaraoke(it.toString())?.apply {
-                deleteFile(this.vocal)
-                deleteFile(this.music)
-            }
-            sharedKaraokePreferences.remove(it.toString())
+            forgetKaraoke(it.toString())
         }
+    }
+
+    fun forgetKaraoke(audioPath: String) {
+        sharedKaraokePreferences.getKaraoke(audioPath)?.apply {
+            deleteFile(this.vocal)
+            deleteFile(this.music)
+        }
+        sharedKaraokePreferences.remove(audioPath)
+        sharedKaraokePreferences.removeAudioPrev(audioPath)
     }
 
     private fun deleteFile(path: String) {
@@ -809,9 +814,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val gson = Gson()
-                val karaokeRef: StudioSharedPreferences.KaraokeRef = gson.fromJson(
-                    jsonString,
-                    object : TypeToken<StudioSharedPreferences.KaraokeRef>() {}.type
+                val karaokeRef: KaraokeRef = gson.fromJson(
+                    jsonString, object : TypeToken<KaraokeRef>() {}.type
                 )
                 audioUri = Uri.parse(audioPath)
                 loadFromKaraokeRef(karaokeRef)
@@ -827,16 +831,15 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
-    fun loadProgressFromIntent(progress: Int, message: String, duration: Double, audioPath: String) {
+    fun loadProgressFromIntent(
+        progress: Int, message: String, duration: Double, audioPath: String
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val context = appContext ?: return@launch
                 val uri = Uri.parse(audioPath) ?: return@launch
                 serviceConnection.bindService()
-                mediaInfo.getSongInfo(context, uri)
-                _songFullName.value = "${mediaInfo.sponsorTitle}${
-                    if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
-                }"
+                setSongName(context, uri)
                 audioUri = uri
                 setWorkspaceState(WorkspaceState.WAITING)
                 notifyProgressChanged(progress, message, duration)
@@ -847,15 +850,34 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
-    private  suspend fun loadFromKaraokeRef(karaokeRef: StudioSharedPreferences.KaraokeRef) {
+    private suspend fun loadFromKaraokeRef(karaokeRef: KaraokeRef) {
         val vocalsFile = Uri.parse(karaokeRef.vocal).toFile()
-        val accompanimentFile =
-            Uri.parse(karaokeRef.music).toFile()
+        val accompanimentFile = Uri.parse(karaokeRef.music).toFile()
         val lyrics = karaokeRef.lyrics
         if (!vocalsFile.exists() || !accompanimentFile.exists()) {
             throw Exception("loadKaraoke - one or more of the files doesn't exist")
         }
         val streams = transformMp3FilesToStreams(vocalsFile, accompanimentFile)
         setStudioData(streams.vocalStream, streams.musicStream, lyrics)
+    }
+
+    fun audioPickList(): StateFlow<List<AudioPrev>> {
+        return if (isPreview) MutableStateFlow(Mocks.AUDIO_PREVS)
+               else sharedKaraokePreferences.audioPreviews
+    }
+
+    fun onPickAudio(audioPrev: AudioPrev) {
+        audioUri = Uri.parse(audioPrev.path)
+        _songFullName.value = audioPrev.name
+        _notificationMessage.value = LyricsSegment("Loading Karaoke", 0.0, 0.75)
+        setWorkspaceState(WorkspaceState.WAITING)
+        loadKaraokeFromStorage()
+    }
+
+    private fun setSongName(context: Context, uri: Uri) {
+        mediaInfo.getSongInfo(context, uri)
+        _songFullName.value = "${mediaInfo.sponsorTitle}${
+            if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
+        }"
     }
 }
