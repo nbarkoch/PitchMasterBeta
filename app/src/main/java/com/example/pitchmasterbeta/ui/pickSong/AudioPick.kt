@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,28 +63,24 @@ fun PickAudioLayout(modifier: Modifier) {
                 )
             }
         } else {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 150.dp)
+                    .padding(10.dp)) {
+                Text(
+                    text = "Recent Karaokes",
+                    color = Color.White,
+                    fontSize = 23.sp,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.W700
+                )
+            }
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(5.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 150.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                item {
-                    Box(
-                        modifier
-                            .fillMaxWidth()
-                            .padding(10.dp)) {
-                        Text(
-                            text = "Recent Karaokes",
-                            color = Color.White,
-                            fontSize = 23.sp,
-                            textAlign = TextAlign.Center,
-                            fontWeight = FontWeight.W700
-                        )
-                    }
-
-                }
                 items(audioList) { item ->
                     Row(modifier = Modifier
                         .fillMaxWidth()
@@ -99,10 +97,11 @@ fun PickAudioLayout(modifier: Modifier) {
                             )
                         }
 
-                        Box(modifier = Modifier.weight(1f)
+                        Box(modifier = Modifier
+                            .weight(1f)
                             .clickable(role = Role.Button, onClick = {
-                            viewModel.onPickAudio(item)
-                        }), contentAlignment = Alignment.Center) {
+                                viewModel.onPickAudio(item)
+                            }), contentAlignment = Alignment.Center) {
                             Text(text = item.name,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
@@ -120,6 +119,9 @@ fun PickAudioLayout(modifier: Modifier) {
                             )
                         }
                     }
+                }
+                item {
+                    Spacer(modifier = Modifier.height(150.dp))
                 }
             }
         }
