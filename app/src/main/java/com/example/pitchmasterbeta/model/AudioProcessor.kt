@@ -1,8 +1,11 @@
 package com.example.pitchmasterbeta.model
 
+import android.media.AudioAttributes
+import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.PlaybackParams
+import android.os.Environment
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
 import be.tarsos.dsp.io.TarsosDSPAudioFormat
@@ -13,8 +16,11 @@ import be.tarsos.dsp.pitch.PitchProcessor
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.processPitchHeavy
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.sortedNotes
 import com.example.pitchmasterbeta.utils.math.shiftArrayRight
+import com.example.pitchmasterbeta.utils.saveRawAsWavFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -45,6 +51,9 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
 
     private var singerCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
     private var micCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    var recording = true
+    private var tempRecordOutputStream: ByteArrayOutputStream? = null
 
     companion object {
         private const val SAMPLE_THRESHOLD = 255.toByte()
@@ -130,11 +139,21 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
 
 
     suspend fun buildMicrophoneAudioDispatcher(pitchHandler: (timestamp: Double, noteI: Int, volume: Int, sim: NotesSimilarity) -> Unit) =
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
+
+            val overlap = mediaInfo.overlap
+            val sampleRate = mediaInfo.voiceSampleRate
+            val floatBuffer = mediaInfo.audioFloatBuffer
+            val bytesToRead = (floatBuffer - overlap) * 2
 
             val pitchDetectionHandler =
                 PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
                     val newTimeStamp = audioEvent.timeStamp
+                    tempRecordOutputStream?.let { stream ->
+                        val dataToWrite =
+                            if (recording) audioEvent.byteBuffer else ByteArray(audioEvent.byteBuffer.size)
+                        stream.write(dataToWrite, overlap * 2, bytesToRead)
+                    }
                     micNoteI = processPitchHeavy(pitchDetectionResult.pitch)
                     val micVolume = soundVolume(audioEvent.floatBuffer)
                     if (micNoteI != sortedNotes.size - 1) {
@@ -150,9 +169,6 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                     pitchHandler(newTimeStamp, micNoteI, micVolume, similarity)
                 }
 
-            val overlap = mediaInfo.overlap
-            val sampleRate = mediaInfo.voiceSampleRate
-            val floatBuffer = mediaInfo.audioFloatBuffer
             microphoneDispatcher =
                 VocalAudioDispatcher.fromDefaultMicrophone(sampleRate, floatBuffer, overlap)
 
@@ -162,6 +178,14 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                 floatBuffer,
                 pitchDetectionHandler
             )
+
+            tempRecordOutputStream = if (recording) {
+                ByteArrayOutputStream()
+            } else {
+                tempRecordOutputStream?.close()
+                null
+            }
+
             microphoneDispatcher?.addAudioProcessor(p)
             microphoneDispatcher
         }
@@ -221,14 +245,30 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
             floatBuffer,
             pitchDetectionHandler
         )
-        val bufferSizeInBytes = floatBuffer * tarsosDSPAudioFormat.sampleSizeInBits / 8
+
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+
+        val audioFormat = AudioFormat.Builder()
+            .setSampleRate(sampleRate.toInt())
+            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO) // Adjust channel mask as needed
+            .build()
+
+        val minBufferSize = AudioTrack.getMinBufferSize(
+            audioFormat.sampleRate,
+            AudioFormat.CHANNEL_OUT_MONO,
+            audioFormat.encoding
+        )
+
         mainAudioTrack = AudioTrack(
-            AudioManager.STREAM_MUSIC,
-            tarsosDSPAudioFormat.sampleRate.toInt(),
-            4,
-            2,
-            bufferSizeInBytes * 2,
-            1
+            audioAttributes,
+            audioFormat,
+            minBufferSize * 2,
+            AudioTrack.MODE_STREAM,
+            AudioManager.AUDIO_SESSION_ID_GENERATE // Or specify your own audio session ID
         )
         mainAudioTrack?.play()
         val bytesToRead = (floatBuffer - overlap) * 2
@@ -271,6 +311,18 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
         musicDispatcher
     }
 
+    fun saveRecording(fileName: String) {
+        val recordingsDirectory = File(Environment.getExternalStorageDirectory(), "Recordings")
+        recordingsDirectory.mkdirs()
+        val recordings = File(recordingsDirectory, "Karaoke")
+        recordings.mkdirs()
+        val file = File(recordings, fileName)
+        file.parentFile?.mkdirs()
+        file.createNewFile() // Create the file
+        tempRecordOutputStream?.let {
+            saveRawAsWavFile(file, it, mediaInfo.voiceSampleRate)
+        }
+    }
 }
 
 

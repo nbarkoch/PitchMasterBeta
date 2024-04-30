@@ -20,8 +20,8 @@ import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.model.MediaInfo
 import com.example.pitchmasterbeta.model.SongAudioDispatcher
 import com.example.pitchmasterbeta.model.StudioSharedPreferences
-import com.example.pitchmasterbeta.model.StudioSharedPreferences.KaraokeRef
 import com.example.pitchmasterbeta.model.StudioSharedPreferences.AudioPrev
+import com.example.pitchmasterbeta.model.StudioSharedPreferences.KaraokeRef
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
 import com.example.pitchmasterbeta.model.getColor
 import com.example.pitchmasterbeta.services.LyricsProvider
@@ -42,6 +42,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -52,7 +55,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private var initialized = false
     private var mediaInfo = MediaInfo()
-    private var audioProcessor: AudioProcessor? = null
+    private var audioProcessor = AudioProcessor(mediaInfo)
 
     //    private var lyricsProvider: LyricsProvider? = null
     private lateinit var sharedKaraokePreferences: StudioSharedPreferences
@@ -126,7 +129,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                             BufferedInputStream(contentResolver.openInputStream(uri))
                         mediaInfo.max(context, uri)
                         setSongName(context, uri)
-                        audioProcessor = AudioProcessor(mediaInfo)
                         val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
                         val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
                         _durationTime.value =
@@ -225,14 +227,23 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun setSingerVolume(volume: Float) {
         if (volume > 0.06f) {
-            audioProcessor?.volumeFactor = volume
+            audioProcessor.volumeFactor = volume
         } else {
-            audioProcessor?.volumeFactor = 0f
+            audioProcessor.volumeFactor = 0f
         }
     }
 
     fun getSingerVolume(): Float {
-        return audioProcessor?.volumeFactor ?: 0f
+        return audioProcessor.volumeFactor
+    }
+
+    private val _isRecording = MutableStateFlow(true)
+    val isRecording: StateFlow<Boolean> = _isRecording
+    private val _isRecordingDisabled = MutableStateFlow(false)
+    val isRecordingDisabled: StateFlow<Boolean> = _isRecordingDisabled
+    fun setRecording(trigger: Boolean) {
+        _isRecording.value = trigger
+        audioProcessor.recording = trigger
     }
 
 
@@ -243,7 +254,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     fun getPitchFactor(): Float {
-        return (audioProcessor?.pitchFactor ?: 1f) - 0.5f
+        return (audioProcessor.pitchFactor) - 0.5f
     }
 
     companion object {
@@ -252,7 +263,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     fun setPitchFactor(pitchFactor: Float) {
-        audioProcessor?.pitchFactor =
+        audioProcessor.pitchFactor =
             pitchFactor * FACTOR_EFFECT + (1 - FACTOR_EFFECT * DEFAULT_FACTOR_VALUE)
     }
 
@@ -267,14 +278,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private val _isComputingPitchSinger = MutableStateFlow(false)
     val isComputingPitchSinger: StateFlow<Boolean> = _isComputingPitchSinger
     fun isComputingPitchSinger(b: Boolean) {
-        audioProcessor?.computeAndPlaySingerSoundMode = b
+        audioProcessor.computeAndPlaySingerSoundMode = b
         _isComputingPitchSinger.value = b
     }
 
     private val _isComputingPitchMic = MutableStateFlow(false)
     val isComputingPitchMic: StateFlow<Boolean> = _isComputingPitchMic
     fun isComputingPitchMic(b: Boolean) {
-        audioProcessor?.computeAndPlayRecordedSoundMode = b
+        audioProcessor.computeAndPlayRecordedSoundMode = b
         _isComputingPitchMic.value = b
     }
 
@@ -307,7 +318,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         _micNoteActive.value = false
                     }
                 }
-            microphoneAudioDispatcher = audioProcessor?.buildMicrophoneAudioDispatcher(handlePitch)
+            microphoneAudioDispatcher = audioProcessor.buildMicrophoneAudioDispatcher(handlePitch)
             // Start the audio dispatcher
             microphoneAudioDispatcher?.run()
         }
@@ -354,7 +365,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             }
             setPlayingState(PlayerState.PLAYING)
             musicAudioDispatcher =
-                audioProcessor?.buildMusicAudioDispatcher(handlePitch, onCompletion)
+                audioProcessor.buildMusicAudioDispatcher(handlePitch, onCompletion)
             // Start the audio dispatcher
             musicAudioDispatcher?.run()
         }
@@ -446,6 +457,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _currentTime.value = "00:00"
         goodForThisWindowWatch = false
         jumpInProgress = false
+        _isRecordingDisabled.value = false
         _micNote.value = NoteState(0f, 0f)
         _sinNote.value = NoteState(0f, 0f)
         _micNoteActive.value = false
@@ -471,6 +483,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             // we can't just jump to lyrics without starting playing its just doesn't make any sense
             return
         }
+        _isRecordingDisabled.value = true // since the audio is ruined, we cannot record, for now..
         jumpLock.withLock {
             withContext(Dispatchers.IO) {
                 jumpInProgress = true
@@ -606,7 +619,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         mediaInfo.singerInputStream = vocalStream
         mediaInfo.bgMusicInputStream = musicStream
         _lyricsSegments.value = lyrics
-        audioProcessor = AudioProcessor(mediaInfo)
         val sec: Int = (mediaInfo.timeStampDuration % 1000 % 60).toInt()
         val min: Int = (mediaInfo.timeStampDuration % 1000 / 60).toInt()
         _durationTime.value =
@@ -879,5 +891,12 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _songFullName.value = "${mediaInfo.sponsorTitle}${
             if (mediaInfo.sponsorArtist.isNotEmpty()) " - ${mediaInfo.sponsorArtist}" else ""
         }"
+    }
+
+    fun saveRecording() {
+        val recordDate = SimpleDateFormat("ddMMyyyyHHmm", Locale.getDefault()).format(Date())
+        viewModelScope.launch {
+            audioProcessor.saveRecording(fileName = "record${recordDate}.wav")
+        }
     }
 }

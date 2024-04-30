@@ -1,27 +1,36 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -41,9 +50,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,7 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
-
+import com.example.pitchmasterbeta.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,6 +77,8 @@ fun WorkspaceHeader(
     val workspaceState = viewModel.workspaceState.collectAsState()
     val playState = viewModel.playingState.collectAsState()
     val songFullName = viewModel.songFullName.collectAsState()
+    val isRecording = viewModel.isRecording.collectAsState()
+    val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
 
     val transition = updateTransition(
         targetState = playState.value == WorkspaceViewModel.PlayerState.END,
@@ -100,8 +113,18 @@ fun WorkspaceHeader(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         MarqueeText(songFullName.value)
-        if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
-            ScoreComposable(viewModel)
+        Box(Modifier.fillMaxWidth()) {
+            if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    ScoreComposable(viewModel)
+                }
+            }
+            RecordButton(
+                isShown = playState.value == WorkspaceViewModel.PlayerState.PLAYING && !isRecordingDisabled.value,
+                active = isRecording.value,
+                onClick = { viewModel.setRecording(!viewModel.isRecording.value) },
+                contentDesc = "recording audio button, currently ${if (isRecording.value) "enabled" else "disabled"}"
+            )
         }
     }
 
@@ -167,6 +190,8 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
 
     val micNoteActive = viewModel.micNoteActive.collectAsState()
     val sinNoteActive = viewModel.sinNoteActive.collectAsState()
+    val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
+    val isRecording = viewModel.isRecording.collectAsState()
     val animatedSmallScoreScale by animateFloatAsState(
         if (micNoteActive.value && sinNoteActive.value) 0.05f else 0f,
         label = ""
@@ -188,6 +213,14 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
         } else {
             opinion = ""
             grade = 0
+        }
+    }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.saveRecording()
         }
     }
 
@@ -257,6 +290,34 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                         fontWeight = FontWeight.W400,
                         modifier = Modifier.padding(10.dp)
                     )
+                    if (!isRecordingDisabled.value && isRecording.value) {
+                        Button(colors = ButtonDefaults.buttonColors(Color(0xFFBE35D6)),
+                            modifier = Modifier.defaultMinSize(
+                                minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            onClick = {
+                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                                    requestPermissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                                } else {
+                                    viewModel.saveRecording()
+                                }
+                            }) {
+                            Text(
+                                text = "Save Recording", color = Color.White,
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                            Image(
+                                painterResource(id = R.drawable.baseline_save_24),
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .size(25.dp)
+                                    .padding(start = 5.dp),
+                                colorFilter = ColorFilter.tint(Color.White)
+                            )
+                        }
+                    }
                     Button(colors = ButtonDefaults.buttonColors(Color.White),
                         modifier = Modifier.defaultMinSize(
                             minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
@@ -276,6 +337,58 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
             }
         }
     }
+}
+
+@Composable
+fun RecordButton(
+    onClick: () -> Unit,
+    contentDesc: String,
+    active: Boolean = true,
+    isShown: Boolean = false,
+) {
+    val scale = remember { Animatable(1f) }
+    val volumeScale by animateFloatAsState(
+        targetValue = if (isShown) 1f else 0f,
+        label = ""
+    )
+
+    LaunchedEffect(active) {
+        while (active) {
+            scale.animateTo(
+                targetValue = 1.2f,
+                animationSpec = tween(durationMillis = 500, easing = LinearEasing)
+            )
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 500, easing = LinearEasing)
+            )
+        }
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(start = 15.dp, top = 10.dp)
+            .graphicsLayer(scaleX = volumeScale, alpha = volumeScale, scaleY = volumeScale)
+            .clickable(onClick = onClick)
+            .border(1.dp, color = Color.White, shape = RoundedCornerShape(12.dp))
+            .padding(start = 3.dp, end = 6.dp)
+    ) {
+        Image(
+            painterResource(id = R.drawable.baseline_fiber_manual_record_24),
+            contentDescription = contentDesc,
+            modifier = Modifier
+                .size(20.dp)
+                .scale(scale.value),
+            colorFilter = if (active) ColorFilter.tint(Color(0xFFBE0D31)) else
+                ColorFilter.tint(Color(0xFF8A5D66))
+        )
+        Text(
+            text = if (active) "Recording" else "Not Recording",
+            color = if (active) Color.White else Color.LightGray,
+            fontWeight = FontWeight.W700, fontSize = 11.sp
+        )
+    }
+
 }
 
 @Preview
