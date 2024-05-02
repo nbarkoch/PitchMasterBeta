@@ -55,9 +55,6 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
     private var singerCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
     private var micCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-    var recording = true
-    private var tempRecordOutputStream: ByteArrayOutputStream? = null
-
     companion object {
         private const val SAMPLE_THRESHOLD = 255.toByte()
 
@@ -147,7 +144,6 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
             val overlap = mediaInfo.overlap
             val sampleRate = mediaInfo.voiceSampleRate
             val floatBuffer = mediaInfo.audioFloatBuffer
-            val bytesToRead = (floatBuffer - overlap) * 2
 
             val pitchDetectionHandler =
                 PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
@@ -177,27 +173,7 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                 pitchDetectionHandler
             )
 
-            tempRecordOutputStream = if (recording) {
-                ByteArrayOutputStream()
-            } else {
-                tempRecordOutputStream?.close()
-                null
-            }
-
-            microphoneDispatcher?.addAudioProcessor(object : AudioProcessor {
-                override fun process(audioEvent: AudioEvent): Boolean {
-                    p.process(audioEvent)
-                    tempRecordOutputStream?.let { stream ->
-                        val dataToWrite =
-                            if (recording) audioEvent.byteBuffer else ByteArray(audioEvent.byteBuffer.size)
-                        stream.write(dataToWrite, overlap * 2, bytesToRead)
-                    }
-                    return false
-                }
-
-                override fun processingFinished() {
-                }
-            })
+            microphoneDispatcher?.addAudioProcessor(p)
             microphoneDispatcher
         }
 
@@ -320,33 +296,6 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
             }
         })
         musicDispatcher
-    }
-
-    suspend fun saveRecording(fileName: String) {
-        withContext(Dispatchers.IO) {
-            val context = appContext ?: return@withContext
-            val audioFile = File.createTempFile("record.wav", null)
-            val outputFile = createFileInStorageDir("$fileName.mp3")
-            tempRecordOutputStream?.let {
-                saveRawAsWavFile(audioFile, it, mediaInfo.voiceSampleRate)
-                it.close()
-            }
-            val wavFileUri = Uri.fromFile(audioFile)
-            val mp3FileUri = Uri.fromFile(outputFile)
-            convertAudioFileToMp3(context, wavFileUri, mp3FileUri)
-            audioFile.delete()
-        }
-    }
-
-    private fun createFileInStorageDir(fileName: String): File {
-        val recordingsDirectory = File(Environment.getExternalStorageDirectory(), "Recordings")
-        recordingsDirectory.mkdirs()
-        val recordings = File(recordingsDirectory, "Karaoke")
-        recordings.mkdirs()
-        val file = File(recordings, fileName)
-        file.parentFile?.mkdirs()
-        file.createNewFile() // Create the file
-        return file
     }
 }
 

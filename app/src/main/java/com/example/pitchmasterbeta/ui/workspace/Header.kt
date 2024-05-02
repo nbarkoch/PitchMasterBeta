@@ -300,8 +300,12 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                         modifier = Modifier.padding(10.dp)
                     )
                     if (!isRecordingDisabled.value && isRecording.value) { //0xFF886A8D
-                        Button(colors = ButtonDefaults.buttonColors(Color(0xFFD183DF)),
-                            enabled = isSavingRecord.value,
+                        Button(colors = ButtonDefaults.buttonColors(
+                            if (isSavingRecord.value)
+                                 Color(0xFF886A8D)
+                            else Color(0xFFD183DF)
+                        ),
+                            enabled = !isSavingRecord.value,
                             modifier = Modifier.defaultMinSize(
                                 minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
                             ),

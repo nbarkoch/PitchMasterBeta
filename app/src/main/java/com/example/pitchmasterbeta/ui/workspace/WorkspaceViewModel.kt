@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.model.AudioProcessor
+import com.example.pitchmasterbeta.model.AudioRecorder
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.model.MediaInfo
@@ -184,6 +185,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
     private var musicAudioDispatcher: SongAudioDispatcher? = null
+    private var audioRecorder: AudioRecorder? = null
     private var lastWindowPosition: Int = 0
     private var goodForThisWindowWatch: Boolean = false
     private var goodForOpinionWatch: Boolean = false
@@ -245,7 +247,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val isSavingRecord: StateFlow<Boolean> = _isSavingRecord
     fun setRecording(trigger: Boolean) {
         _isRecording.value = trigger
-        audioProcessor.recording = trigger
     }
 
 
@@ -371,6 +372,14 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             // Start the audio dispatcher
             musicAudioDispatcher?.run()
         }
+
+        appContext?.let { context ->
+            if (_isRecording.value) {
+                audioRecorder = AudioRecorder(context = context)
+                audioRecorder?.startRecording()
+            }
+        }
+
         jobsCompleted = false
     }
 
@@ -414,6 +423,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun pauseAudioDispatchers() {
         microphoneAudioDispatcher?.pause()
+        audioRecorder?.pauseRecording()
         musicAudioDispatcher?.pause()
         setPlayingState(PlayerState.PAUSE)
     }
@@ -423,6 +433,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             musicAudioDispatcher?.resume()
         }
         microphoneAudioDispatcher?.resume()
+        audioRecorder?.resumeRecording()
         setPlayingState(PlayerState.PLAYING)
     }
 
@@ -450,6 +461,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 this.stop()
             }
         }
+        audioRecorder?.stopRecording()
     }
 
     private fun resetAudio() {
@@ -899,7 +911,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         val recordDate = SimpleDateFormat("ddMMyyyyHHmm", Locale.getDefault()).format(Date())
         viewModelScope.launch(Dispatchers.IO) {
             _isSavingRecord.value = true
-            audioProcessor.saveRecording(fileName = "record${recordDate}")
+            audioRecorder?.saveRecording(fileName = "record${recordDate}")
             _isSavingRecord.value = false
         }
     }
