@@ -5,8 +5,6 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.PlaybackParams
-import android.net.Uri
-import android.os.Environment
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
 import be.tarsos.dsp.io.TarsosDSPAudioFormat
@@ -14,16 +12,11 @@ import be.tarsos.dsp.io.UniversalAudioInputStream
 import be.tarsos.dsp.pitch.PitchDetectionHandler
 import be.tarsos.dsp.pitch.PitchDetectionResult
 import be.tarsos.dsp.pitch.PitchProcessor
-import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.processPitchHeavy
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.sortedNotes
-import com.example.pitchmasterbeta.utils.convertAudioFileToMp3
 import com.example.pitchmasterbeta.utils.math.shiftArrayRight
-import com.example.pitchmasterbeta.utils.saveRawAsWavFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.math.sqrt

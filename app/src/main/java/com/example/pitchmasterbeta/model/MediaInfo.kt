@@ -8,10 +8,7 @@ import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.example.pitchmasterbeta.utils.convertAudioFileToWAV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
