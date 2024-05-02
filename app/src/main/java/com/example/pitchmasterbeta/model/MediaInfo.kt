@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
+import com.example.pitchmasterbeta.utils.convertAudioFileToWAV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -107,16 +108,6 @@ data class MediaInfo(
         }
     }
 
-    private fun transformToWAV(context: Context, inputUri: Uri, outputUri: Uri) {
-        val inputUriPath = FFmpegKitConfig.getSafParameterForRead(context, inputUri)
-        val outputUriPath = FFmpegKitConfig.getSafParameterForWrite(context, outputUri)
-        FFmpegKit.execute(" -i $inputUriPath -acodec pcm_s16le -ar 44100 -ac 2 -f wav $outputUriPath")
-        Log.d(
-            "FFMPEG",
-            "executing: ffmpeg -i ${inputUri.path} -acodec pcm_s16le -ar 44100 -ac 2 -f wav ${outputUri.path}"
-        )
-    }
-
     /**
      * Function that gets a context, audio file uri, and output WAV file uri
      * and do the following:
@@ -131,7 +122,7 @@ data class MediaInfo(
     ): BufferedInputStream {
 
         // first, turn the audio file to a WAV file
-        transformToWAV(context, anyAudioFileUri, wavFileUri)
+        convertAudioFileToWAV(context, anyAudioFileUri, wavFileUri)
 
         // then, init the studio, and turn to buffer input stream
         max(context, wavFileUri)

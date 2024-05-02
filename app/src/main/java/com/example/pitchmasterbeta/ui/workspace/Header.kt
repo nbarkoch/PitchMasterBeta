@@ -1,6 +1,10 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.content.Intent
 import android.os.Build
+import android.os.Environment
+import android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+import android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -53,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +66,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
+import androidx.core.content.ContextCompat.startActivity
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.R
@@ -68,6 +74,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 
 @Composable
 fun WorkspaceHeader(
@@ -187,10 +194,12 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
     val colorState = viewModel.similarityColor.collectAsState()
     val color =
         animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
+    val context = LocalContext.current.applicationContext
 
     val micNoteActive = viewModel.micNoteActive.collectAsState()
     val sinNoteActive = viewModel.sinNoteActive.collectAsState()
     val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
+    val isSavingRecord = viewModel.isSavingRecord.collectAsState()
     val isRecording = viewModel.isRecording.collectAsState()
     val animatedSmallScoreScale by animateFloatAsState(
         if (micNoteActive.value && sinNoteActive.value) 0.05f else 0f,
@@ -290,8 +299,9 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                         fontWeight = FontWeight.W400,
                         modifier = Modifier.padding(10.dp)
                     )
-                    if (!isRecordingDisabled.value && isRecording.value) {
-                        Button(colors = ButtonDefaults.buttonColors(Color(0xFFBE35D6)),
+                    if (!isRecordingDisabled.value && isRecording.value) { //0xFF886A8D
+                        Button(colors = ButtonDefaults.buttonColors(Color(0xFFD183DF)),
+                            enabled = isSavingRecord.value,
                             modifier = Modifier.defaultMinSize(
                                 minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
                             ),

@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.PlaybackParams
+import android.net.Uri
 import android.os.Environment
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
@@ -13,8 +14,10 @@ import be.tarsos.dsp.io.UniversalAudioInputStream
 import be.tarsos.dsp.pitch.PitchDetectionHandler
 import be.tarsos.dsp.pitch.PitchDetectionResult
 import be.tarsos.dsp.pitch.PitchProcessor
+import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.processPitchHeavy
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.sortedNotes
+import com.example.pitchmasterbeta.utils.convertAudioFileToMp3
 import com.example.pitchmasterbeta.utils.math.shiftArrayRight
 import com.example.pitchmasterbeta.utils.saveRawAsWavFile
 import kotlinx.coroutines.Dispatchers
@@ -149,11 +152,6 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
             val pitchDetectionHandler =
                 PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
                     val newTimeStamp = audioEvent.timeStamp
-                    tempRecordOutputStream?.let { stream ->
-                        val dataToWrite =
-                            if (recording) audioEvent.byteBuffer else ByteArray(audioEvent.byteBuffer.size)
-                        stream.write(dataToWrite, overlap * 2, bytesToRead)
-                    }
                     micNoteI = processPitchHeavy(pitchDetectionResult.pitch)
                     val micVolume = soundVolume(audioEvent.floatBuffer)
                     if (micNoteI != sortedNotes.size - 1) {
@@ -186,7 +184,20 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                 null
             }
 
-            microphoneDispatcher?.addAudioProcessor(p)
+            microphoneDispatcher?.addAudioProcessor(object : AudioProcessor {
+                override fun process(audioEvent: AudioEvent): Boolean {
+                    p.process(audioEvent)
+                    tempRecordOutputStream?.let { stream ->
+                        val dataToWrite =
+                            if (recording) audioEvent.byteBuffer else ByteArray(audioEvent.byteBuffer.size)
+                        stream.write(dataToWrite, overlap * 2, bytesToRead)
+                    }
+                    return false
+                }
+
+                override fun processingFinished() {
+                }
+            })
             microphoneDispatcher
         }
 
@@ -311,7 +322,23 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
         musicDispatcher
     }
 
-    fun saveRecording(fileName: String) {
+    suspend fun saveRecording(fileName: String) {
+        withContext(Dispatchers.IO) {
+            val context = appContext ?: return@withContext
+            val audioFile = File.createTempFile("record.wav", null)
+            val outputFile = createFileInStorageDir("$fileName.mp3")
+            tempRecordOutputStream?.let {
+                saveRawAsWavFile(audioFile, it, mediaInfo.voiceSampleRate)
+                it.close()
+            }
+            val wavFileUri = Uri.fromFile(audioFile)
+            val mp3FileUri = Uri.fromFile(outputFile)
+            convertAudioFileToMp3(context, wavFileUri, mp3FileUri)
+            audioFile.delete()
+        }
+    }
+
+    private fun createFileInStorageDir(fileName: String): File {
         val recordingsDirectory = File(Environment.getExternalStorageDirectory(), "Recordings")
         recordingsDirectory.mkdirs()
         val recordings = File(recordingsDirectory, "Karaoke")
@@ -319,9 +346,7 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
         val file = File(recordings, fileName)
         file.parentFile?.mkdirs()
         file.createNewFile() // Create the file
-        tempRecordOutputStream?.let {
-            saveRawAsWavFile(file, it, mediaInfo.voiceSampleRate)
-        }
+        return file
     }
 }
 

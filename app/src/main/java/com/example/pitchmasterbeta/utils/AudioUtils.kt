@@ -1,5 +1,10 @@
 package com.example.pitchmasterbeta.utils
 
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.FFmpegKitConfig
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -56,4 +61,24 @@ private fun writeString(output: DataOutputStream, value: String) {
     for (i in value.indices) {
         output.write(value[i].code)
     }
+}
+
+fun convertAudioFileToWAV(context: Context, inputUri: Uri, outputUri: Uri) {
+    val inputUriPath = FFmpegKitConfig.getSafParameterForRead(context, inputUri)
+    val outputUriPath = FFmpegKitConfig.getSafParameterForWrite(context, outputUri)
+    FFmpegKit.execute(" -i $inputUriPath -acodec pcm_s16le -ar 44100 -ac 2 -f wav $outputUriPath")
+    Log.d(
+        "FFMPEG",
+        "executing: ffmpeg -i ${inputUri.path} -acodec pcm_s16le -ar 44100 -ac 2 -f wav ${outputUri.path}"
+    )
+}
+
+fun convertAudioFileToMp3(context: Context, inputUri: Uri, outputUri: Uri) {
+    val inputUriPath = FFmpegKitConfig.getSafParameterForRead(context, inputUri)
+    val outputUriPath = FFmpegKitConfig.getSafParameterForWrite(context, outputUri)
+    FFmpegKit.execute(" -i $inputUriPath -codec:a libmp3lame -qscale:a 2 -f mp3 $outputUriPath")
+    Log.d(
+        "FFMPEG",
+        "executing: ffmpeg -i ${inputUri.path} -codec:a libmp3lame -qscale:a 2 -f mp3 ${outputUri.path}"
+    )
 }
