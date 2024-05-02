@@ -243,8 +243,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val isRecording: StateFlow<Boolean> = _isRecording
     private val _isRecordingDisabled = MutableStateFlow(false)
     val isRecordingDisabled: StateFlow<Boolean> = _isRecordingDisabled
-    private val _isSavingRecord = MutableStateFlow(false)
-    val isSavingRecord: StateFlow<Boolean> = _isSavingRecord
+    private val _recordSaved = MutableStateFlow(false)
+    val recordSaved: StateFlow<Boolean> = _recordSaved
     fun setRecording(trigger: Boolean) {
         _isRecording.value = trigger
     }
@@ -476,6 +476,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _sinNote.value = NoteState(0f, 0f)
         _micNoteActive.value = false
         _sinNoteActive.value = false
+        _recordSaved.value = false
         try {
             resetDispatchers()
             resetStreams()
@@ -910,9 +911,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     fun saveRecording() {
         val recordDate = SimpleDateFormat("ddMMyyyyHHmm", Locale.getDefault()).format(Date())
         viewModelScope.launch(Dispatchers.IO) {
-            _isSavingRecord.value = true
+            _recordSaved.value = true
             audioRecorder?.saveRecording(fileName = "record${recordDate}")
-            _isSavingRecord.value = false
         }
     }
 }

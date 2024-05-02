@@ -53,7 +53,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -193,7 +192,7 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
     val micNoteActive = viewModel.micNoteActive.collectAsState()
     val sinNoteActive = viewModel.sinNoteActive.collectAsState()
     val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
-    val isSavingRecord = viewModel.isSavingRecord.collectAsState()
+    val recordSaved = viewModel.recordSaved.collectAsState()
     val isRecording = viewModel.isRecording.collectAsState()
     val animatedSmallScoreScale by animateFloatAsState(
         if (micNoteActive.value && sinNoteActive.value) 0.05f else 0f,
@@ -295,11 +294,11 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                     )
                     if (!isRecordingDisabled.value && isRecording.value) { //0xFF886A8D
                         Button(colors = ButtonDefaults.buttonColors(
-                            if (isSavingRecord.value)
-                                 Color(0xFF886A8D)
+                            if (recordSaved.value)
+                                 Color(0xFF878188)
                             else Color(0xFFD183DF)
                         ),
-                            enabled = !isSavingRecord.value,
+                            enabled = !recordSaved.value,
                             modifier = Modifier.defaultMinSize(
                                 minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
                             ),
