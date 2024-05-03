@@ -1,5 +1,7 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +32,10 @@ fun WorkspaceSurface(
     val viewModel: WorkspaceViewModel = MainActivity.getWorkspaceViewModel()
     val scaffoldState = rememberScaffoldState()
     val snackbarEvent by viewModel.snackbarEvent.collectAsState(initial = null)
+    val colorState = viewModel.similarityColor.collectAsState()
+    val color =
+        animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(300))
+
     LaunchedEffect(snackbarEvent) {
         snackbarEvent?.let {
             viewModel.viewModelScope.launch {
@@ -43,10 +49,11 @@ fun WorkspaceSurface(
     val gradientBrush = Brush.linearGradient(
         colors = listOf(
             Color(0xFF403C63),
-            Color(0xFF2E265E),
+            color.value.copy(alpha = 0.05f),
             Color(0xFF121314),
         ),
     )
+
 
     // Create or retrieve the ViewModel associated with the ViewModelStore
     WorkspaceBackHandler()
@@ -57,6 +64,7 @@ fun WorkspaceSurface(
             modifier = modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .background(color = Color(0xFF2E265E))
                 .background(brush = gradientBrush)
         )
         {

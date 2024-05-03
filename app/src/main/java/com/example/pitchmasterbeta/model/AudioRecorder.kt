@@ -15,7 +15,7 @@ import java.io.IOException
 class AudioRecorder(val context: Context) {
     private var mediaRecorder: MediaRecorder? = null
     private var outputFile: File? = null
-    fun startRecording() {
+    fun startRecording(): Boolean {
         mediaRecorder = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(context)
         } else MediaRecorder()).apply {
@@ -30,10 +30,12 @@ class AudioRecorder(val context: Context) {
             try {
                 prepare()
                 start()
-            } catch (e: IOException) {
+                return true
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+        return false
     }
 
     fun stopRecording() {

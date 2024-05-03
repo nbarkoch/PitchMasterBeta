@@ -446,8 +446,8 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
 
 
 val colorMap = hashMapOf(
-    AudioProcessor.NotesSimilarity.Idle to Color(0xFFFFFFFF),
-    AudioProcessor.NotesSimilarity.Neutral to Color(0xFFFFFFFF),
+    AudioProcessor.NotesSimilarity.Idle to Color(0xFFdd308f),
+    AudioProcessor.NotesSimilarity.Neutral to Color(0xFFE44EA0),
     AudioProcessor.NotesSimilarity.Close to Color(0xff7dab52),
     AudioProcessor.NotesSimilarity.Equal to Color(0xff27d57e),
     AudioProcessor.NotesSimilarity.Wrong to Color(0xffd52737)

@@ -220,7 +220,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private val _progress = MutableStateFlow(0.0f)
     val progress: StateFlow<Float> = _progress
 
-    private val _similarityColor = MutableStateFlow(Color(0xFFFFFFFF))
+    private val _similarity = MutableStateFlow(AudioProcessor.NotesSimilarity.Idle)
+
+    private val _similarityColor = MutableStateFlow(Color(0xFFdd308f))
     val similarityColor: StateFlow<Color> = _similarityColor
 
     private val _displaySingerVolume = MutableStateFlow(false)
@@ -243,8 +245,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private val _isRecording = MutableStateFlow(true)
     val isRecording: StateFlow<Boolean> = _isRecording
-    private val _isRecordingDisabled = MutableStateFlow(false)
-    val isRecordingDisabled: StateFlow<Boolean> = _isRecordingDisabled
+    private val _isRecordingEnabled = MutableStateFlow(false)
+    val isRecordingEnabled: StateFlow<Boolean> = _isRecordingEnabled
     private val _recordSaved = MutableStateFlow(false)
     val recordSaved: StateFlow<Boolean> = _recordSaved
     fun setRecording(trigger: Boolean) {
@@ -304,7 +306,11 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         micJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int, AudioProcessor.NotesSimilarity) -> Unit =
                 { _, noteI, volume, similarity ->
-                    _similarityColor.value = getColor(similarity)
+                    if (!goodForThisWindowWatch || (_similarity.value != AudioProcessor.NotesSimilarity.Equal)
+                    ) {
+                        _similarityColor.value = getColor(similarity)
+                        _similarity.value = similarity
+                    }
                     if (noteI > 0 && lyricsNowActive) {
                         if (similarity == AudioProcessor.NotesSimilarity.Equal || similarity == AudioProcessor.NotesSimilarity.Close) {
                             goodForThisWindowWatch = true
@@ -376,9 +382,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         appContext?.let { context ->
             if (_isRecording.value) {
-                _isRecordingDisabled.value = false
                 audioRecorder = AudioRecorder(context = context)
-                audioRecorder?.startRecording()
+                _isRecordingEnabled.value = audioRecorder?.startRecording() ?: false
             }
         }
 
@@ -499,7 +504,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             // we can't just jump to lyrics without starting playing its just doesn't make any sense
             return
         }
-        _isRecordingDisabled.value = true // since the audio is ruined, we cannot record, for now..
+        _isRecordingEnabled.value = false // since the audio is ruined, we cannot record, for now..
         jumpLock.withLock {
             withContext(Dispatchers.IO) {
                 jumpInProgress = true

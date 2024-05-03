@@ -5,7 +5,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -63,7 +62,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.R
@@ -82,7 +80,7 @@ fun WorkspaceHeader(
     val playState = viewModel.playingState.collectAsState()
     val songFullName = viewModel.songFullName.collectAsState()
     val isRecording = viewModel.isRecording.collectAsState()
-    val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
+    val isRecordingEnabled = viewModel.isRecordingEnabled.collectAsState()
 
     val transition = updateTransition(
         targetState = playState.value == WorkspaceViewModel.PlayerState.END,
@@ -124,7 +122,7 @@ fun WorkspaceHeader(
                     ScoreComposable(viewModel)
                 }
                 RecordButton(
-                    isShown = playState.value == WorkspaceViewModel.PlayerState.PLAYING && !isRecordingDisabled.value,
+                    isShown = playState.value == WorkspaceViewModel.PlayerState.PLAYING && isRecordingEnabled.value,
                     active = isRecording.value,
                     onClick = { viewModel.setRecording(!viewModel.isRecording.value) },
                     contentDesc = "recording audio button, currently ${if (isRecording.value) "enabled" else "disabled"}"
@@ -188,10 +186,6 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
     val offsetY =
         (with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() / 2f - 100.dp.toPx() * 1f })
 
-    val colorState = viewModel.similarityColor.collectAsState()
-    val color =
-        animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(1000))
-
     val micNoteActive = viewModel.micNoteActive.collectAsState()
     val sinNoteActive = viewModel.sinNoteActive.collectAsState()
     val animatedSmallScoreScale by animateFloatAsState(
@@ -251,11 +245,15 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
             Box(
                 Modifier
                     .scale(animatedSmallScoreScale + 1f)
-                    .border(
-                        color = color.value,
+                    .background(
+                        color = Color(0x3B000000),
                         shape = CircleShape,
-                        width = (animatedSmallScoreScale * 4 + 1) * 3.dp
                     )
+//                    .border(
+//                        color = Color.White,
+//                        shape = CircleShape,
+//                        width = (animatedSmallScoreScale * 50).dp
+//                    )
                     .padding(7.5.dp)
                     .widthIn(50.dp, 300.dp)
                     .heightIn(50.dp, 300.dp),
@@ -301,7 +299,7 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
 
 @Composable
 fun ResultedButtons(viewModel: WorkspaceViewModel) {
-    val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
+    val isRecordingEnabled = viewModel.isRecordingEnabled.collectAsState()
     val recordSaved = viewModel.recordSaved.collectAsState()
     val isRecording = viewModel.isRecording.collectAsState()
     val requestPermissionLauncher = rememberLauncherForActivityResult(
@@ -312,7 +310,7 @@ fun ResultedButtons(viewModel: WorkspaceViewModel) {
         }
     }
 
-    if (!isRecordingDisabled.value && isRecording.value) {
+    if (isRecordingEnabled.value && isRecording.value) {
         Button(colors = ButtonDefaults.buttonColors(
             if (recordSaved.value)
                 Color(0xFFB297B7)

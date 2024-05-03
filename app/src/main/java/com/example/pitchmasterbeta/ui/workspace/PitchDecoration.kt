@@ -1,6 +1,7 @@
 package com.example.pitchmasterbeta.ui.workspace
 
-import android.animation.ArgbEvaluator
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,7 +29,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,14 +61,19 @@ fun PitchDecorationColumn(
     maxChordWidth: Dp, numOfItems: Int, chordHeight: Dp
 ) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val colorState = viewModel.similarityColor.collectAsState()
+    val color =
+        animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(300))
+
     val gradientBrush = Brush.horizontalGradient(
         colors = listOf(
-            Color(0x2DE96ADC),
+            color.value.copy(alpha = 0.3f),
             Color.Transparent,
         ),
         startX = 0.0f,
         endX = 40f
     )
+
 
     val baseModifier = Modifier
         .fillMaxHeight()
@@ -86,7 +91,7 @@ fun PitchDecorationColumn(
                     .width(10.dp)
                     .padding(0.dp, 3.dp)
                     .offset(x = 0.dp, y = i * chordHeight),
-                color = interpolateColor(i, numOfItems),
+                color = color.value,
                 chordHeight = chordHeight - 6.dp,
             )
         }
@@ -104,6 +109,10 @@ fun LazyWindowScroller(
 ) {
     val localDensity = LocalDensity.current
     val scrollState = rememberLazyListState()
+    val colorState = viewModel.similarityColor.collectAsState()
+    val color =
+        animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(300))
+
     val chordHeightPx = with(localDensity) { chordHeight.toPx() }
     val currentMidpoint = chordHeightPx * 2.5f
     val note by rememberUpdatedState(
@@ -153,7 +162,7 @@ fun LazyWindowScroller(
                 modifier = Modifier
                     .width(scaleX * 10.dp)
                     .padding(0.dp, 3.dp),
-                color = interpolateColor(i, items.size),
+                color = color.value,
                 chordHeight = chordHeight - 6.dp
             )
         }
@@ -165,16 +174,16 @@ fun LazyWindowScroller(
 }
 
 
-val argbEvaluator = ArgbEvaluator()
-val firstColor = Color(0xFF9830dd).toArgb()
-val secondColor = Color(0xFFdd308f).toArgb()
-private fun interpolateColor(position: Int, totalItems: Int): Color {
-    return Color(
-        argbEvaluator.evaluate(
-            position.toFloat() / (totalItems - 1), firstColor, secondColor
-        ) as Int
-    )
-}
+//val argbEvaluator = ArgbEvaluator()
+//val firstColor = Color(0xFF9830dd).toArgb()
+//val secondColor = Color(0xFFdd308f).toArgb()
+//private fun interpolateColor(position: Int, totalItems: Int): Color {
+//    return Color(
+//        argbEvaluator.evaluate(
+//            position.toFloat() / (totalItems - 1), firstColor, secondColor
+//        ) as Int
+//    )
+//}
 
 
 @Composable
