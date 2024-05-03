@@ -1,5 +1,6 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.content.res.Configuration
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,12 +22,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -102,7 +105,8 @@ fun WorkspaceHeader(
     )
 
     Box(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .alpha(alpha)
             .background(color = Color.Black)
@@ -128,7 +132,6 @@ fun WorkspaceHeader(
             )
         }
     }
-
 }
 
 @Composable
@@ -191,9 +194,6 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
 
     val micNoteActive = viewModel.micNoteActive.collectAsState()
     val sinNoteActive = viewModel.sinNoteActive.collectAsState()
-    val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
-    val recordSaved = viewModel.recordSaved.collectAsState()
-    val isRecording = viewModel.isRecording.collectAsState()
     val animatedSmallScoreScale by animateFloatAsState(
         if (micNoteActive.value && sinNoteActive.value) 0.05f else 0f,
         label = ""
@@ -215,14 +215,6 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
         } else {
             opinion = ""
             grade = 0
-        }
-    }
-
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            viewModel.saveRecording()
         }
     }
 
@@ -292,57 +284,81 @@ fun ScoreComposable(viewModel: WorkspaceViewModel) {
                         fontWeight = FontWeight.W400,
                         modifier = Modifier.padding(10.dp)
                     )
-                    if (!isRecordingDisabled.value && isRecording.value) { //0xFF886A8D
-                        Button(colors = ButtonDefaults.buttonColors(
-                            if (recordSaved.value)
-                                 Color(0xFF878188)
-                            else Color(0xFFD183DF)
-                        ),
-                            enabled = !recordSaved.value,
-                            modifier = Modifier.defaultMinSize(
-                                minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            onClick = {
-                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                                    requestPermissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                                } else {
-                                    viewModel.saveRecording()
-                                }
-                            }) {
-                            Text(
-                                text = "Save Recording", color = Color.White,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center,
-                            )
-                            Image(
-                                painterResource(id = R.drawable.baseline_save_24),
-                                contentDescription = "",
-                                modifier = Modifier
-                                    .size(25.dp)
-                                    .padding(start = 5.dp),
-                                colorFilter = ColorFilter.tint(Color.White)
-                            )
+                    if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            ResultedButtons(viewModel)
                         }
-                    }
-                    Button(colors = ButtonDefaults.buttonColors(Color.White),
-                        modifier = Modifier.defaultMinSize(
-                            minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
-                        ),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        onClick = {
-                            viewModel.resetScoreAndPlayingState()
-
-                        }) {
-                        Text(
-                            text = "Cancel", color = Color.Black,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center,
-                        )
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ResultedButtons(viewModel)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ResultedButtons(viewModel: WorkspaceViewModel) {
+    val isRecordingDisabled = viewModel.isRecordingDisabled.collectAsState()
+    val recordSaved = viewModel.recordSaved.collectAsState()
+    val isRecording = viewModel.isRecording.collectAsState()
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.saveRecording()
+        }
+    }
+
+    if (!isRecordingDisabled.value && isRecording.value) {
+        Button(colors = ButtonDefaults.buttonColors(
+            if (recordSaved.value)
+                Color(0xFFB297B7)
+            else Color(0xFFD183DF)
+        ),
+            enabled = !recordSaved.value,
+            modifier = Modifier.defaultMinSize(
+                minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
+            ),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            onClick = {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                    requestPermissionLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                } else {
+                    viewModel.saveRecording()
+                }
+            }) {
+            Text(
+                text = "Save Recording", color = Color.White,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+            )
+            Image(
+                painterResource(id = R.drawable.baseline_save_24),
+                contentDescription = "",
+                modifier = Modifier
+                    .size(22.dp)
+                    .padding(start = 5.dp),
+                colorFilter = ColorFilter.tint(Color.White)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+    }
+    Button(colors = ButtonDefaults.buttonColors(Color.White),
+        modifier = Modifier.defaultMinSize(
+            minWidth = ButtonDefaults.MinWidth, minHeight = 10.dp
+        ),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        onClick = {
+            viewModel.resetScoreAndPlayingState()
+        }) {
+        Text(
+            text = "Cancel", color = Color.Black,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

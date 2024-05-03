@@ -33,8 +33,10 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -355,7 +357,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 } else {
                     _sinNoteActive.value = false
                 }
-
                 updateActiveSegmentIndex(
                     musicTimeStamp, _lyricsScrollToPosition.value, _lyricsActiveWordIndex.value
                 )
@@ -375,6 +376,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         appContext?.let { context ->
             if (_isRecording.value) {
+                _isRecordingDisabled.value = false
                 audioRecorder = AudioRecorder(context = context)
                 audioRecorder?.startRecording()
             }
@@ -471,7 +473,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _currentTime.value = "00:00"
         goodForThisWindowWatch = false
         jumpInProgress = false
-        _isRecordingDisabled.value = false
         _micNote.value = NoteState(0f, 0f)
         _sinNote.value = NoteState(0f, 0f)
         _micNoteActive.value = false
@@ -745,6 +746,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private fun initTempFiles(context: Context) {
         tempSingerFile = File(context.cacheDir, "vocalFile.wav")
         tempMusicFile = File(context.cacheDir, "musicFile.wav")
+        tempSingerFile?.deleteOnExit()
+        tempMusicFile?.deleteOnExit()
         deleteTempFiles()
     }
 
@@ -890,7 +893,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun audioPickList(): StateFlow<List<AudioPrev>> {
         return if (isPreview) MutableStateFlow(Mocks.AUDIO_PREVS)
-               else sharedKaraokePreferences.audioPreviews
+        else sharedKaraokePreferences.audioPreviews
     }
 
     fun onPickAudio(audioPrev: AudioPrev) {
@@ -908,11 +911,23 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }"
     }
 
+    private val snackbarEventChannel = Channel<SnackbarEvent?>()
+    val snackbarEvent = snackbarEventChannel.receiveAsFlow()
+
     fun saveRecording() {
         val recordDate = SimpleDateFormat("ddMMyyyyHHmm", Locale.getDefault()).format(Date())
+        val recordName = "record${recordDate}"
         viewModelScope.launch(Dispatchers.IO) {
             _recordSaved.value = true
-            audioRecorder?.saveRecording(fileName = "record${recordDate}")
+            audioRecorder?.save(fileName = recordName)
+            snackbarEventChannel.trySend(
+                SnackbarEvent(
+                    "$recordName Saved Successfully!",
+                    7000,
+                    null,
+                    null
+                )
+            ).isSuccess
         }
     }
 }

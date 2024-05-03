@@ -20,6 +20,7 @@ class AudioRecorder(val context: Context) {
             MediaRecorder(context)
         } else MediaRecorder()).apply {
             outputFile = File.createTempFile("record", ".m4a")
+            outputFile?.deleteOnExit()
             setAudioSource(MediaRecorder.AudioSource.MIC)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -66,22 +67,20 @@ class AudioRecorder(val context: Context) {
         }
     }
 
-    suspend fun saveRecording(fileName: String) {
-        withContext(Dispatchers.IO) {
-            try {
-                outputFile?.let { inFile ->
-                    val outFile = createFileInStorageDir("$fileName.m4a")
-                    inFile.inputStream().use { input ->
-                        outFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
+    fun save(fileName: String) {
+        try {
+            outputFile?.let { inFile ->
+                val outFile = createFileInStorageDir("$fileName.m4a")
+                inFile.inputStream().use { input ->
+                    outFile.outputStream().use { output ->
+                        input.copyTo(output)
                     }
                 }
-                outputFile?.delete()
-            } catch (e: IOException) {
-                e.printStackTrace()
-                // failure :(
+                inFile.delete()
             }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            // failure :(
         }
     }
 
