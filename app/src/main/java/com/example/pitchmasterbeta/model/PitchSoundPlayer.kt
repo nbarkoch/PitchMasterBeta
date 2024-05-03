@@ -449,7 +449,7 @@ val colorMap = hashMapOf(
     AudioProcessor.NotesSimilarity.Idle to Color(0xFFdd308f),
     AudioProcessor.NotesSimilarity.Neutral to Color(0xFFE44EA0),
     AudioProcessor.NotesSimilarity.Close to Color(0xff7dab52),
-    AudioProcessor.NotesSimilarity.Equal to Color(0xff27d57e),
+    AudioProcessor.NotesSimilarity.Equal to Color(0xFF27D57B),
     AudioProcessor.NotesSimilarity.Wrong to Color(0xffd52737)
 )
 

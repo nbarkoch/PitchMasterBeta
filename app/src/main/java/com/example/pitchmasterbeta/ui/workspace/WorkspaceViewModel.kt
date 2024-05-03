@@ -483,6 +483,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _micNoteActive.value = false
         _sinNoteActive.value = false
         _recordSaved.value = false
+        _similarity.value = AudioProcessor.NotesSimilarity.Idle
+        _similarityColor.value = Color(0xFFdd308f)
         try {
             resetDispatchers()
             resetStreams()
