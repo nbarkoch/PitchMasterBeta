@@ -111,25 +111,25 @@ fun WorkspaceHeader(
             .alpha(alpha)
             .background(color = Color.Black)
     )
-    Column(
-        modifier = modifier
-            .background(brush = gradientBrush)
-            .defaultMinSize(minHeight = 200.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        MarqueeText(songFullName.value)
-        Box(Modifier.fillMaxWidth()) {
-            if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
+    if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
+        Column(
+            modifier = modifier
+                .background(brush = gradientBrush)
+                .defaultMinSize(minHeight = 200.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            MarqueeText(songFullName.value)
+            Box(Modifier.fillMaxWidth()) {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     ScoreComposable(viewModel)
                 }
+                RecordButton(
+                    isShown = playState.value == WorkspaceViewModel.PlayerState.PLAYING && !isRecordingDisabled.value,
+                    active = isRecording.value,
+                    onClick = { viewModel.setRecording(!viewModel.isRecording.value) },
+                    contentDesc = "recording audio button, currently ${if (isRecording.value) "enabled" else "disabled"}"
+                )
             }
-            RecordButton(
-                isShown = playState.value == WorkspaceViewModel.PlayerState.PLAYING && !isRecordingDisabled.value,
-                active = isRecording.value,
-                onClick = { viewModel.setRecording(!viewModel.isRecording.value) },
-                contentDesc = "recording audio button, currently ${if (isRecording.value) "enabled" else "disabled"}"
-            )
         }
     }
 }

@@ -22,7 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,7 +65,7 @@ fun PickAudioLayout(modifier: Modifier) {
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 150.dp)
+                    .padding(top = 75.dp)
                     .padding(10.dp)) {
                 Text(
                     text = "Recent Karaokes",
