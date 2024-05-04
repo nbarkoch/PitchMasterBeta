@@ -249,6 +249,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val recordSaved: StateFlow<Boolean> = _recordSaved
     fun setRecording(trigger: Boolean) {
         _isRecording.value = trigger
+        audioProcessor.recording = trigger
     }
 
 
