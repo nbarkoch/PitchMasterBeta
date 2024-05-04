@@ -15,7 +15,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.model.AudioProcessor
-import com.example.pitchmasterbeta.model.AudioRecorder
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.model.MediaInfo
@@ -187,7 +186,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private var microphoneAudioDispatcher: VocalAudioDispatcher? = null
     private var musicAudioDispatcher: SongAudioDispatcher? = null
-    private var audioRecorder: AudioRecorder? = null
     private var lastWindowPosition: Int = 0
     private var goodForThisWindowWatch: Boolean = false
     private var goodForOpinionWatch: Boolean = false
@@ -306,8 +304,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         micJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int, AudioProcessor.NotesSimilarity) -> Unit =
                 { _, noteI, volume, similarity ->
-                    if (!goodForThisWindowWatch || (_similarity.value != AudioProcessor.NotesSimilarity.Equal)
-                    ) {
+                    if (similarity == AudioProcessor.NotesSimilarity.Idle || !goodForThisWindowWatch) {
                         _similarityColor.value = getColor(similarity)
                         _similarity.value = similarity
                     }
@@ -382,8 +379,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         appContext?.let { context ->
             if (_isRecording.value) {
-                audioRecorder = AudioRecorder(context = context)
-                _isRecordingEnabled.value = audioRecorder?.startRecording() ?: false
+                audioProcessor.recording = true
+                _isRecordingEnabled.value = true
             }
         }
 
@@ -430,7 +427,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun pauseAudioDispatchers() {
         microphoneAudioDispatcher?.pause()
-        audioRecorder?.pauseRecording()
         musicAudioDispatcher?.pause()
         setPlayingState(PlayerState.PAUSE)
     }
@@ -440,7 +436,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             musicAudioDispatcher?.resume()
         }
         microphoneAudioDispatcher?.resume()
-        audioRecorder?.resumeRecording()
         setPlayingState(PlayerState.PLAYING)
     }
 
@@ -468,7 +463,6 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 this.stop()
             }
         }
-        audioRecorder?.stopRecording()
     }
 
     private fun resetAudio() {
@@ -506,7 +500,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             // we can't just jump to lyrics without starting playing its just doesn't make any sense
             return
         }
-        _isRecordingEnabled.value = false // since the audio is ruined, we cannot record, for now..
+//        _isRecordingEnabled.value = false // since the audio is ruined, we cannot record, for now..
         jumpLock.withLock {
             withContext(Dispatchers.IO) {
                 jumpInProgress = true
@@ -926,7 +920,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         val recordName = "record${recordDate}"
         viewModelScope.launch(Dispatchers.IO) {
             _recordSaved.value = true
-            audioRecorder?.save(fileName = recordName)
+            audioProcessor.saveRecording(fileName = recordName)
             snackbarEventChannel.trySend(
                 SnackbarEvent(
                     "$recordName Saved Successfully!",

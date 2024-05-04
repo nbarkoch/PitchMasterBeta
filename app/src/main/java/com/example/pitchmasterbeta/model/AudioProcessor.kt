@@ -5,6 +5,8 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.PlaybackParams
+import android.net.Uri
+import android.os.Environment
 import be.tarsos.dsp.AudioEvent
 import be.tarsos.dsp.AudioProcessor
 import be.tarsos.dsp.io.TarsosDSPAudioFormat
@@ -12,11 +14,17 @@ import be.tarsos.dsp.io.UniversalAudioInputStream
 import be.tarsos.dsp.pitch.PitchDetectionHandler
 import be.tarsos.dsp.pitch.PitchDetectionResult
 import be.tarsos.dsp.pitch.PitchProcessor
+import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.processPitchHeavy
 import com.example.pitchmasterbeta.model.PitchSoundPlayer.Companion.sortedNotes
+import com.example.pitchmasterbeta.utils.convertAudioFileToMp3
 import com.example.pitchmasterbeta.utils.math.shiftArrayRight
+import com.example.pitchmasterbeta.utils.updateWavHeader
+import com.example.pitchmasterbeta.utils.writeWavHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -47,6 +55,10 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
 
     private var singerCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
     private var micCurrentPitches = intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    var recording = true
+    private var fileOutputStream: FileOutputStream? = null
+    private var outputFile: File? = null
 
     companion object {
         private const val SAMPLE_THRESHOLD = 255.toByte()
@@ -137,6 +149,7 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
             val overlap = mediaInfo.overlap
             val sampleRate = mediaInfo.voiceSampleRate
             val floatBuffer = mediaInfo.audioFloatBuffer
+            val bytesToRead = (floatBuffer - overlap) * 2
 
             val pitchDetectionHandler =
                 PitchDetectionHandler { pitchDetectionResult: PitchDetectionResult, audioEvent: AudioEvent ->
@@ -166,7 +179,31 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                 pitchDetectionHandler
             )
 
-            microphoneDispatcher?.addAudioProcessor(p)
+            fileOutputStream = if (recording) {
+                outputFile = File.createTempFile("record", ".m4a")
+                outputFile?.deleteOnExit()
+                FileOutputStream(outputFile).apply {
+                    writeWavHeader(this, mediaInfo.voiceSampleRate)
+                }
+            } else {
+                fileOutputStream?.close()
+                null
+            }
+
+            microphoneDispatcher?.addAudioProcessor(object : AudioProcessor {
+                override fun process(audioEvent: AudioEvent): Boolean {
+                    p.process(audioEvent)
+                    fileOutputStream?.let { stream ->
+                        val dataToWrite =
+                            if (recording) audioEvent.byteBuffer else ByteArray(audioEvent.byteBuffer.size)
+                        stream.write(dataToWrite, overlap * 2, bytesToRead)
+                    }
+                    return false
+                }
+
+                override fun processingFinished() {
+                }
+            })
             microphoneDispatcher
         }
 
@@ -290,6 +327,36 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
         })
         musicDispatcher
     }
+
+    suspend fun saveRecording(fileName: String) {
+        withContext(Dispatchers.IO) {
+            val context = appContext ?: return@withContext
+            val recordFile = createFileInStorageDir("$fileName.mp3")
+            fileOutputStream?.let {
+                outputFile?.let { outputFile ->
+                    updateWavHeader(outputFile)
+                    it.close()
+                }
+            }
+            val wavFileUri = Uri.fromFile(outputFile)
+            val mp3FileUri = Uri.fromFile(recordFile)
+            convertAudioFileToMp3(context, wavFileUri, mp3FileUri)
+            outputFile?.delete()
+            outputFile = null
+        }
+    }
+
+    private fun createFileInStorageDir(fileName: String): File {
+        val recordingsDirectory = File(Environment.getExternalStorageDirectory(), "Recordings")
+        recordingsDirectory.mkdirs()
+        val recordings = File(recordingsDirectory, "Karaoke")
+        recordings.mkdirs()
+        val file = File(recordings, fileName)
+        file.parentFile?.mkdirs()
+        file.createNewFile() // Create the file
+        return file
+    }
+
 }
 
 

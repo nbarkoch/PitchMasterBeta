@@ -10,6 +10,8 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.OutputStream
+import java.io.RandomAccessFile
 
 @Throws(IOException::class)
 fun saveRawAsWavFile(
@@ -40,6 +42,73 @@ fun saveRawAsWavFile(
     } finally {
         output?.close()
     }
+}
+
+
+fun writeWavHeader(outputStream: OutputStream, sampleRate: Int) {
+    val totalAudioLen: Long = 0 // Set to 0 initially, will be updated later
+    val totalDataLen: Long = totalAudioLen + 36 // 36 is the size of the header
+
+    // Write the "RIFF" chunk descriptor
+    outputStream.write("RIFF".toByteArray())
+    outputStream.write(intToByteArray(totalDataLen.toInt()))
+
+    // Write the "WAVE" format identifier
+    outputStream.write("WAVE".toByteArray())
+
+    // Write the "fmt " sub-chunk
+    outputStream.write("fmt ".toByteArray())
+    outputStream.write(intToByteArray(16)) // Sub-chunk size (16 for PCM)
+    outputStream.write(shortToByteArray(1)) // Audio format (1 for PCM)
+    outputStream.write(shortToByteArray(1)) // Number of channels
+    outputStream.write(intToByteArray(sampleRate)) // Sample rate
+    outputStream.write(intToByteArray(sampleRate * 2)) // Byte rate
+    outputStream.write(shortToByteArray(2)) // Block align
+    outputStream.write(shortToByteArray(16)) // Bits per sample
+
+    // Write the "data" sub-chunk (placeholder, will be updated later)
+    outputStream.write("data".toByteArray())
+    outputStream.write(intToByteArray(totalAudioLen.toInt()))
+}
+
+fun updateWavHeader(file: File) {
+    val dataChunkSize = file.length() - 36
+    val riffChunkSize =
+        dataChunkSize + 36 - 8  // 36 is the size of the header and 8 is for "RIFF" and chunk size fields
+
+    // Open the WAV file for reading and writing
+    RandomAccessFile(file, "rw").use { randomAccessFile ->
+        // Calculate the actual sizes of the RIFF chunk and the data chunk
+
+        // Write the updated sizes to the header
+        randomAccessFile.seek(4)
+        randomAccessFile.write(intToByteArray(riffChunkSize.toInt()))
+
+        randomAccessFile.seek(40)
+        randomAccessFile.write(intToByteArray(dataChunkSize.toInt()))
+    }
+}
+
+/**
+ * Function to convert an integer to a little-endian byte array.
+ */
+fun intToByteArray(value: Int): ByteArray {
+    return byteArrayOf(
+        value.toByte(),
+        (value shr 8).toByte(),
+        (value shr 16).toByte(),
+        (value shr 24).toByte()
+    )
+}
+
+/**
+ * Function to convert a short to a little-endian byte array.
+ */
+fun shortToByteArray(value: Int): ByteArray {
+    return byteArrayOf(
+        value.toByte(),
+        (value shr 8).toByte()
+    )
 }
 
 @Throws(IOException::class)
