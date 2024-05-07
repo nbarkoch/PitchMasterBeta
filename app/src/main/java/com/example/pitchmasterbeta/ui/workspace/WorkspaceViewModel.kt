@@ -305,7 +305,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         micJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int, AudioProcessor.NotesSimilarity) -> Unit =
                 { _, noteI, volume, similarity ->
-                    if (similarity == AudioProcessor.NotesSimilarity.Idle || !goodForThisWindowWatch) {
+                    if (
+                        !goodForThisWindowWatch ||
+                        _similarity.value !=AudioProcessor.NotesSimilarity.Equal
+                    ) {
                         _similarityColor.value = getColor(similarity)
                         _similarity.value = similarity
                     }

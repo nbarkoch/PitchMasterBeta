@@ -1,7 +1,6 @@
 package com.example.pitchmasterbeta.ui.workspace
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
@@ -35,7 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
-
 import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import kotlinx.coroutines.delay
@@ -103,6 +101,7 @@ fun BubbleAnimation(active: Boolean) {
     }
     var initialY by remember { mutableFloatStateOf(screenHeightDp) }
     var targetY by remember { mutableFloatStateOf(bubbleSizeDp.value) }
+    var color by remember { mutableStateOf(getRandomColorFromGradient(Color.Blue, Color.Red)) }
     val transition = updateTransition(
         targetState = isVisible,
         label = ""
@@ -122,24 +121,16 @@ fun BubbleAnimation(active: Boolean) {
         }
     )
 
-    val color by transition.animateColor(
-        transitionSpec = {
-            tween(durationMillis = duration)
-        }, label = ""
-    ) {
-        Color(if (it) android.graphics.Color.BLUE else android.graphics.Color.RED)
-    }
-
-
     LaunchedEffect(active) {
         while (active) {
             delay((500..16000).random().toLong())
+            color = getRandomColorFromGradient(Color(0xFFdd308f), Color(0xFF3834C0))
             bubbleSizeDp = (screenWidthDp.toInt() / 2..screenWidthDp.toInt()).random().dp
             val halfBubbleSize = bubbleSizeDp.value.toInt() / 2
             initialX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()
             targetX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()
             duration = (7000..9000).random()
-            bubbleOpacity = Random.nextDouble(0.1, 0.25).toFloat()
+            bubbleOpacity = Random.nextDouble(0.1, 0.2).toFloat()
             initialY = screenHeightDp + (0..1).random()
             targetY = -bubbleSizeDp.value + (0..1).random()
             isVisible = true
@@ -165,6 +156,15 @@ fun BubbleAnimation(active: Boolean) {
             .background(brush = brush, shape = CircleShape)
     )
 
+}
+
+fun getRandomColorFromGradient(startColor: Color, endColor: Color): Color {
+    val randomFactor = Random.nextDouble()
+    val interpolatedRed = (startColor.red + randomFactor * (endColor.red - startColor.red)).toFloat()
+    val interpolatedGreen = (startColor.green + randomFactor * (endColor.green - startColor.green)).toFloat()
+    val interpolatedBlue = (startColor.blue + randomFactor * (endColor.blue - startColor.blue)).toFloat()
+
+    return Color(interpolatedRed, interpolatedGreen, interpolatedBlue)
 }
 
 @Preview(showBackground = true)
