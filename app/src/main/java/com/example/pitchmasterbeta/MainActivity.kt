@@ -17,11 +17,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.ViewModelProvider
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
+import com.example.pitchmasterbeta.bridge.NativeWaveBridge
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
 
 class MainActivity : ComponentActivity() {
+    private val nativeWaveBridge = NativeWaveBridge()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
