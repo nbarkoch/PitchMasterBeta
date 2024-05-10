@@ -6,7 +6,7 @@
 
 
 extern "C" {
-    void getActiveNativeBridge(jobject thiz, std::function<void(pitchmaster::NativeCPPBridge*)> func);
+    void checkNativeBridgeValidity(jobject thiz, std::function<void(pitchmaster::NativeCPPBridge*)> func);
 
     JNIEXPORT jlong JNICALL
     Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_create(JNIEnv *env, jobject thiz) {
@@ -15,6 +15,7 @@ extern "C" {
             LOGD("Failed to init nativeBridge");
             nativeBridge.reset(nullptr);
         }
+        LOGD("invoked -> @create()");
         return reinterpret_cast<jlong>(nativeBridge.release());
     }
     
@@ -26,113 +27,79 @@ extern "C" {
             LOGD("Attempt to destroy uninitialized nativeBridge");
             return;
         }
+        LOGD("invoked -> @delete()");
         delete nativeBridge;
     }
 
     JNIEXPORT void JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_play(JNIEnv *env, jobject thiz,
-                                                                  jlong bridge_native_handle) {
-        auto* nativeBridge = reinterpret_cast<pitchmaster::NativeCPPBridge*>(thiz);
-
-        if (nativeBridge) {
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_play(JNIEnv *env, jobject thiz, jlong bridge_native_handle) {
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
             nativeBridge->play();
-        } else {
-            LOGD("NativeBridge not created. Please, create the synthesizer first by "
-                  "calling create().");
-        }
+        });
     }
 
     JNIEXPORT jboolean JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_isPlaying(JNIEnv *env, jobject thiz,
-                                                                       jlong bridge_native_handle) {
-        auto* nativeBridge = reinterpret_cast<pitchmaster::NativeCPPBridge*>(thiz);
-
-        if (not nativeBridge) {
-            LOGD("NativeBridge not created. Please, create the synthesizer first by "
-                 "calling create().");
-            return false;
-        }
-
-        return nativeBridge->isPlaying();
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_isPlaying(JNIEnv *env, jobject thiz, jlong bridge_native_handle) {
+        bool isPlaying = false;
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
+            isPlaying = nativeBridge->isPlaying();
+        });
+        return isPlaying;
     }
 
     JNIEXPORT void JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_pause(JNIEnv *env, jobject thiz,
-                                                                   jlong bridge_native_handle) {
-        auto* nativeBridge = reinterpret_cast<pitchmaster::NativeCPPBridge*>(thiz);
-
-        if (nativeBridge) {
-            nativeBridge->pause();
-        } else {
-            LOGD("NativeBridge not created. Please, create the synthesizer first by "
-                 "calling create().");
-        }
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_pause(JNIEnv *env, jobject thiz, jlong bridge_native_handle) {
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
+            return nativeBridge->pause();
+        });
     }
 
     JNIEXPORT void JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_stop(JNIEnv *env, jobject thiz,
-                                                                  jlong bridge_native_handle) {
-        auto *nativeBridge = reinterpret_cast<pitchmaster::NativeCPPBridge *>(thiz);
-
-        if (nativeBridge) {
-            nativeBridge->stop();
-        } else {
-            LOGD("NativeBridge not created. Please, create the synthesizer first by "
-                 "calling create().");
-        }
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_stop(JNIEnv *env, jobject thiz, jlong bridge_native_handle) {
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
+            return nativeBridge->stop();
+        });
     }
 
     JNIEXPORT void JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_skipTo(JNIEnv *env, jobject thiz,
-                                                                    jlong bridge_native_handle,
-                                                                    jdouble jtimestamp) {
-        auto *nativeBridge = reinterpret_cast<pitchmaster::NativeCPPBridge *>(thiz);
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_skipTo(JNIEnv *env, jobject thiz, jlong bridge_native_handle, jdouble jtimestamp) {
         const auto timestamp = static_cast<double >(jtimestamp);
-        if (nativeBridge) {
-            nativeBridge->skipTo(timestamp);
-        } else {
-            LOGD("NativeBridge not created. Please, create the synthesizer first by "
-                 "calling create().");
-        }
-    }
-
-    JNIEXPORT void JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_setPitchHeight(JNIEnv *env, jobject thiz,
-                                                                            jlong bridge_native_handle,
-                                                                            jfloat jfactor) {
-        const auto factor = static_cast<float >(jfactor);
-        getActiveNativeBridge(thiz, [factor](pitchmaster::NativeCPPBridge* nativeBridge) {
-            nativeBridge->setPitchHeight(factor);
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
+            return nativeBridge->skipTo(timestamp);
         });
     }
 
     JNIEXPORT void JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_setVolume(JNIEnv *env, jobject thiz,
-                                                                       jlong bridge_native_handle,
-                                                                       jfloat jfactor) {
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_setPitchHeight(JNIEnv *env, jobject thiz, jlong bridge_native_handle, jfloat jfactor) {
         const auto factor = static_cast<float >(jfactor);
-        getActiveNativeBridge(thiz, [factor](pitchmaster::NativeCPPBridge* nativeBridge) {
-            nativeBridge->setVolume(factor);
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
+            return nativeBridge->setPitchHeight(factor);
         });
     }
 
     JNIEXPORT void JNICALL
-    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_setMicEcho(JNIEnv *env, jobject thiz,
-                                                                        jlong bridge_native_handle,
-                                                                        jboolean jactive) {
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_setVolume(JNIEnv *env, jobject thiz, jlong bridge_native_handle, jfloat jfactor) {
+        const auto factor = static_cast<float >(jfactor);
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
+            return nativeBridge->setVolume(factor);
+        });
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_example_pitchmasterbeta_bridge_NativeWaveBridge_setMicEcho(JNIEnv *env, jobject thiz, jlong bridge_native_handle, jboolean jactive) {
         const auto active = static_cast<bool>(jactive);
-        getActiveNativeBridge(thiz, [active](pitchmaster::NativeCPPBridge* nativeBridge) {
-            nativeBridge->setMicEcho(active);
+        checkNativeBridgeValidity(thiz, [&](pitchmaster::NativeCPPBridge* nativeBridge) {
+            return nativeBridge->setMicEcho(active);
         });
     }
 
-    void getActiveNativeBridge(jobject thiz, std::function<void(pitchmaster::NativeCPPBridge*)> func) {
-        auto *nativeBridge = reinterpret_cast<pitchmaster::NativeCPPBridge *>(thiz);
-        if (nativeBridge) {
-            func(nativeBridge);
-        } else {
+    void checkNativeBridgeValidity(jobject thiz, std::function<void(pitchmaster::NativeCPPBridge*)> func) {
+        auto* nativeBridge = reinterpret_cast<pitchmaster::NativeCPPBridge*>(thiz);
+        if (!nativeBridge) {
             LOGD("NativeBridge not created. Please, create the synthesizer first by calling create().");
+            return;
         }
+        func(nativeBridge);
     }
 }
 

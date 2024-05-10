@@ -4,10 +4,12 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Dispatcher
 
 interface INativeWaveBridge {
-
+    suspend fun play()
+    suspend fun pause()
+    suspend fun stop()
+    suspend fun isPlaying(): Boolean
 }
 
 class NativeWaveBridge: INativeWaveBridge, DefaultLifecycleObserver {
@@ -54,24 +56,24 @@ class NativeWaveBridge: INativeWaveBridge, DefaultLifecycleObserver {
     }
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)
-    }
-    override fun onResume(owner: LifecycleOwner) {
-        super.onResume(owner)
         synchronized(connectionMutex) {
             createBridgeIfNotExits()
         }
     }
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+    }
     override fun onPause(owner: LifecycleOwner) {
         super.onPause(owner)
-        synchronized(connectionMutex) {
-            deleteBridgeIfExits()
-        }
     }
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
     }
     override fun onDestroy(owner: LifecycleOwner) {
         super.onDestroy(owner)
+        synchronized(connectionMutex) {
+            deleteBridgeIfExits()
+        }
     }
 
     // helper functions
@@ -94,28 +96,28 @@ class NativeWaveBridge: INativeWaveBridge, DefaultLifecycleObserver {
 
     // bridge methods
 
-    suspend fun play() = withContext(Dispatchers.IO) {
+    override suspend fun play() = withContext(Dispatchers.IO) {
         synchronized(connectionMutex) {
             createBridgeIfNotExits()
             play(bridgeNativeHandle)
         }
     }
 
-    suspend fun pause() = withContext(Dispatchers.IO) {
+    override suspend fun pause() = withContext(Dispatchers.IO) {
         synchronized(connectionMutex) {
             createBridgeIfNotExits()
             pause(bridgeNativeHandle)
         }
     }
 
-    suspend fun stop() = withContext(Dispatchers.IO) {
+    override suspend fun stop() = withContext(Dispatchers.IO) {
         synchronized(connectionMutex) {
             createBridgeIfNotExits()
             stop(bridgeNativeHandle)
         }
     }
 
-    suspend fun isPlaying() = withContext(Dispatchers.IO) {
+    override suspend fun isPlaying() = withContext(Dispatchers.IO) {
         synchronized(connectionMutex) {
             createBridgeIfNotExits()
             return@withContext isPlaying(bridgeNativeHandle)

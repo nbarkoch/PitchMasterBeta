@@ -14,6 +14,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
+import com.example.pitchmasterbeta.bridge.INativeWaveBridge
 import com.example.pitchmasterbeta.model.AudioProcessor
 import com.example.pitchmasterbeta.model.LyricsSegment
 import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
@@ -59,7 +60,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private var mediaInfo = MediaInfo()
     private var audioProcessor = AudioProcessor(mediaInfo)
 
-    //    private var lyricsProvider: LyricsProvider? = null
+    private var nativeWaveBridge: INativeWaveBridge? = null
     private lateinit var sharedKaraokePreferences: StudioSharedPreferences
     private var audioUri: Uri? = null
     private var loadKaraokeJob: Job? = null
@@ -378,11 +379,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             musicAudioDispatcher?.run()
         }
 
-        appContext?.let { context ->
-            if (_isRecording.value) {
-                audioProcessor.recording = true
-                _isRecordingEnabled.value = true
-            }
+        if (_isRecording.value) {
+            audioProcessor.recording = true
+            _isRecordingEnabled.value = true
         }
 
         jobsCompleted = false
@@ -738,8 +737,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _notificationMessage.value = LyricsSegment(message, 0.0, duration)
     }
 
-    fun init(context: Context) {
+    fun init(context: Context, nwb: INativeWaveBridge) {
         sharedKaraokePreferences = StudioSharedPreferences(context)
+        nativeWaveBridge = nwb
         initTempFiles(context)
         resetWorkspace()
         initialized = true

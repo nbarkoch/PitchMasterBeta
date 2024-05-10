@@ -28,10 +28,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         viewModelProvider = ViewModelProvider(this)
+        lifecycle.addObserver(nativeWaveBridge)
+
         appContext = applicationContext
         val viewModel = getWorkspaceViewModel()
         if (!viewModel.getIsInitialized()) {
-            viewModel.init(this)
+            viewModel.init(this, nativeWaveBridge)
         }
         handleIntent(intent = intent, isAlive = false)
         setContent {
@@ -47,6 +49,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        lifecycle.removeObserver(nativeWaveBridge)
     }
 
     companion object {
