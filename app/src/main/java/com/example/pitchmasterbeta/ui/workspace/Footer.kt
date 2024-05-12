@@ -406,6 +406,8 @@ fun PlaygroundFooter(context: Context, viewModel: WorkspaceViewModel) {
                 }
             }, onProgressChanged = { progress ->
                 viewModel.jumpToTimestamp(viewModel.getTimestampFromProgress(progress))
+            }, onProgressDrag = { progress ->
+                viewModel.dragAndSetCurrentTime(progress)
             })
     }
 

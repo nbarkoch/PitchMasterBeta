@@ -40,7 +40,8 @@ fun CircleProgressbarButton(
     progress: Float = 0f,
     onClick: () -> Unit = {},
     size: Dp = 70.dp,
-    onProgressChanged: suspend (newProgress: Float) -> Unit = {}
+    onProgressChanged: suspend (newProgress: Float) -> Unit = {},
+    onProgressDrag: suspend (newProgress: Float) -> Unit = {}
 ) {
     var radius by remember {
         mutableFloatStateOf(0f)
@@ -71,7 +72,8 @@ fun CircleProgressbarButton(
         onClick = onClick,
     )
     Canvas(
-        modifier = Modifier.size(size - 5.dp)
+        modifier = Modifier
+            .size(size - 5.dp)
             .clip(CircleShape)
             .clickable(role = Role.Button, onClick = onClick)
             .pointerInput(Unit) {
@@ -94,6 +96,9 @@ fun CircleProgressbarButton(
                     val tAngle = getRotationAngle(handleCenter, shapeCenter)
                     if (abs(tAngle - angle) < 180) {
                         angle = tAngle
+                    }
+                    CoroutineScope(Dispatchers.IO).launch {
+                        onProgressDrag(angle.toFloat() / 360f)
                     }
                     change.consume()
                 }

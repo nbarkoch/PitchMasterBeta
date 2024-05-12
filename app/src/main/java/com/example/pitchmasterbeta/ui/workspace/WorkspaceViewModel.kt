@@ -211,6 +211,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val sinNoteActive: StateFlow<Boolean> = _sinNoteActive
     val sinNote: StateFlow<NoteState> = _sinNote
 
+    private val _isProgressDragged = MutableStateFlow(false)
     private val _currentTime = MutableStateFlow("00:00")
     val currentTime: StateFlow<String> = _currentTime
     private val _durationTime = MutableStateFlow("00:00")
@@ -338,11 +339,13 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         // Start the music audio dispatcher
         musicJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int) -> Unit = { musicTimeStamp, noteI, volume ->
-                _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
-                val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
-                val min: Int = (musicTimeStamp % 1000 / 60).toInt()
-                _currentTime.value =
-                    "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                if (!_isProgressDragged.value) {
+                    _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
+                    val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
+                    val min: Int = (musicTimeStamp % 1000 / 60).toInt()
+                    _currentTime.value =
+                        "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
+                }
                 val currentWindowPosition: Int = (musicTimeStamp % 1000 % 60).toInt()
                 if (lastWindowPosition != currentWindowPosition) {
                     if (goodForThisWindowWatch) {
@@ -474,6 +477,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _lyricsActiveWordIndex.value = -1
         _progress.value = 0f
         _currentTime.value = "00:00"
+        _isProgressDragged.value = false
         goodForThisWindowWatch = false
         jumpInProgress = false
         _micNote.value = NoteState(0f, 0f)
@@ -540,6 +544,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                         }
                     }
                 }
+                _isProgressDragged.value = false
                 jumpInProgress = false
             }
         }
@@ -806,6 +811,24 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     fun getTimestampFromProgress(progress: Float): Double {
         return progress * mediaInfo.timeStampDuration
+    }
+
+    /**
+     * Simulates changing to a specific point in a timeline without immediately jumping to that point in
+     * the audio playback. Instead, it visually indicates to the user the timestamp to which
+     * they want to navigate.
+     *
+     * @param progress The progress value indicating the relative position within the entire duration
+     *                 of the media. Should be between 0 and 1, where 0 represents the start of the media
+     *                 and 1 represents the end.
+     */
+    fun dragAndSetCurrentTime(progress: Float) {
+        _isProgressDragged.value = true
+        val musicTimeStamp = progress * mediaInfo.timeStampDuration
+        val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
+        val min: Int = (musicTimeStamp % 1000 / 60).toInt()
+        _currentTime.value =
+            "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
     }
 
     private fun saveKaraoke(karaokeRef: KaraokeRef) {
