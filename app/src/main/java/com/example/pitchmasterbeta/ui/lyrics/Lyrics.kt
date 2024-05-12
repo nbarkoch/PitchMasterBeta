@@ -15,10 +15,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,11 +30,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
-
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LyricsLazyColumn(
     modifier: Modifier = Modifier,
@@ -42,6 +49,8 @@ fun LyricsLazyColumn(
     val scrollToPosition by rememberUpdatedState(viewModel.lyricsScrollToPosition.collectAsState())
     val activeWordIndex by rememberUpdatedState(viewModel.lyricsActiveWordIndex.collectAsState())
     val segments by viewModel.lyricsSegments.collectAsState()
+    var isLazyColumnActiveByUser by remember { mutableStateOf(false) }
+    var lastTimeoutJob by remember { mutableStateOf<Job?>(null) }
 
     // Create element height in pixel state
     var columnMidpoint by remember {
@@ -53,6 +62,10 @@ fun LyricsLazyColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier
             .fillMaxWidth()
+            .pointerInteropFilter {
+                isLazyColumnActiveByUser = true
+                false
+            }
             .onGloballyPositioned { coordinates ->
                 columnMidpoint = coordinates.size.height.toFloat() / 2f
             }) {
@@ -93,7 +106,21 @@ fun LyricsLazyColumn(
     }
 
     LaunchedEffect(scrollToPosition.value) {
-        listState.animateScrollToItem(scrollToPosition.value + 1, -columnMidpoint.toInt())
+        if (!isLazyColumnActiveByUser) {
+            listState.animateScrollToItem(scrollToPosition.value + 1, -columnMidpoint.toInt())
+        }
+    }
+
+    LaunchedEffect(isLazyColumnActiveByUser) {
+        if (isLazyColumnActiveByUser) {
+            val timeoutMillis = 5000L  // Timeout duration in milliseconds (adjust as needed)
+            lastTimeoutJob?.cancel()
+            lastTimeoutJob = withContext(Dispatchers.Main) {
+                delay(timeoutMillis)
+                isLazyColumnActiveByUser = false
+                null // Reset lastTimeoutJob after completion
+            }
+        }
     }
 }
 
