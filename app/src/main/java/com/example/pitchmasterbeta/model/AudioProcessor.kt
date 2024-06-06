@@ -100,7 +100,7 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                     }
                 }
             }
-            return NotesSimilarity.values()[maxVal + 2]
+            return NotesSimilarity.entries[maxVal + 2]
         }
 
         private fun mixedBuffers(

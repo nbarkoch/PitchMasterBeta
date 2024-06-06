@@ -86,6 +86,7 @@ class SpleeterService : Service() {
         const val EXTRA_FILE_URI = "EXTRA_FILE_URI"
         const val EXTRA_OBJECT_KEY = "EXTRA_OBJECT_KEY"
         const val EXTRA_FILE_NAME = "EXTRA_FILE_NAME"
+        const val JWT_TOKEN = "JWT_TOKEN"
     }
 
 
@@ -99,28 +100,35 @@ class SpleeterService : Service() {
 
             val objectKey = intent.getStringExtra(KEYS.EXTRA_OBJECT_KEY)
             val songName = intent.getStringExtra(KEYS.EXTRA_FILE_NAME)
+            val jwtToken = intent.getStringExtra(KEYS.JWT_TOKEN)
 
-            if (fileUri != null && objectKey != null && songName != null) {
+            if (fileUri != null && objectKey != null && songName != null && jwtToken != null) {
                 spleeterNotification = SpleeterProgressNotification(this, fileUri.toString())
                 startForeground(
                     SpleeterProgressNotification.PROGRESS_NOTIFICATION_ID,
                     spleeterNotification?.buildNotification()
                 )
-                startBackgroundThread(fileUri, objectKey, songName)
+                startBackgroundThread(jwtToken, fileUri, objectKey, songName)
             }
         }
         return START_STICKY
     }
 
-    private fun initServices() {
+    private fun initServices(jwtToken: String) {
         val clientConfiguration = ClientConfiguration().apply {
             connectionTimeout = 1000 * 60 * 4
             socketTimeout = 1000 * 60 * 4
         }
 
         sCredProvider = CognitoCachingCredentialsProvider(
-            applicationContext, AWSKeys.COGNITO_POOL_ID, AWSKeys.MY_REGIONS, clientConfiguration
+            applicationContext, AWSKeys.IDENTITY_POOL_ID, AWSKeys.MY_REGIONS, clientConfiguration
         )
+
+        val logins: MutableMap<String, String> = HashMap()
+        logins["cognito-idp.${AWSKeys.MY_REGION}.amazonaws.com/${AWSKeys.USERPool.POOL_ID}"] =
+            jwtToken
+        sCredProvider.setLogins(logins)
+        sCredProvider.refresh()
 
         s3Client = AmazonS3Client(sCredProvider, clientConfiguration).apply {
             setRegion(AWSKeys.MY_REGION)
@@ -164,7 +172,6 @@ class SpleeterService : Service() {
 
                             ProgressEvent.FAILED_EVENT_CODE -> {
                                 notificationCallback = {}
-                                serviceNotifier?.notifyFailed()
                                 continuation.resume(false)
                             }
 
@@ -175,15 +182,9 @@ class SpleeterService : Service() {
                 s3Client.putObject(putObjectRequest)
             } catch (e: Exception) {
                 e.printStackTrace()
-                stopSelf()
                 continuation.resume(false) // Resume with false if an exception occurs
             }
         }
-    }
-
-    private fun processFailed() {
-        serviceNotifier?.notifyFailed()
-        stopSelf()
     }
 
     data class ResultLambda(
@@ -232,11 +233,16 @@ class SpleeterService : Service() {
         stopBackgroundThread()
     }
 
-    private fun startBackgroundThread(uri: Uri, objectKey: String, songName: String) {
+    private fun startBackgroundThread(
+        jwtToken: String,
+        uri: Uri,
+        objectKey: String,
+        songName: String
+    ) {
         isActive = true
         apiCoroutineScope.launch(Dispatchers.IO) {
             try {
-                initServices()
+                initServices(jwtToken)
                 val s3UploadResult = startUploadToS3(uri, objectKey)
                 if (!isActive || !s3UploadResult) {
                     if (!s3UploadResult) {
@@ -328,7 +334,7 @@ class SpleeterService : Service() {
                         },
                         async {
                             downloadAudioFile(accompanimentUrl) { p ->
-                                notificationCallback(progress1 + p, progress1 + progress2, )
+                                notificationCallback(progress1 + p, progress1 + progress2)
                                 progress2 = p
                                 Log.d("Download Progress", "file2: ${p * 100}%")
                             }

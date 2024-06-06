@@ -24,7 +24,6 @@ import com.example.pitchmasterbeta.model.StudioSharedPreferences.AudioPrev
 import com.example.pitchmasterbeta.model.StudioSharedPreferences.KaraokeRef
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
 import com.example.pitchmasterbeta.model.getColor
-import com.example.pitchmasterbeta.services.LyricsProvider
 import com.example.pitchmasterbeta.services.SpleeterService
 import com.example.pitchmasterbeta.utils.Mocks
 import com.google.gson.Gson
@@ -55,6 +54,7 @@ import kotlin.coroutines.suspendCoroutine
 
 class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
+    private lateinit var jwtToken: String
     private var initialized = false
     private var mediaInfo = MediaInfo()
     private var audioProcessor = AudioProcessor(mediaInfo)
@@ -82,7 +82,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val lyricsSegments: StateFlow<List<LyricsTimestampedSegment>> = _lyricsSegments
 
     fun mockupLyrics() {
-        _lyricsSegments.value = LyricsProvider.extractData(Mocks.DIFFERENT_LOVE)
+        _lyricsSegments.value = Mocks.extractData(Mocks.DIFFERENT_LOVE)
     }
 
     enum class WorkspaceState {
@@ -164,6 +164,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             val fileName = "mashu"//UUID.randomUUID().toString() // "mashu"
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_OBJECT_KEY, fileName)
             serviceSpleeterIntent.putExtra(SpleeterService.KEYS.EXTRA_FILE_NAME, songName)
+            serviceSpleeterIntent.putExtra(SpleeterService.KEYS.JWT_TOKEN, jwtToken)
             context.startService(serviceSpleeterIntent)
             serviceConnection.bindService()
         } catch (e: Exception) {
@@ -384,11 +385,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             musicAudioDispatcher?.run()
         }
 
-        appContext?.let { context ->
-            if (_isRecording.value) {
-                audioProcessor.recording = true
-                _isRecordingEnabled.value = true
-            }
+        if (_isRecording.value) {
+            audioProcessor.recording = true
+            _isRecordingEnabled.value = true
         }
 
         jobsCompleted = false
@@ -958,4 +957,9 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             ).isSuccess
         }
     }
+
+    fun setJwtToken(jwtToken: String) {
+        this.jwtToken = jwtToken
+    }
+
 }

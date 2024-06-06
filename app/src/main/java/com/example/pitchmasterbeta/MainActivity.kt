@@ -16,10 +16,16 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
+import com.example.pitchmasterbeta.ui.login.AuthRouter
+import com.example.pitchmasterbeta.ui.login.AuthViewModel
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceViewModel
+import kotlinx.serialization.Serializable
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +39,11 @@ class MainActivity : ComponentActivity() {
         }
         handleIntent(intent = intent, isAlive = false)
         setContent {
+            val navController = rememberNavController()
+            val navigateToWorkspace: (String) -> Unit = { jwtToken ->
+                viewModel.setJwtToken(jwtToken)
+                navController.navigate(WorkspaceIntro)
+            }
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr ) {
                 PitchMasterBetaTheme {
                     // A surface container using the 'background' color from the theme
@@ -40,7 +51,14 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        WorkspaceSurface()
+                        NavHost(navController = navController, startDestination = AuthIntro) {
+                            composable<AuthIntro> {
+                                AuthRouter(navigateToWorkspace)
+                            }
+                            composable<WorkspaceIntro> {
+                                WorkspaceSurface()
+                            }
+                        }
                     }
                 }
             }
@@ -58,6 +76,14 @@ class MainActivity : ComponentActivity() {
                 return viewModel
             }
             return viewModelProvider[WorkspaceViewModel::class.java]
+        }
+
+        fun getAuthViewModel(): AuthViewModel {
+            if (isPreview) {
+                // viewModel.mockupLyrics()
+                return AuthViewModel()
+            }
+            return viewModelProvider[AuthViewModel::class.java]
         }
     }
 
@@ -107,6 +133,13 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent, isAlive = true)
     }
 }
+
+
+@Serializable
+object AuthIntro
+
+@Serializable
+object WorkspaceIntro
 
 @Preview(showBackground = true)
 @Composable

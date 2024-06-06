@@ -1,6 +1,11 @@
 package com.example.pitchmasterbeta.utils
 
+import android.util.Log
+import com.example.pitchmasterbeta.model.LyricsTimestampedSegment
 import com.example.pitchmasterbeta.model.StudioSharedPreferences
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import org.json.JSONObject
 
 @Suppress("unused")
 class Mocks {
@@ -781,5 +786,22 @@ class Mocks {
             StudioSharedPreferences.AudioPrev("אהבה אחרת - אייל גולן", ""),
             StudioSharedPreferences.AudioPrev("Bob Marli - Don't worry", "")
         )
+
+        fun extractData(payloadString: String): List<LyricsTimestampedSegment> {
+            val responseJson = JSONObject(payloadString)
+            val gson = Gson()
+            val jsonBody = JSONObject(responseJson.getString("body"))
+
+            val timestampedSegments: MutableList<LyricsTimestampedSegment> = gson.fromJson(
+                jsonBody.getString("timestamped_segments"),
+                object : TypeToken<List<LyricsTimestampedSegment>>() {}.type
+            )
+            if (timestampedSegments.isEmpty()) {
+                Log.e("LyricsProvider", " - bad response - lyrics are empty :(")
+            } else {
+                Log.i("LyricsProvider", " - response: \n $timestampedSegments")
+            }
+            return timestampedSegments
+        }
     }
 }
