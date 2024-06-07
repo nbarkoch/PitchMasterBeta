@@ -1,9 +1,5 @@
 package com.example.pitchmasterbeta.ui.login
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,16 +17,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -45,8 +44,13 @@ import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.MainActivity.Companion.getAuthViewModel
 import com.example.pitchmasterbeta.R
+import com.example.pitchmasterbeta.model.LoginSharedPreferences
 import com.example.pitchmasterbeta.ui.login.components.AuthOutlinedTextField
+import com.example.pitchmasterbeta.ui.login.components.LoadingOverlay
+import com.example.pitchmasterbeta.ui.theme.MainGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
+import com.example.pitchmasterbeta.ui.theme.PurpleLight10
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -54,18 +58,12 @@ fun LoginScreen(
     navigateToRegistrationScreen: () -> Unit = {}
 ) {
     val viewModel = getAuthViewModel()
+    val coroutineScope = rememberCoroutineScope()
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     var loading by remember { mutableStateOf(false) }
 
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF403C63),
-            Color(0xFF2E265E),
-            Color(0xFF121314),
-        ),
-    )
     var userName by remember {
         mutableStateOf("")
     }
@@ -75,16 +73,32 @@ fun LoginScreen(
     var verificationError by remember {
         mutableStateOf<String?>(null)
     }
+    var checkBoxChecked by remember {
+        mutableStateOf(false)
+    }
 
     val isValidInput: (text: String, maxLength: Int, noSpacing: Boolean) -> Boolean =
         { it, maxLength, noSpacing ->
             it.length < maxLength && !(noSpacing && it.isNotEmpty() && it.last() == ' ')
         }
 
+    LaunchedEffect(Unit) {
+        if (userName.isEmpty() && password.isEmpty()) {
+            coroutineScope.launch {
+                val lastLoginUser = LoginSharedPreferences.getLastLoginUser()
+                if (lastLoginUser != null) {
+                    userName = lastLoginUser.username
+                    password = lastLoginUser.password
+                    checkBoxChecked = true
+                }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = gradientBrush)
+            .background(brush = MainGradientBrush)
             .padding(10.dp)
     ) {
         Column(
@@ -147,11 +161,33 @@ fun LoginScreen(
                         .padding(10.dp), contentAlignment = Alignment.CenterEnd
                 ) {
                     Text(
-                        modifier = Modifier.clickable {},
+                        modifier = Modifier.clickable { },
                         text = "Forgot Password?",
                         fontWeight = W600,
                         fontSize = 13.sp,
-                        color = Color(0xFFD59EFD),
+                        color = PurpleLight10,
+                    )
+                }
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = checkBoxChecked, onCheckedChange = {
+                            checkBoxChecked = it
+                        },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = PurpleLight10,
+                            uncheckedColor = Color.White
+                        )
+                    )
+                    Text(
+                        modifier = Modifier.clickable {},
+                        text = "Remember me",
+                        fontWeight = W600,
+                        fontSize = 12.sp,
+                        color = PurpleLight10,
                     )
                 }
                 verificationError?.let {
@@ -173,13 +209,10 @@ fun LoginScreen(
                         color = Color.White,
                     )
                     Text(
-                        modifier = Modifier.clickable {
-
-                            navigateToRegistrationScreen()
-                        },
+                        modifier = Modifier.clickable(onClick = navigateToRegistrationScreen),
                         text = "Sign Up Now",
                         fontSize = 14.sp,
-                        color = Color(0xFFD59EFD),
+                        color = PurpleLight10,
                         fontWeight = FontWeight.W700,
                         textDecoration = TextDecoration.Underline
                     )
@@ -198,6 +231,13 @@ fun LoginScreen(
                     loading = true
                     viewModel.login(userName, password, onCompletion = { jwtToken ->
                         loading = false
+                        coroutineScope.launch {
+                            if (checkBoxChecked) {
+                                LoginSharedPreferences.saveLastLoginUser(userName, password)
+                            } else {
+                                LoginSharedPreferences.forgetLastLoginUser()
+                            }
+                        }
                         navigateToWorkspace(jwtToken)
                     }, onFailure = { errorMessage ->
                         loading = false
@@ -212,23 +252,7 @@ fun LoginScreen(
             }
         }
     }
-    AnimatedVisibility(
-        visible = loading,
-        enter = fadeIn(animationSpec = tween(1000)),
-        exit = fadeOut(animationSpec = tween(1000))
-    ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color(0xC8AC90E0)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Please Wait..", color = Color.White,
-                fontSize = 20.sp, fontWeight = FontWeight.W700
-            )
-        }
-    }
+    LoadingOverlay(loading)
 }
 
 

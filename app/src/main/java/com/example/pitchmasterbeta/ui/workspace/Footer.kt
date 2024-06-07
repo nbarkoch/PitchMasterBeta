@@ -67,6 +67,8 @@ import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 
 import com.example.pitchmasterbeta.R
+import com.example.pitchmasterbeta.ui.theme.DarkGrey10
+import com.example.pitchmasterbeta.ui.theme.Pink10
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -274,8 +276,9 @@ fun SimpleCircleButton(
                 painterResource(id = resource),
                 contentDescription = contentDesc,
                 modifier = Modifier.size(size - 15.dp),
-                colorFilter = if (active) ColorFilter.tint(Color(0xFFDF2FA4)) else
-                    ColorFilter.tint(Color(0xFF343435))
+                colorFilter = ColorFilter.tint(
+                    if (active) Pink10 else DarkGrey10
+                )
             )
         }
     }
@@ -301,7 +304,7 @@ fun ComplexCircleButton(
                 defaultElevation = 20.dp,
             ),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFFFFFF),
+                containerColor = Color.White,
             ),
             modifier = Modifier
                 .size(size - 10.dp)
@@ -332,9 +335,7 @@ fun ComplexCircleButton(
                     contentDescription = contentDesc,
                     modifier = Modifier.size(size - 20.dp),
                     colorFilter = ColorFilter.tint(
-                        if (active) Color(0xFFDF2FA4) else Color(
-                            0xFF333333
-                        )
+                        if (active) Pink10 else DarkGrey10
                     )
                 )
             }

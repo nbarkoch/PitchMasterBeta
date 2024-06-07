@@ -15,13 +15,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
+import com.example.pitchmasterbeta.ui.theme.DynamicGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
+import com.example.pitchmasterbeta.ui.theme.PurpleDark10
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -46,14 +46,6 @@ fun WorkspaceSurface(
         }
     }
 
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF403C63),
-            color.value.copy(alpha = 0.05f),
-            Color(0xFF121314),
-        ),
-    )
-
 
     // Create or retrieve the ViewModel associated with the ViewModelStore
     WorkspaceBackHandler()
@@ -64,8 +56,8 @@ fun WorkspaceSurface(
             modifier = modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .background(color = Color(0xFF2E265E))
-                .background(brush = gradientBrush)
+                .background(color = PurpleDark10)
+                .background(brush = DynamicGradientBrush(color.value))
         )
         {
             BackgroundMic()

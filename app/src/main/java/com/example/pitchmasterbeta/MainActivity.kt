@@ -80,7 +80,6 @@ class MainActivity : ComponentActivity() {
 
         fun getAuthViewModel(): AuthViewModel {
             if (isPreview) {
-                // viewModel.mockupLyrics()
                 return AuthViewModel()
             }
             return viewModelProvider[AuthViewModel::class.java]

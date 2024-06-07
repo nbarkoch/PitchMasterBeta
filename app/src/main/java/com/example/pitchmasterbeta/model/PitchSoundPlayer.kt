@@ -1,6 +1,11 @@
 package com.example.pitchmasterbeta.model
 
 import androidx.compose.ui.graphics.Color
+import com.example.pitchmasterbeta.ui.theme.Green10
+import com.example.pitchmasterbeta.ui.theme.GreenGrey10
+import com.example.pitchmasterbeta.ui.theme.Pink10
+import com.example.pitchmasterbeta.ui.theme.PinkLight10
+import com.example.pitchmasterbeta.ui.theme.Red10
 import kotlin.math.floor
 import kotlin.math.sin
 
@@ -446,11 +451,11 @@ class PitchSoundPlayer(private val sampleRate: Int, duration: Int) {
 
 
 val colorMap = hashMapOf(
-    AudioProcessor.NotesSimilarity.Idle to Color(0xFFdd308f),
-    AudioProcessor.NotesSimilarity.Neutral to Color(0xFFE44EA0),
-    AudioProcessor.NotesSimilarity.Close to Color(0xff7dab52),
-    AudioProcessor.NotesSimilarity.Equal to Color(0xFF27D57B),
-    AudioProcessor.NotesSimilarity.Wrong to Color(0xffd52737)
+    AudioProcessor.NotesSimilarity.Idle to Pink10,
+    AudioProcessor.NotesSimilarity.Neutral to PinkLight10,
+    AudioProcessor.NotesSimilarity.Close to GreenGrey10,
+    AudioProcessor.NotesSimilarity.Equal to Green10,
+    AudioProcessor.NotesSimilarity.Wrong to Red10
 )
 
 fun getColor(notesSimilarity: AudioProcessor.NotesSimilarity?): Color {

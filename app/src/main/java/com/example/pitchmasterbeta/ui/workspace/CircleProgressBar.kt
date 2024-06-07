@@ -18,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
@@ -26,6 +25,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.pitchmasterbeta.R
+import com.example.pitchmasterbeta.ui.theme.Pink10
+import com.example.pitchmasterbeta.ui.theme.PinkDark10
+import com.example.pitchmasterbeta.ui.theme.PinkLight10
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -115,19 +117,19 @@ fun CircleProgressbarButton(
         handleCenter = Offset(x, y)
 
         drawCircle(
-            color = Color(0xFF69357C).copy(alpha = 0.40f),
+            color = PinkDark10.copy(alpha = 0.40f),
             style = Stroke(10f),
             radius = radius
         )
         drawArc(
-            color = Color(0xFFDF2FA4),
+            color = Pink10,
             startAngle = 0f,
             sweepAngle = angle.toFloat(),
             useCenter = false,
             style = Stroke(10f)
         )
         if (isDragged) {
-            drawCircle(color = Color(0xFFDF40A9), center = handleCenter, radius = 7.5f)
+            drawCircle(color = PinkLight10, center = handleCenter, radius = 7.5f)
         }
     }
 }

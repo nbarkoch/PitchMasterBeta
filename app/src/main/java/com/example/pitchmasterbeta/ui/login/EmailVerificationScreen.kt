@@ -1,9 +1,5 @@
 package com.example.pitchmasterbeta.ui.login
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalFocusManager
@@ -43,8 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
+import com.example.pitchmasterbeta.ui.login.components.LoadingOverlay
 import com.example.pitchmasterbeta.ui.login.components.OTPTextField
+import com.example.pitchmasterbeta.ui.theme.MainGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
+import com.example.pitchmasterbeta.ui.theme.PurpleLight10
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -91,14 +89,6 @@ fun EmailVerificationScreen(
         })
     }
 
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF403C63),
-            Color(0xFF2E265E),
-            Color(0xFF121314),
-        ),
-    )
-
     LaunchedEffect(somethingIsWrong) {
         if (somethingIsWrong) {
             withContext(Dispatchers.Main) {
@@ -115,7 +105,7 @@ fun EmailVerificationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = gradientBrush)
+            .background(brush = MainGradientBrush)
             .padding(10.dp)
     ) {
         Column(
@@ -146,7 +136,7 @@ fun EmailVerificationScreen(
                 )
             }
 
-            Text(textAlign = TextAlign.Center, text = emailToVerify, color = Color(0xFFD59EFD))
+            Text(textAlign = TextAlign.Center, text = emailToVerify, color = PurpleLight10)
             Spacer(modifier = Modifier.height(20.dp))
             Text(
                 textAlign = TextAlign.Center,
@@ -201,7 +191,7 @@ fun EmailVerificationScreen(
                     },
                     text = "Send Verification Code Again",
                     fontSize = 14.sp,
-                    color = Color(0xFFD59EFD),
+                    color = PurpleLight10,
                     fontWeight = FontWeight.W700,
                     textDecoration = TextDecoration.Underline
                 )
@@ -226,23 +216,7 @@ fun EmailVerificationScreen(
         }
 
     }
-    AnimatedVisibility(
-        visible = loading,
-        enter = fadeIn(animationSpec = tween(1000)),
-        exit = fadeOut(animationSpec = tween(1000))
-    ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color(0xC8AC90E0)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Please Wait..", color = Color.White,
-                fontSize = 20.sp, fontWeight = FontWeight.W700
-            )
-        }
-    }
+    LoadingOverlay(loading)
 }
 
 @Preview(showBackground = true)

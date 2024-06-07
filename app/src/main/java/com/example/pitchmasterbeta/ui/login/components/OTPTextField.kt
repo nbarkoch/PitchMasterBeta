@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.pitchmasterbeta.ui.theme.PurpleDarkWeak10
 
 @Composable
 fun OTPTextField(
@@ -67,7 +68,7 @@ fun OTPTextField(
                         .border(
                             border = BorderStroke(
                                 width = 1.dp,
-                                color = if (hasError) Color.Red else weakColor
+                                color = if (hasError) Color.Red else PurpleDarkWeak10
                             ),
                             shape = RoundedCornerShape(12.dp),
                         )
@@ -75,7 +76,7 @@ fun OTPTextField(
                 ) {
                     if (isHolder) {
                         Text(
-                            textAlign = TextAlign.Center, text = "*", color = weakColor
+                            textAlign = TextAlign.Center, text = "*", color = PurpleDarkWeak10
                         )
                     } else {
                         Text(

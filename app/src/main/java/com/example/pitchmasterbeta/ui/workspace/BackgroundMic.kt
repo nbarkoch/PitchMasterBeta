@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.R
+import com.example.pitchmasterbeta.ui.theme.Blue10
+import com.example.pitchmasterbeta.ui.theme.Pink10
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import kotlinx.coroutines.delay
 import kotlin.random.Random
@@ -124,7 +126,7 @@ fun BubbleAnimation(active: Boolean) {
     LaunchedEffect(active) {
         while (active) {
             delay((500..16000).random().toLong())
-            color = getRandomColorFromGradient(Color(0xFFdd308f), Color(0xFF3834C0))
+            color = getRandomColorFromGradient(Pink10, Blue10)
             bubbleSizeDp = (screenWidthDp.toInt() / 2..screenWidthDp.toInt()).random().dp
             val halfBubbleSize = bubbleSizeDp.value.toInt() / 2
             initialX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()

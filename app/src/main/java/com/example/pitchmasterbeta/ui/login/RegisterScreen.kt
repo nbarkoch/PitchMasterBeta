@@ -1,9 +1,5 @@
 package com.example.pitchmasterbeta.ui.login
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -45,7 +40,10 @@ import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.MainActivity.Companion.getAuthViewModel
 import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.login.components.AuthOutlinedTextField
+import com.example.pitchmasterbeta.ui.login.components.LoadingOverlay
+import com.example.pitchmasterbeta.ui.theme.MainGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
+import com.example.pitchmasterbeta.ui.theme.PurpleLight10
 
 @Composable
 fun RegisterScreen(
@@ -62,14 +60,6 @@ fun RegisterScreen(
             it.length < maxLength && !(noSpacing && it.isNotEmpty() && it.last() == ' ')
         }
 
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF403C63),
-            Color(0xFF2E265E),
-            Color(0xFF121314),
-        ),
-    )
-
     var userName by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -85,7 +75,7 @@ fun RegisterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = gradientBrush)
+            .background(brush = MainGradientBrush)
             .padding(10.dp)
     ) {
         Column(
@@ -201,7 +191,7 @@ fun RegisterScreen(
                         },
                         text = "Login Now",
                         fontSize = 14.sp,
-                        color = Color(0xFFD59EFD),
+                        color = PurpleLight10,
                         fontWeight = FontWeight.W700,
                         textDecoration = TextDecoration.Underline
                     )
@@ -236,23 +226,7 @@ fun RegisterScreen(
             }
         }
     }
-    AnimatedVisibility(
-        visible = loading,
-        enter = fadeIn(animationSpec = tween(1000)),
-        exit = fadeOut(animationSpec = tween(1000))
-    ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color(0xC8AC90E0)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Please Wait..", color = Color.White,
-                fontSize = 20.sp, fontWeight = FontWeight.W700
-            )
-        }
-    }
+    LoadingOverlay(loading)
 }
 
 @Preview(showBackground = true)

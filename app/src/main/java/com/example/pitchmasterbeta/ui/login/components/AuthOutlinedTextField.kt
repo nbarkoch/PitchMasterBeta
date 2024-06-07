@@ -17,8 +17,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-val weakColor = Color(0xFF5C519C)
+import com.example.pitchmasterbeta.ui.theme.PurpleDark10
+import com.example.pitchmasterbeta.ui.theme.PurpleDarkWeak10
 
 @Composable
 fun AuthOutlinedTextField(
@@ -37,13 +37,13 @@ fun AuthOutlinedTextField(
             fontSize = 18.sp
         ),
         shape = MaterialTheme.shapes.small,
-        placeholder = { Text(placeHolder, color = weakColor) },
+        placeholder = { Text(placeHolder, color = PurpleDarkWeak10) },
         colors = TextFieldDefaults.outlinedTextFieldColors(
             focusedBorderColor = Color.White,
-            unfocusedBorderColor = weakColor,
+            unfocusedBorderColor = PurpleDarkWeak10,
             cursorColor = Color.White,
             textColor = Color.White,
-            backgroundColor = Color(0xFF2E265E),
+            backgroundColor = PurpleDark10,
             disabledBorderColor = Color.Gray,
             disabledLabelColor = Color.Gray,
             disabledPlaceholderColor = Color.Gray,

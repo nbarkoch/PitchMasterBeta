@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
@@ -29,22 +28,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
+import com.example.pitchmasterbeta.ui.theme.MainGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
+import com.example.pitchmasterbeta.ui.theme.PurpleLight10
 
 @Composable
 fun RegistrationSuccessScreen(navigateToLoginScreen: () -> Unit = {}) {
-
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF403C63),
-            Color(0xFF2E265E),
-            Color(0xFF121314),
-        ),
-    )
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = gradientBrush)
+            .background(brush = MainGradientBrush)
             .padding(10.dp)
     ) {
         Column(
@@ -86,7 +79,7 @@ fun RegistrationSuccessScreen(navigateToLoginScreen: () -> Unit = {}) {
                 },
                 text = "Log In",
                 fontSize = 17.sp,
-                color = Color(0xFFD59EFD),
+                color = PurpleLight10,
                 fontWeight = FontWeight.W700,
                 textDecoration = TextDecoration.Underline
             )

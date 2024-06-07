@@ -25,6 +25,7 @@ import com.example.pitchmasterbeta.model.StudioSharedPreferences.KaraokeRef
 import com.example.pitchmasterbeta.model.VocalAudioDispatcher
 import com.example.pitchmasterbeta.model.getColor
 import com.example.pitchmasterbeta.services.SpleeterService
+import com.example.pitchmasterbeta.ui.theme.Pink10
 import com.example.pitchmasterbeta.utils.Mocks
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -222,7 +223,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
     private val _similarity = MutableStateFlow(AudioProcessor.NotesSimilarity.Idle)
 
-    private val _similarityColor = MutableStateFlow(Color(0xFFdd308f))
+    private val _similarityColor = MutableStateFlow(Pink10)
     val similarityColor: StateFlow<Color> = _similarityColor
 
     private val _displaySingerVolume = MutableStateFlow(false)
@@ -485,7 +486,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _sinNoteActive.value = false
         _recordSaved.value = false
         _similarity.value = AudioProcessor.NotesSimilarity.Idle
-        _similarityColor.value = Color(0xFFdd308f)
+        _similarityColor.value = Pink10
         try {
             resetDispatchers()
             resetStreams()

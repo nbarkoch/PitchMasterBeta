@@ -1,7 +1,10 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -41,27 +44,31 @@ import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 
+
 @Composable
 fun PitchDecorations(
     chordHeight: Dp = 14.dp,
-    maxChordWidth: Dp = 30.dp
+    maxChordWidth: Dp = 30.dp,
+    pitchItemWidth: Dp = 9.dp
 ) {
     val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
     val numOfItems = (screenHeightDp.dp / chordHeight).toInt()
-    PitchDecorationColumn(viewModel, 1, maxChordWidth, numOfItems, chordHeight)
+    PitchDecorationColumn(viewModel, 1, maxChordWidth, numOfItems, chordHeight, pitchItemWidth)
 
-    PitchDecorationColumn(viewModel, -1, maxChordWidth, numOfItems, chordHeight)
+    PitchDecorationColumn(viewModel, -1, maxChordWidth, numOfItems, chordHeight, pitchItemWidth)
 }
 
 @Composable
 fun PitchDecorationColumn(
     viewModel: WorkspaceViewModel,
     direction: Int,
-    maxChordWidth: Dp, numOfItems: Int, chordHeight: Dp
+    maxChordWidth: Dp, numOfItems: Int, chordHeight: Dp, pitchItemWidth: Dp
 ) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
     val colorState = viewModel.similarityColor.collectAsState()
+    val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
+
     val color =
         animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(300))
 
@@ -84,20 +91,33 @@ fun PitchDecorationColumn(
             .scale(scaleX = -1f, scaleY = 1f)
     } else baseModifier)
 
-    Box(modifier = modifier.background(brush = gradientBrush)) {
-        repeat(numOfItems) { i ->
-            PitchItem(
-                modifier = Modifier
-                    .width(10.dp)
-                    .padding(0.dp, 3.dp)
-                    .offset(x = 0.dp, y = i * chordHeight),
-                color = color.value,
-                chordHeight = chordHeight - 6.dp,
-            )
-        }
-        LazyWindowScroller(viewModel, direction, chordHeight, numOfItems)
-    }
 
+
+    AnimatedVisibility(
+        visible = workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE,
+        enter = slideInHorizontally(
+            initialOffsetX = { direction * -it },
+            animationSpec = tween(durationMillis = 300)
+        ),
+        exit = slideOutHorizontally(
+            targetOffsetX = { direction * -it },
+            animationSpec = tween(durationMillis = 300)
+        )
+    ) {
+        Box(modifier = modifier.background(brush = gradientBrush)) {
+            repeat(numOfItems) { i ->
+                PitchItem(
+                    modifier = Modifier
+                        .width(pitchItemWidth)
+                        .padding(0.dp, 3.dp)
+                        .offset(x = 0.dp, y = i * chordHeight),
+                    color = color.value,
+                    chordHeight = chordHeight - 6.dp,
+                )
+            }
+            LazyWindowScroller(viewModel, direction, chordHeight, numOfItems, pitchItemWidth)
+        }
+    }
 }
 
 @Composable
@@ -106,6 +126,7 @@ fun LazyWindowScroller(
     direction: Int,
     chordHeight: Dp,
     numOfItems: Int,
+    pitchItemWidth: Dp,
 ) {
     val localDensity = LocalDensity.current
     val scrollState = rememberLazyListState()
@@ -151,8 +172,8 @@ fun LazyWindowScroller(
                         val offsetFromMidpoint =
                             currentItemInfo.offset + (currentItemInfo.size / 2) - currentMidpoint
                         val scalingFactor =
-                            (1f - minOf(1f, abs(offsetFromMidpoint) / currentMidpoint) * 0.75f)
-                        scalingFactor * 3f * note.value.volume
+                            (1f - minOf(1f, abs(offsetFromMidpoint) / currentMidpoint))
+                        scalingFactor * 3.5f * note.value.volume
                     } else {
                         0f
                     }
@@ -160,7 +181,7 @@ fun LazyWindowScroller(
             }
             PitchItem(
                 modifier = Modifier
-                    .width(scaleX * 10.dp)
+                    .width(scaleX * pitchItemWidth)
                     .padding(0.dp, 3.dp),
                 color = color.value,
                 chordHeight = chordHeight - 6.dp
@@ -169,7 +190,11 @@ fun LazyWindowScroller(
     }
     LaunchedEffect(note.value.noteF) {
         snapshotFlow { note.value.noteF }
-            .collectLatest { scrollState.animateScrollToItem((it * items.size).toInt()) }
+            .collectLatest {
+                scrollState.animateScrollToItem(
+                    (it * items.size).toInt(),
+                )
+            }
     }
 }
 
@@ -208,13 +233,15 @@ fun PitchDecorationsPreview() {
     val screenHeightDp = LocalConfiguration.current.screenHeightDp
     val chordHeight: Dp = 14.dp
     val maxChordWidth: Dp = 30.dp
+    val pitchItemWidth: Dp = 10.dp
     PitchMasterBetaTheme {
         PitchDecorationColumn(
             viewModel = viewModelDummy,
             direction = 1,
             maxChordWidth = maxChordWidth,
             numOfItems = (screenHeightDp.dp / chordHeight).toInt(),
-            chordHeight = chordHeight
+            chordHeight = chordHeight,
+            pitchItemWidth = pitchItemWidth
         )
     }
 }
