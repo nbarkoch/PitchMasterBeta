@@ -1,6 +1,7 @@
 package com.example.pitchmasterbeta.ui.login
 
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,15 +20,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
+import com.example.pitchmasterbeta.ui.login.components.MainTitle
 import com.example.pitchmasterbeta.ui.theme.MainGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.theme.PurpleLight10
@@ -45,20 +47,13 @@ fun RegistrationSuccessScreen(navigateToLoginScreen: () -> Unit = {}) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                Modifier
-                    .padding(top = 75.dp, bottom = 20.dp)
-                    .padding(10.dp)
-                    .align(Alignment.CenterHorizontally)
-            ) {
-                Text(
-                    text = "Registration Success",
-                    color = Color.White,
-                    fontSize = 23.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.W700
-                )
-            }
+            MainTitle(
+                Modifier.padding(
+                    top = if (LocalConfiguration.current.orientation
+                        == Configuration.ORIENTATION_PORTRAIT
+                    ) 50.dp else 0.dp
+                ), text = "Registration Success"
+            )
             Box(Modifier.padding(20.dp)) {
                 Image(
                     painterResource(id = R.drawable.success_icon_big_outline),

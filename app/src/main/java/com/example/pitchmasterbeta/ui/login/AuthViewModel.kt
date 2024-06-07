@@ -12,8 +12,10 @@ import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationDetails
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ForgotPasswordContinuation
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.ForgotPasswordHandler
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.GenericHandler
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.VerificationHandler
@@ -88,6 +90,7 @@ class AuthViewModel : ViewModel() {
             })
         } catch (e: Exception) {
             e.printStackTrace()
+            onFailure("Something went wrong")
         }
     }
 
@@ -110,6 +113,7 @@ class AuthViewModel : ViewModel() {
         MISSING_NUMBERS,
         MISSING_UPPER_CASE,
         MISSING_LOWER_CASE,
+        PASSWORDS_DOES_NOT_MATCH
     }
 
 //    enum class UsernameReasoning {
@@ -144,7 +148,7 @@ class AuthViewModel : ViewModel() {
         return newValidation
     }
 
-    fun isPasswordValid(password: String): List<String> {
+    fun isPasswordValid(password: String, confirmedPassword: String): List<String> {
         val passwordValidationStackDraft = ArrayList<PasswordReasoning>()
         if (password.isEmpty()) {
             return emptyList()
@@ -165,6 +169,9 @@ class AuthViewModel : ViewModel() {
         if (!Pattern.compile("^(?=.*[a-z]).+\$").matcher(password).matches()) {
             passwordValidationStackDraft.add(PasswordReasoning.MISSING_LOWER_CASE)
         }
+        if (confirmedPassword.isNotEmpty() && password != confirmedPassword) {
+            passwordValidationStackDraft.add(PasswordReasoning.PASSWORDS_DOES_NOT_MATCH)
+        }
 
         val passwordErrorStackDraft = passwordValidationStackDraft.map {
             when (it) {
@@ -172,6 +179,7 @@ class AuthViewModel : ViewModel() {
                 PasswordReasoning.MISSING_NUMBERS -> "Password should have at least 1 digit"
                 PasswordReasoning.MISSING_UPPER_CASE -> "Password should have at least 1 upper case letter"
                 PasswordReasoning.MISSING_LOWER_CASE -> "Password should have at least 1 lower case letter"
+                PasswordReasoning.PASSWORDS_DOES_NOT_MATCH -> "Passwords doesn't match"
             }
         }
 
@@ -262,5 +270,48 @@ class AuthViewModel : ViewModel() {
         user.resendConfirmationCodeInBackground(resendConfirmationHandler)
     }
 
+    private fun startForgotPassword(username: String) {
+        val user = userPool.getUser(username)
+        user.forgotPasswordInBackground(object : ForgotPasswordHandler {
+            override fun onSuccess() {
+                // Handle success, the verification code was sent successfully
+                Log.d("ForgotPassword", "Verification code sent successfully")
+                // Proceed to UI to allow user to enter verification code and new password
+            }
+
+            override fun getResetCode(continuation: ForgotPasswordContinuation?) {
+                //
+            }
+
+            override fun onFailure(e: Exception?) {
+                // Handle failure
+                Log.e("ForgotPassword", "Error initiating forgot password", e)
+            }
+        })
+    }
+
+    private fun confirmNewPassword(
+        username: String,
+        verificationCode: String,
+        newPassword: String
+    ) {
+        val user = userPool.getUser(username)
+        user.confirmPassword(verificationCode, newPassword, object : ForgotPasswordHandler {
+            override fun onSuccess() {
+                // Handle success, the password was reset successfully
+                Log.d("ForgotPassword", "Password reset successfully")
+                // Proceed to login or other screen
+            }
+
+            override fun getResetCode(continuation: ForgotPasswordContinuation?) {
+                //
+            }
+
+            override fun onFailure(e: Exception?) {
+                // Handle failure
+                Log.e("ForgotPassword", "Error resetting password", e)
+            }
+        })
+    }
 
 }

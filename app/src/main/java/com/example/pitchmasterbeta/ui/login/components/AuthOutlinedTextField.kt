@@ -1,6 +1,7 @@
 package com.example.pitchmasterbeta.ui.login.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,11 +16,19 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.theme.PurpleDark10
 import com.example.pitchmasterbeta.ui.theme.PurpleDarkWeak10
+import com.example.pitchmasterbeta.ui.theme.PurpleLight10
 
+data class TextVisibilityProps(
+    val textVisible: Boolean = true,
+    val onVisibleIconClick: (Boolean) -> Unit,
+)
 @Composable
 fun AuthOutlinedTextField(
     placeHolder: String,
@@ -27,6 +36,7 @@ fun AuthOutlinedTextField(
     leadingIconResourceId: Int,
     isError: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
+    visibilityProps: TextVisibilityProps? = null,
     onValueChange: (String) -> Unit,
 ) {
     OutlinedTextField(
@@ -49,6 +59,7 @@ fun AuthOutlinedTextField(
             disabledPlaceholderColor = Color.Gray,
             disabledTextColor = Color.Gray
         ),
+        visualTransformation = if (visibilityProps?.textVisible != false) VisualTransformation.None else PasswordVisualTransformation(),
         leadingIcon = {
             Image(
                 painterResource(id = leadingIconResourceId),
@@ -61,6 +72,18 @@ fun AuthOutlinedTextField(
             keyboardType = keyboardType
         ),
         singleLine = true,
-        isError = isError
+        isError = isError,
+        trailingIcon = {
+            if (visibilityProps != null) {
+                Image(
+                    painterResource(id = if (visibilityProps.textVisible) R.drawable.outlined_visibility_eye else R.drawable.off_outlined_visibility),
+                    contentDescription = if (visibilityProps.textVisible) "Hide password" else "Show password",
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clickable { visibilityProps.onVisibleIconClick(!visibilityProps.textVisible) },
+                    colorFilter = ColorFilter.tint(PurpleLight10)
+                )
+            }
+        }
     )
 }

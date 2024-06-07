@@ -1,21 +1,18 @@
 package com.example.pitchmasterbeta.ui.login
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -39,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.login.components.LoadingOverlay
+import com.example.pitchmasterbeta.ui.login.components.MainFooterButton
+import com.example.pitchmasterbeta.ui.login.components.MainTitle
 import com.example.pitchmasterbeta.ui.login.components.OTPTextField
 import com.example.pitchmasterbeta.ui.theme.MainGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
@@ -76,6 +76,8 @@ fun EmailVerificationScreen(
     }
 
     val onVerificationCodeEntered = { code: String ->
+        verificationSpecialMessage = ""
+        somethingIsWrong = false
         loading = true
         focusManager.clearFocus()
         keyboardController?.hide()
@@ -87,6 +89,32 @@ fun EmailVerificationScreen(
             verificationSpecialMessage = "Wrong code has entered, try again.."
             loading = false
         })
+    }
+
+    val resendVerificationToEmail = {
+        viewModel.resendVerificationToEmail(username, onCompletion = {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            verificationSpecialMessage =
+                "We sent you another verification code,\n check it out!"
+            somethingIsWrong = false
+            verificationCode = ""
+        }, onFailure = {
+            verificationSpecialMessage =
+                "Something went wrong, Please try again"
+            somethingIsWrong = true
+        })
+    }
+
+    val onCodeTextInputChanged: (String) -> Unit = {
+        verificationCode = it
+        if (verificationSpecialMessage.isNotEmpty()) {
+            verificationSpecialMessage = ""
+            somethingIsWrong = false
+        }
+        if (it.length == otpLength) {
+            onVerificationCodeEntered(it)
+        }
     }
 
     LaunchedEffect(somethingIsWrong) {
@@ -102,6 +130,8 @@ fun EmailVerificationScreen(
         }
     }
 
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -113,110 +143,83 @@ fun EmailVerificationScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                Modifier
-                    .padding(top = 75.dp, bottom = 20.dp)
-                    .padding(10.dp)
-                    .align(Alignment.CenterHorizontally)
-            ) {
+            if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                MainTitle(Modifier.padding(top = 50.dp), text = "Verify Your Email")
+                PaperPlaneImage()
+                Text(textAlign = TextAlign.Center, text = emailToVerify, color = PurpleLight10)
+                Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Verify Your Email",
-                    color = Color.White,
-                    fontSize = 23.sp,
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.W700
+                    text = "To complete the registration\nyou'll need to verify your email address",
+                    color = Color.White
+                )
+            } else {
+                MainTitle(text = "Verify Your Email")
+                Text(textAlign = TextAlign.Center, text = emailToVerify, color = PurpleLight10)
+                Text(
+                    textAlign = TextAlign.Center,
+                    text = "To complete the registration you'll need to verify your email address",
+                    color = Color.White
                 )
             }
-            Box(Modifier.padding(20.dp)) {
-                Image(
-                    painterResource(id = R.drawable.paper_plane_icon_big_outline),
-                    contentDescription = "paper plane icon",
-                    modifier = Modifier.size(60.dp),
-                    colorFilter = ColorFilter.tint(Color.White)
-                )
-            }
-
-            Text(textAlign = TextAlign.Center, text = emailToVerify, color = PurpleLight10)
-            Spacer(modifier = Modifier.height(20.dp))
-            Text(
-                textAlign = TextAlign.Center,
-                text = "To complete the registration\nyou'll need to verify your email address",
-                color = Color.White
-            )
             Spacer(modifier = Modifier.height(20.dp))
             OTPTextField(
-                otp = verificationCode, // Your OTP digits
-                boxSize = 48, // Size of the entire box
-                digitSize = 40, // Size of each digit box
-                digitSpacing = 8, // Spacing between digits,
+                otp = verificationCode,
+                boxSize = 48,
+                digitSize = 40,
+                digitSpacing = 8,
                 otpLength = otpLength,
-                hasError = redEnv
-            ) {
-                verificationCode = it
-                if (verificationSpecialMessage.isNotEmpty()) {
-                    verificationSpecialMessage = ""
-                    somethingIsWrong = false
-                }
-                if (it.length == otpLength) {
-                    onVerificationCodeEntered(it)
-                }
-            }
-
-            Text(
-                textAlign = TextAlign.Center,
-                text = verificationSpecialMessage,
-                color = if (somethingIsWrong) Color.Red else Color.White
+                hasError = redEnv,
+                onTextChanged = onCodeTextInputChanged,
             )
-
-            Spacer(modifier = Modifier.weight(1f))
-            Box(
-                Modifier
-                    .padding(vertical = 25.dp, horizontal = 10.dp)
-                    .align(Alignment.CenterHorizontally)
-            ) {
+            if (verificationSpecialMessage.isNotEmpty()) {
                 Text(
-                    modifier = Modifier.clickable {
-                        viewModel.resendVerificationToEmail(username, onCompletion = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                            verificationSpecialMessage =
-                                "We sent you another verification code,\n check it out!"
-                            somethingIsWrong = false
-                            verificationCode = ""
-                        }, onFailure = {
-                            verificationSpecialMessage =
-                                "Something went wrong resending another verification code"
-                            somethingIsWrong = true
-                        })
-                    },
-                    text = "Send Verification Code Again",
-                    fontSize = 14.sp,
-                    color = PurpleLight10,
-                    fontWeight = FontWeight.W700,
-                    textDecoration = TextDecoration.Underline
+                    textAlign = TextAlign.Center,
+                    text = verificationSpecialMessage,
+                    color = if (somethingIsWrong) Color.Red else Color.White
                 )
             }
-
-            Button(colors = ButtonDefaults.buttonColors(
-                Color.White, disabledContainerColor = Color.LightGray
-            ),
-                enabled = verificationCode.length == otpLength,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 15.dp),
-                onClick = {
-                    onVerificationCodeEntered(verificationCode)
-                }) {
-                Text(
-                    text = "CONFIRM", color = Color.Black,
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                )
+            Spacer(modifier = Modifier.weight(1f))
+            SimpleBaseButton(
+                modifier = Modifier
+                    .padding(bottom = 20.dp)
+                    .align(Alignment.CenterHorizontally),
+                text = "Send Verification Code Again",
+                onClick = resendVerificationToEmail
+            )
+            MainFooterButton(text = "CONFIRM", enabled = verificationCode.length == otpLength) {
+                onVerificationCodeEntered(verificationCode)
             }
         }
-
     }
     LoadingOverlay(loading)
+}
+
+
+@Composable
+fun PaperPlaneImage() {
+    Box(Modifier.padding(20.dp)) {
+        Image(
+            painterResource(id = R.drawable.paper_plane_icon_big_outline),
+            contentDescription = "paper plane icon",
+            modifier = Modifier.size(60.dp),
+            colorFilter = ColorFilter.tint(Color.White)
+        )
+    }
+}
+
+@Composable
+fun SimpleBaseButton(modifier: Modifier, text: String, onClick: () -> Unit) {
+    Box(modifier) {
+        Text(
+            modifier = Modifier.clickable(onClick = onClick),
+            text = text,
+            fontSize = 14.sp,
+            color = PurpleLight10,
+            fontWeight = FontWeight.W700,
+            textDecoration = TextDecoration.Underline
+        )
+    }
 }
 
 @Preview(showBackground = true)

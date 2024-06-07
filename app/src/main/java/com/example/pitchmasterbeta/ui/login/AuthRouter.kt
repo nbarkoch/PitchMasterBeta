@@ -30,6 +30,7 @@ fun AuthRouter(navigateToWorkspace: (String) -> Unit = {}) {
             RegisterScreen(navigateToLoginScreen = {
                 navigateWithPopUpTo(LoginScreenIntro, RegisterScreenIntro)
             }, navigateToVerificationScreen = { email, userName ->
+                navController.navigate(LoginScreenIntro)
                 navController.navigate(EmailVerificationIntro(email, userName))
             })
         }
