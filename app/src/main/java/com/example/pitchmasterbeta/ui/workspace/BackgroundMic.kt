@@ -1,15 +1,10 @@
 package com.example.pitchmasterbeta.ui.workspace
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -23,18 +18,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
-import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.theme.Blue10
 import com.example.pitchmasterbeta.ui.theme.Pink10
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
@@ -43,31 +35,6 @@ import kotlin.random.Random
 
 @Composable
 fun BackgroundMic() {
-    val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
-    val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
-
-    AnimatedVisibility(
-        visible = workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE,
-        enter = slideInVertically(
-            initialOffsetY = { it },
-            animationSpec = tween(durationMillis = 300)
-        ),
-        exit = slideOutVertically(
-            targetOffsetY = { it },
-            animationSpec = tween(durationMillis = 300)
-        ),
-        modifier = Modifier
-            .fillMaxSize()
-            .alpha(0.15f)
-            .offset(y = 70.dp)
-    ) {
-        Image(
-            modifier = Modifier.fillMaxSize(),
-            alignment = Alignment.BottomCenter,
-            painter = painterResource(id = R.drawable.image_smic_bg),
-            contentDescription = ""
-        )
-    }
     BubbleMaker()
 }
 
@@ -88,7 +55,6 @@ fun BubbleAnimation(active: Boolean) {
     val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp.value
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp.value
     var bubbleSizeDp by remember { mutableStateOf(50.dp) }
-    var bubbleOpacity by remember { mutableFloatStateOf(0.6f) }
     var duration by remember { mutableIntStateOf(3000) }
     var isVisible by remember { mutableStateOf(false) }
     var initialX by remember {
@@ -132,7 +98,6 @@ fun BubbleAnimation(active: Boolean) {
             initialX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()
             targetX = (-halfBubbleSize..screenWidthDp.toInt() - halfBubbleSize).random().toFloat()
             duration = (7000..9000).random()
-            bubbleOpacity = Random.nextDouble(0.1, 0.2).toFloat()
             initialY = screenHeightDp + (0..1).random()
             targetY = -bubbleSizeDp.value + (0..1).random()
             isVisible = true
@@ -154,7 +119,7 @@ fun BubbleAnimation(active: Boolean) {
         modifier = Modifier
             .offset(x = x.dp, y = y.dp)
             .size(bubbleSizeDp)
-            .alpha(if (isVisible) bubbleOpacity else 0f)
+            .alpha(if (isVisible) 0.1f else 0f)
             .background(brush = brush, shape = CircleShape)
     )
 

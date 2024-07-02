@@ -13,13 +13,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.ui.theme.DynamicGradientBrush
+import com.example.pitchmasterbeta.ui.theme.FooterGradientBrush
+import com.example.pitchmasterbeta.ui.theme.HeaderGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.theme.PurpleDark10
 import kotlinx.coroutines.delay
@@ -35,6 +39,8 @@ fun WorkspaceSurface(
     val colorState = viewModel.similarityColor.collectAsState()
     val color =
         animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(300))
+    val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
+    val similarity = viewModel.similarity.collectAsState()
 
     LaunchedEffect(snackbarEvent) {
         snackbarEvent?.let {
@@ -54,26 +60,33 @@ fun WorkspaceSurface(
     ) { innerPadding ->
         Box(
             modifier = modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .background(color = PurpleDark10)
                 .background(brush = DynamicGradientBrush(color.value))
+                .padding(innerPadding)
         )
         {
             BackgroundMic()
             WorkspaceBody(Modifier.fillMaxSize())
             WorkspaceFooter(
                 Modifier
+                    .background(FooterGradientBrush)
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
+                    .padding(bottom = 10.dp)
             )
             WorkspaceHeader(
                 Modifier
+                    .background(HeaderGradientBrush)
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
+                    .padding(top = 20.dp)
             )
-            PitchDecorations()
         }
+        AudioVisualizerScreen(
+            isVisible = workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE,
+            similarity = similarity.value
+        )
     }
 
 }

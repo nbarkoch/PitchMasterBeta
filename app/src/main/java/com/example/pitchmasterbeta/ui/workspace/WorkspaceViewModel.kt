@@ -83,7 +83,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val lyricsSegments: StateFlow<List<LyricsTimestampedSegment>> = _lyricsSegments
 
     fun mockupLyrics() {
-        _lyricsSegments.value = Mocks.extractData(Mocks.DIFFERENT_LOVE)
+        _lyricsSegments.value = Mocks.extractData(Mocks.ROZ)
     }
 
     enum class WorkspaceState {
@@ -222,6 +222,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val progress: StateFlow<Float> = _progress
 
     private val _similarity = MutableStateFlow(AudioProcessor.NotesSimilarity.Idle)
+    val similarity: StateFlow<AudioProcessor.NotesSimilarity> = _similarity
 
     private val _similarityColor = MutableStateFlow(Pink10)
     val similarityColor: StateFlow<Color> = _similarityColor
@@ -436,6 +437,12 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         microphoneAudioDispatcher?.pause()
         musicAudioDispatcher?.pause()
         setPlayingState(PlayerState.PAUSE)
+    }
+
+    fun onMoveToBackground() {
+        if (_playingState.value == PlayerState.PLAYING) {
+            pauseAudioDispatchers()
+        }
     }
 
     fun continueAudioDispatchers() {

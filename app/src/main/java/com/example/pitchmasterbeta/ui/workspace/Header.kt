@@ -50,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
@@ -94,14 +93,6 @@ fun WorkspaceHeader(
         }
     )
 
-    val gradientBrush = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFF132152),
-            Color(0x750E0D3A),
-            Color.Transparent
-        )
-    )
-
     Box(
         modifier =
         Modifier
@@ -111,9 +102,7 @@ fun WorkspaceHeader(
     )
     if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
         Column(
-            modifier = modifier
-                .background(brush = gradientBrush)
-                .defaultMinSize(minHeight = 200.dp),
+            modifier = modifier.defaultMinSize(minHeight = 200.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             MarqueeText(songFullName.value)

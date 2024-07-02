@@ -83,14 +83,6 @@ fun WorkspaceFooter(
     val showNotificationDialog by rememberUpdatedState(viewModel.showNotificationDialog.collectAsState())
     val showSaveAudioDialog by rememberUpdatedState(viewModel.showSaveAudioDialog.collectAsState())
 
-    val gradientBrush = Brush.verticalGradient(
-        colors = listOf(
-            Color.Transparent,
-            Color(0xFF1E0D3A),
-            Color(0xFF0E0D3A)
-        ),
-    )
-
 
     val loadMusicFromGalleryResultLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -132,7 +124,6 @@ fun WorkspaceFooter(
         }
         Column(
             modifier = modifier
-                .background(gradientBrush)
                 .pointerInput(Unit) { detectTapGestures {} },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

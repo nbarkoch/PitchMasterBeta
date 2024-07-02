@@ -131,6 +131,11 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         handleIntent(intent, isAlive = true)
     }
+
+    override fun onStop() {
+        super.onStop()
+        getWorkspaceViewModel().onMoveToBackground()
+    }
 }
 
 

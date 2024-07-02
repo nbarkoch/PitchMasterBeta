@@ -76,7 +76,7 @@ fun AuthOutlinedTextField(
         trailingIcon = {
             if (visibilityProps != null) {
                 Image(
-                    painterResource(id = if (visibilityProps.textVisible) R.drawable.outlined_visibility_eye else R.drawable.off_outlined_visibility),
+                    painterResource(id = if (visibilityProps.textVisible) R.drawable.off_outlined_visibility else R.drawable.outlined_visibility_eye),
                     contentDescription = if (visibilityProps.textVisible) "Hide password" else "Show password",
                     modifier = Modifier
                         .size(30.dp)

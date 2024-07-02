@@ -34,6 +34,22 @@ val MainGradientBrush = Brush.linearGradient(
     ),
 )
 
+val HeaderGradientBrush = Brush.verticalGradient(
+    colors = listOf(
+        Color(0xFF132152),
+        Color(0x750E0D3A),
+        Color.Transparent
+    )
+)
+
+val FooterGradientBrush = Brush.verticalGradient(
+    colors = listOf(
+        Color.Transparent,
+        Color(0xFF1E0D3A),
+        Color(0xFF0E0D3A)
+    ),
+)
+
 
 val DynamicGradientBrush: (Color) -> Brush = {
     Brush.linearGradient(
