@@ -17,12 +17,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 import com.example.pitchmasterbeta.ui.theme.DynamicGradientBrush
-import com.example.pitchmasterbeta.ui.theme.FooterGradientBrush
 import com.example.pitchmasterbeta.ui.theme.HeaderGradientBrush
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.theme.PurpleDark10
@@ -40,6 +38,7 @@ fun WorkspaceSurface(
     val color =
         animateColorAsState(targetValue = colorState.value, label = "", animationSpec = tween(300))
     val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
+    val playingState by rememberUpdatedState(viewModel.playingState.collectAsState())
     val similarity = viewModel.similarity.collectAsState()
 
     LaunchedEffect(snackbarEvent) {
@@ -70,19 +69,19 @@ fun WorkspaceSurface(
             WorkspaceBody(Modifier.fillMaxSize())
             WorkspaceFooter(
                 Modifier
-                    .background(FooterGradientBrush)
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 10.dp)
+                    .align(Alignment.BottomCenter),
+                workspaceState = workspaceState.value
             )
             WorkspaceHeader(
                 Modifier
                     .background(HeaderGradientBrush)
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .padding(top = 20.dp)
+                    .align(Alignment.TopCenter),
+                workspaceState = workspaceState.value
             )
         }
+        DialogOverlay(playingState.value == WorkspaceViewModel.PlayerState.END)
         AudioVisualizerScreen(
             isVisible = workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE,
             similarity = similarity.value

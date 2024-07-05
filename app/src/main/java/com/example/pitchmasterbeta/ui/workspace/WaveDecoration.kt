@@ -28,7 +28,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -39,7 +41,10 @@ import kotlinx.coroutines.delay
 
 
 val colorOptionsBest = listOf(
-    Color(0xFF00D1FE), Color(0xFF8A2BE2), Color(0xFFE904DB), Color(0xFF1158FF)
+    Color(0xFF00D1FE),
+    Color(0xFF8A2BE2),
+    Color(0xFFF70AE8),
+    Color(0xFF1158FF),
 )
 
 val colorOptionsBad = listOf(
@@ -51,46 +56,56 @@ val colorOptionsIdle = listOf(
 )
 
 val colorOptionsNatural = listOf(
-    Color(0x2ADB11FF)
+    Color(0x61DF2BFF)
 )
 
 val colorOptionsClose = listOf(
     Color(0xFF6100FE), Color(0xFFDB11FF)
 )
 
+fun colorOptions(similarity: AudioProcessor.NotesSimilarity): List<Color> {
+    return when (similarity) {
+        AudioProcessor.NotesSimilarity.Wrong -> colorOptionsBad
+        AudioProcessor.NotesSimilarity.Neutral -> colorOptionsNatural
+        AudioProcessor.NotesSimilarity.Idle -> colorOptionsIdle
+        AudioProcessor.NotesSimilarity.Close -> colorOptionsClose
+        AudioProcessor.NotesSimilarity.Equal -> colorOptionsBest
+    }
+}
+
 @Composable
 fun AnimatedColorBorder(
     modifier: Modifier = Modifier,
     similarity: AudioProcessor.NotesSimilarity,
-    volume: Float
+    volume: Float,
+    leftAudioData: List<Float>,
+    rightAudioData: List<Float>
 ) {
-    val colorCount = 3 // Number of colors in the gradient
+    val colorCountInGradient = 4
 
-    // State to trigger recomposition
     var colorUpdateTrigger by remember { mutableIntStateOf(0) }
-    val colorOptions = remember { mutableStateOf(colorOptionsIdle) }
+
+    val colorOptions = remember { mutableStateOf(colorOptions(similarity)) }
+
+    LaunchedEffect(similarity) {
+        colorOptions.value = colorOptions(similarity)
+    }
+
+    LaunchedEffect(colorUpdateTrigger) {
+        colorOptions.value = colorOptions.value.shuffled()
+    }
 
     // Create animated colors
-    val animatedColors = List(colorCount) { index ->
-        colorOptions.value = when (similarity) {
-            AudioProcessor.NotesSimilarity.Wrong -> colorOptionsBad
-            AudioProcessor.NotesSimilarity.Neutral -> colorOptionsNatural
-            AudioProcessor.NotesSimilarity.Idle -> colorOptionsIdle
-            AudioProcessor.NotesSimilarity.Close -> colorOptionsClose
-            AudioProcessor.NotesSimilarity.Equal -> colorOptionsBest
-        }
-
-        val color = remember { mutableStateOf(colorOptions.value.random()) }
+    val animatedColors = List(colorCountInGradient) { index ->
+        val color = remember { mutableStateOf(colorOptions.value[index % colorOptions.value.size]) }
         val animatedColor by animateColorAsState(
             targetValue = color.value,
-            animationSpec = tween(2000),
+            animationSpec = tween(500),
             label = "color_$index"
         )
-
-        LaunchedEffect(similarity, colorUpdateTrigger) {
-            color.value = colorOptions.value.random()
+        LaunchedEffect(colorUpdateTrigger) {
+            color.value = colorOptions.value[index % colorOptions.value.size]
         }
-
         animatedColor
     }
 
@@ -106,7 +121,9 @@ fun AnimatedColorBorder(
     BorderAudioVisualizer(
         modifier = modifier,
         colors = animatedColors,
-        volumeScale = volume
+        volumeScale = volume,
+        leftAudioData,
+        rightAudioData
     )
 }
 
@@ -114,7 +131,9 @@ fun AnimatedColorBorder(
 fun BorderAudioVisualizer(
     modifier: Modifier = Modifier,
     colors: List<Color>,
-    volumeScale: Float
+    volumeScale: Float,
+    leftAudioData: List<Float>,
+    rightAudioData: List<Float>
 ) {
 
     val gradientOffset = remember { Animatable(0f) }
@@ -168,7 +187,7 @@ fun BorderAudioVisualizer(
     ) {
         val width = size.width
         val height = size.height
-        val borderWidth = 5.dp.toPx() * (1f + volumeScale * 0.25f)
+        val borderWidth = 5.dp.toPx()
         val cornerRadius = 40.dp.toPx()
 
         drawRoundRect(
@@ -177,15 +196,54 @@ fun BorderAudioVisualizer(
             cornerRadius = CornerRadius(cornerRadius),
             style = Stroke(width = borderWidth)
         )
+
+
+        // Draw left edge wave
+        drawWave(leftAudioData, true, gradientBrush, borderWidth)
+
+        // Draw right edge wave
+        drawWave(rightAudioData, false, gradientBrush, borderWidth)
     }
 }
 
+
+fun DrawScope.drawWave(
+    audioData: List<Float>,
+    isLeftEdge: Boolean,
+    brush: Brush,
+    strokeWidth: Float
+) {
+    val path = Path()
+    val height = size.height
+    val width = strokeWidth * 3 // Width of the wave area
+
+    val startX = if (isLeftEdge) 0f else size.width - width
+    path.moveTo(if (isLeftEdge) startX else startX + width, height)
+
+    val segmentHeight = height / (audioData.size - 1)
+    audioData.forEachIndexed { index, amplitude ->
+        val x = if (isLeftEdge) {
+            startX + width * amplitude
+        } else {
+            startX + width * (1 - amplitude)
+        }
+        val y = height - index * segmentHeight
+        path.lineTo(x, y)
+    }
+
+    path.lineTo(if (isLeftEdge) startX else startX + width, 0f)
+    path.close()
+
+    drawPath(path, brush)
+}
 
 @Composable
 fun AudioVisualizerScreen(isVisible: Boolean = false, similarity: AudioProcessor.NotesSimilarity) {
     val viewModel: WorkspaceViewModel = MainActivity.getWorkspaceViewModel()
     val sinNote by rememberUpdatedState(viewModel.sinNote.collectAsState())
     val micNote by rememberUpdatedState(viewModel.micNote.collectAsState())
+
+    val audioData = viewModel.audioData.collectAsState()
 
 
     AnimatedVisibility(
@@ -196,7 +254,9 @@ fun AudioVisualizerScreen(isVisible: Boolean = false, similarity: AudioProcessor
         AnimatedColorBorder(
             Modifier,
             similarity,
-            volume = sinNote.value.volume + micNote.value.volume
+            volume = sinNote.value.volume + micNote.value.volume,
+            audioData.value.first,
+            audioData.value.second
         )
     }
     Canvas(

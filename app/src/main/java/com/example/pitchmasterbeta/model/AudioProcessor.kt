@@ -41,6 +41,7 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
     private var mainAudioTrack: AudioTrack? = null
     var volumeFactor: Float = 0f
     var pitchFactor: Float = 1.0f
+    private val channels = 1 // 1 = Mono, 2 = Streo
 
     val playbackParams = PlaybackParams()
     var computeAndPlaySingerSoundMode: Boolean = false
@@ -209,7 +210,7 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
 
 
     suspend fun buildMusicAudioDispatcher(
-        pitchHandler: (timestamp: Double, noteI: Int, volume: Int) -> Unit,
+        pitchHandler: (timestamp: Double, noteI: Int, volume: Int, audioData: Pair<List<Float>, List<Float>>) -> Unit,
         onCompletion: () -> Unit
     ) = withContext(Dispatchers.Default) {
         val overlap = mediaInfo.overlap
@@ -253,7 +254,8 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                 }
                 generatedSingerByteSound =
                     playSound.generatedSnd[if (singNoteI == 0) 0 else (singNoteI - 1) % 12 + 1]
-                pitchHandler(sTimeStamp, singNoteI, singVolume)
+                val audioData = processAudioData(audioEvent.byteBuffer, samplesPerChannel = 50)
+                pitchHandler(sTimeStamp, singNoteI, singVolume, audioData)
             }
 
         val p = PitchProcessor(
@@ -357,6 +359,45 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
         return file
     }
 
+    private fun processAudioData(
+        byteArray: ByteArray,
+        samplesPerChannel: Int
+    ): Pair<List<Float>, List<Float>> {
+        val shortArray = byteArray.toShortArray()
+        val leftChannel = mutableListOf<Float>()
+        val rightChannel = mutableListOf<Float>()
+
+        val samplesPerFrame = channels
+        val framesToProcess = minOf(shortArray.size / samplesPerFrame, samplesPerChannel)
+
+        for (i in 0 until framesToProcess) {
+            val leftSample = shortArray[i * samplesPerFrame].toFloat() / Short.MAX_VALUE
+            leftChannel.add(abs(leftSample))
+
+            if (channels > 1) {
+                val rightSample = shortArray[i * samplesPerFrame + 1].toFloat() / Short.MAX_VALUE
+                rightChannel.add(abs(rightSample))
+            } else {
+                rightChannel.add(abs(leftSample))
+            }
+        }
+
+        // Ensure we have exactly samplesPerChannel samples
+        while (leftChannel.size < samplesPerChannel) {
+            leftChannel.add(0f)
+            rightChannel.add(0f)
+        }
+
+        return Pair(leftChannel, rightChannel)
+    }
+
+    private fun ByteArray.toShortArray(): ShortArray {
+        val shortArray = ShortArray(size / 2)
+        for (i in shortArray.indices) {
+            shortArray[i] =
+                ((this[i * 2 + 1].toInt() shl 8) or (this[i * 2].toInt() and 0xFF)).toShort()
+        }
+        return shortArray
+    }
+
 }
-
-

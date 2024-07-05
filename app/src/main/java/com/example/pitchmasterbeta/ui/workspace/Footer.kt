@@ -68,6 +68,7 @@ import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
 
 import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.theme.DarkGrey10
+import com.example.pitchmasterbeta.ui.theme.FooterGradientBrush
 import com.example.pitchmasterbeta.ui.theme.Pink10
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -76,10 +77,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun WorkspaceFooter(
     modifier: Modifier = Modifier,
+    workspaceState: WorkspaceViewModel.WorkspaceState
 ) {
     val viewModel: WorkspaceViewModel = getWorkspaceViewModel()
     val context = LocalContext.current.applicationContext
-    val workspaceState by rememberUpdatedState(viewModel.workspaceState.collectAsState())
     val showNotificationDialog by rememberUpdatedState(viewModel.showNotificationDialog.collectAsState())
     val showSaveAudioDialog by rememberUpdatedState(viewModel.showSaveAudioDialog.collectAsState())
 
@@ -119,21 +120,21 @@ fun WorkspaceFooter(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
+        if (workspaceState == WorkspaceViewModel.WorkspaceState.IDLE) {
             ControlsRow()
         }
         Column(
             modifier = modifier
+                .background(FooterGradientBrush)
+                .padding(bottom = 10.dp)
                 .pointerInput(Unit) { detectTapGestures {} },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically,
-
-                ) {
-
-                when (workspaceState.value) {
+            ) {
+                when (workspaceState) {
                     WorkspaceViewModel.WorkspaceState.IDLE -> {
                         PlaygroundFooter(context, viewModel)
                     }
@@ -156,7 +157,7 @@ fun WorkspaceFooter(
                     else -> Box {}
                 }
             }
-            if (workspaceState.value == WorkspaceViewModel.WorkspaceState.IDLE) {
+            if (workspaceState == WorkspaceViewModel.WorkspaceState.IDLE) {
                 DurationRow()
             }
         }
@@ -537,6 +538,9 @@ fun PitchControls(modifier: Modifier) {
 fun WorkspaceFooterPreview() {
     isPreview = true
     MaterialTheme {
-        WorkspaceFooter(modifier = Modifier.fillMaxWidth())
+        WorkspaceFooter(
+            modifier = Modifier.fillMaxWidth(),
+            workspaceState = WorkspaceViewModel.WorkspaceState.IDLE
+        )
     }
 }

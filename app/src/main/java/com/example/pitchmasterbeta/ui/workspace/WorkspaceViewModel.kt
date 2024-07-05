@@ -213,6 +213,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     val sinNoteActive: StateFlow<Boolean> = _sinNoteActive
     val sinNote: StateFlow<NoteState> = _sinNote
 
+    private val _audioData = MutableStateFlow(Pair(emptyList<Float>(), emptyList<Float>()))
+    val audioData: StateFlow<Pair<List<Float>, List<Float>>> = _audioData
+
+
     private val _isProgressDragged = MutableStateFlow(false)
     private val _currentTime = MutableStateFlow("00:00")
     val currentTime: StateFlow<String> = _currentTime
@@ -341,7 +345,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         // Start the music audio dispatcher
         musicJob = CoroutineScope(Dispatchers.IO).launch {
-            val handlePitch: (Double, Int, Int) -> Unit = { musicTimeStamp, noteI, volume ->
+            val handlePitch: (Double, Int, Int, Pair<List<Float>, List<Float>>) -> Unit =
+                { musicTimeStamp, noteI, volume, audioData ->
                 if (!_isProgressDragged.value) {
                     _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
                     val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
@@ -370,6 +375,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 } else {
                     _sinNoteActive.value = false
                 }
+                    _audioData.value = audioData
                 updateActiveSegmentIndex(
                     musicTimeStamp, _lyricsScrollToPosition.value, _lyricsActiveWordIndex.value
                 )
