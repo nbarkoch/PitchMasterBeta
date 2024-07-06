@@ -93,7 +93,11 @@ fun LyricsText(
                 }
 
                 val text = segment.text.joinToString(" ") { w -> w.word }
-                isSegmentRTL = text.isNotEmpty() && Character.getDirectionality(text[0]) in 1..2
+                isSegmentRTL = text.isNotEmpty() && Character.getDirectionality(
+                    (text.filter { Character.isLetterOrDigit(it) }).first()
+                ) in
+                        Character.DIRECTIONALITY_RIGHT_TO_LEFT..
+                        Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC
                 // Split the original text into lines based on offsets
 
                 lines = (0 until lineCount).map { i ->
@@ -130,8 +134,11 @@ fun LyricsText(
                         val lineOffset = lines.subList(0, lineIdx).flatten().size
                         for (index in lines[lineIdx].indices) {
                             val word = lines[lineIdx][index]
-                            val isRTL =
-                                word.word.isNotEmpty() && Character.getDirectionality(word.word[0]) in 1..2
+                            val isRTL = word.word.isNotEmpty() && Character.getDirectionality(
+                                (word.word.filter { Character.isLetterOrDigit(it) }).first()
+                            ) in
+                                    Character.DIRECTIONALITY_RIGHT_TO_LEFT..
+                                    Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC
                             val transition = updateTransition(
                                 targetState = activeWord >= lineOffset + index,
                                 label = ""

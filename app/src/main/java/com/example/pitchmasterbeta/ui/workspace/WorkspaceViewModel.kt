@@ -416,7 +416,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     private fun updateActiveWordIndex(
         currentSegment: LyricsTimestampedSegment,
         currentActiveWordIndex: Int,
-        musicTimeStamp: Double
+        musicTimeStamp: Double,
     ) {
         if (currentActiveWordIndex != -1) {
             val nextActiveIndex = currentSegment.text.indexOfLast { word ->
@@ -428,7 +428,8 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             }
         } else {
             val firstWord = currentSegment.text.first()
-            if (musicTimeStamp in firstWord.start..firstWord.end) {
+            val lastWord = currentSegment.text.last()
+            if (musicTimeStamp in firstWord.start..lastWord.end + 0.2) {
                 _lyricsActiveWordIndex.value = 0
                 lyricsNowActive = true
             }

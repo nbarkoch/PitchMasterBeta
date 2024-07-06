@@ -65,7 +65,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.pitchmasterbeta.MainActivity
 import com.example.pitchmasterbeta.MainActivity.Companion.getWorkspaceViewModel
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
-
 import com.example.pitchmasterbeta.R
 import com.example.pitchmasterbeta.ui.theme.DarkGrey10
 import com.example.pitchmasterbeta.ui.theme.FooterGradientBrush
@@ -117,7 +116,7 @@ fun WorkspaceFooter(
     }
 
     Column(
-        modifier = modifier,
+        modifier = modifier.pointerInput(Unit) { detectTapGestures {} },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (workspaceState == WorkspaceViewModel.WorkspaceState.IDLE) {
@@ -126,8 +125,7 @@ fun WorkspaceFooter(
         Column(
             modifier = modifier
                 .background(FooterGradientBrush)
-                .padding(bottom = 10.dp)
-                .pointerInput(Unit) { detectTapGestures {} },
+                .padding(bottom = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(

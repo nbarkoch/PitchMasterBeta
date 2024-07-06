@@ -1,6 +1,5 @@
 package com.example.pitchmasterbeta.ui.workspace
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -25,8 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -59,9 +60,6 @@ fun WorkspaceHeader(
     val songFullName = viewModel.songFullName.collectAsState()
     val isRecording = viewModel.isRecording.collectAsState()
     val isRecordingEnabled = viewModel.isRecordingEnabled.collectAsState()
-
-
-
 
     if (workspaceState == WorkspaceViewModel.WorkspaceState.IDLE) {
         Column(
@@ -190,29 +188,26 @@ fun RecordButton(
     active: Boolean = true,
     isShown: Boolean = false,
 ) {
-    val scale = remember { Animatable(1f) }
-    val volumeScale by animateFloatAsState(
+    var scale by remember { mutableFloatStateOf(1f) }
+
+    LaunchedEffect(active, isShown) {
+        while (active && isShown) {
+            scale = 1.2f
+            delay(500)
+            scale = 1f
+            delay(500)
+        }
+    }
+
+    val containerScale by animateFloatAsState(
         targetValue = if (isShown) 1f else 0f,
         label = ""
     )
 
-    LaunchedEffect(active) {
-        while (active) {
-            scale.animateTo(
-                targetValue = 1.2f,
-                animationSpec = tween(durationMillis = 500, easing = LinearEasing)
-            )
-            scale.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 500, easing = LinearEasing)
-            )
-        }
-    }
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .graphicsLayer(scaleX = volumeScale, alpha = volumeScale, scaleY = volumeScale)
+            .graphicsLayer(scaleX = containerScale, alpha = containerScale, scaleY = containerScale)
             .clickable(onClick = onClick)
             .border(1.dp, color = Color.White, shape = RoundedCornerShape(12.dp))
             .padding(start = 3.dp, end = 6.dp)
@@ -222,7 +217,7 @@ fun RecordButton(
             contentDescription = contentDesc,
             modifier = Modifier
                 .size(20.dp)
-                .scale(scale.value),
+                .scale(scale),
             colorFilter = if (active) ColorFilter.tint(Color(0xFFBE0D31)) else
                 ColorFilter.tint(Color(0xFF8A5D66))
         )
