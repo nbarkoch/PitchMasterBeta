@@ -94,6 +94,10 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun isLoggedIn(): Boolean {
+        return userSession?.isValid ?: false
+    }
+
     fun logout(username: String, onCompletion: () -> Unit, onFailure: () -> Unit) {
         val user = userPool.getUser(username)
         user.globalSignOutInBackground(object : GenericHandler {

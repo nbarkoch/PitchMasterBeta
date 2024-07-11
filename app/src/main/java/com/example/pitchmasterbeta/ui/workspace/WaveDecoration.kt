@@ -1,11 +1,13 @@
 package com.example.pitchmasterbeta.ui.workspace
 
+import android.graphics.Matrix
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,7 +31,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.SweepGradientShader
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.tooling.preview.Preview
@@ -136,29 +140,36 @@ fun BorderAudioVisualizer(
     rightAudioData: List<Float>
 ) {
 
-    val gradientOffset = remember { Animatable(0f) }
-    // Launch an animation that repeats infinitely
-    LaunchedEffect(Unit) {
-        gradientOffset.animateTo(
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 2000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            )
-        )
-    }
+    val infiniteTransition = rememberInfiniteTransition(label = "")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ), label = "rotation"
+    )
 
     // Compute the animated gradient brush
-    val gradientBrush = remember(gradientOffset.value) {
-        Brush.linearGradient(
-            colors = colors,
-            start = Offset(1000f * gradientOffset.value, 1000f * gradientOffset.value),
-            end = Offset(
-                1000f + 1000f * gradientOffset.value,
-                1000f + 1000f * gradientOffset.value
-            ),
-            tileMode = TileMode.Mirror
-        )
+    val gradientBrush = remember(rotation) {
+        object : ShaderBrush() {
+            override fun createShader(size: Size): Shader {
+                val continuousColors = colors.takeIf { it.isEmpty() || it.first() == it.last() }
+                    ?: (colors + colors.first())
+                val sweepGradient = SweepGradientShader(
+                    center = Offset(size.width / 2, size.height / 2),
+                    colors = continuousColors
+                )
+
+                val matrix = Matrix().apply {
+                    preRotate(rotation, size.width / 2f, size.height / 2f)
+                }
+
+                return sweepGradient.apply {
+                    setLocalMatrix(matrix)
+                }
+            }
+        }
     }
 
 

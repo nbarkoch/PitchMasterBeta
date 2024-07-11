@@ -187,6 +187,7 @@ class AudioProcessor(private val mediaInfo: MediaInfo) {
                     writeWavHeader(this, mediaInfo.voiceSampleRate)
                 }
             } else {
+                outputFile?.delete()
                 fileOutputStream?.close()
                 null
             }
