@@ -24,6 +24,9 @@ import com.amazonaws.services.cognitoidentityprovider.model.SignUpResult
 import com.amazonaws.services.cognitoidentityprovider.model.UsernameExistsException
 import com.example.pitchmasterbeta.MainActivity.Companion.appContext
 import com.example.pitchmasterbeta.services.AWSKeys
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.regex.Pattern
 
 
@@ -94,8 +97,12 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun isLoggedIn(): Boolean {
-        return userSession?.isValid ?: false
+
+    private val _isLoggedIn = MutableStateFlow(false)
+    val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+    fun checkLoginStatus(): Boolean {
+        _isLoggedIn.value = userSession?.isValid ?: false
+        return _isLoggedIn.value
     }
 
     fun logout(username: String, onCompletion: () -> Unit, onFailure: () -> Unit) {

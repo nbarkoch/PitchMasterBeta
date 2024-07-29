@@ -55,8 +55,9 @@ import kotlin.coroutines.suspendCoroutine
 
 class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
-    private lateinit var jwtToken: String
     private var initialized = false
+
+    private lateinit var jwtToken: String
     private var mediaInfo = MediaInfo()
     private var audioProcessor = AudioProcessor(mediaInfo)
 
@@ -761,10 +762,12 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     fun init(context: Context) {
-        sharedKaraokePreferences = StudioSharedPreferences(context)
-        initTempFiles(context)
-        resetWorkspace()
-        initialized = true
+        if (!initialized) {
+            sharedKaraokePreferences = StudioSharedPreferences(context)
+            initTempFiles(context)
+            resetWorkspace()
+            initialized = true
+        }
     }
 
     private fun initTempFiles(context: Context) {

@@ -11,6 +11,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,23 +46,43 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent = intent, isAlive = false)
         setContent {
             val navController = rememberNavController()
+            var isInitialized by remember { mutableStateOf(false) }
+            val isLoggedIn by getAuthViewModel().isLoggedIn.collectAsState()
+
             val navigateToWorkspace: (String) -> Unit = { jwtToken ->
                 viewModel.setJwtToken(jwtToken)
                 navController.navigate(WorkspaceIntro)
             }
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr ) {
+
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 PitchMasterBetaTheme {
                     // A surface container using the 'background' color from the theme
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        NavHost(navController = navController, startDestination = AuthIntro) {
-                            composable<AuthIntro> {
-                                AuthRouter(navigateToWorkspace)
+                        LaunchedEffect(Unit) {
+                            getAuthViewModel().checkLoginStatus()
+                            isInitialized = true
+                        }
+                        if (isInitialized) {
+                            NavHost(
+                                navController = navController,
+                                startDestination = if (isLoggedIn) WorkspaceIntro else AuthIntro
+                            ) {
+                                composable<AuthIntro> {
+                                    AuthRouter(navigateToWorkspace)
+                                }
+                                composable<WorkspaceIntro> {
+                                    WorkspaceSurface()
+                                }
                             }
-                            composable<WorkspaceIntro> {
-                                WorkspaceSurface()
+                            LaunchedEffect(isLoggedIn) {
+                                if (!isLoggedIn) {
+                                    navController.navigate(AuthIntro) {
+                                        popUpToRoute?.let { popUpTo(it) { inclusive = true } }
+                                    }
+                                }
                             }
                         }
                     }
@@ -111,6 +137,7 @@ class MainActivity : ComponentActivity() {
                         viewModel.loadKaraokeFromIntent(jsonString, audioPath)
                     }
                 }
+
                 "11" -> {
                     if (!isAlive) {
                         val message = extras.getString("message")
