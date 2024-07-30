@@ -11,22 +11,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
+import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
-import com.example.pitchmasterbeta.ui.login.AuthRouter
+import com.example.pitchmasterbeta.ui.app.AppNavGraph
 import com.example.pitchmasterbeta.ui.login.AuthViewModel
 import com.example.pitchmasterbeta.ui.theme.PitchMasterBetaTheme
 import com.example.pitchmasterbeta.ui.workspace.WorkspaceSurface
@@ -36,24 +30,13 @@ import kotlinx.serialization.Serializable
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        viewModelProvider = ViewModelProvider(this)
-        appContext = applicationContext
-        val viewModel = getWorkspaceViewModel()
-        if (!viewModel.getIsInitialized()) {
-            viewModel.init(this)
-        }
+        init()
         handleIntent(intent = intent, isAlive = false)
+
         setContent {
             val navController = rememberNavController()
-            var isInitialized by remember { mutableStateOf(false) }
-            val isLoggedIn by getAuthViewModel().isLoggedIn.collectAsState()
-
-            val navigateToWorkspace: (String) -> Unit = { jwtToken ->
-                viewModel.setJwtToken(jwtToken)
-                navController.navigate(WorkspaceIntro)
-            }
-
+            val authViewModel = getAuthViewModel()
+            val workspaceViewModel = getWorkspaceViewModel()
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 PitchMasterBetaTheme {
                     // A surface container using the 'background' color from the theme
@@ -61,31 +44,28 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        LaunchedEffect(Unit) {
-                            getAuthViewModel().checkLoginStatus()
-                            isInitialized = true
-                        }
-                        if (isInitialized) {
-                            NavHost(
-                                navController = navController,
-                                startDestination = if (isLoggedIn) WorkspaceIntro else AuthIntro
-                            ) {
-                                composable<AuthIntro> {
-                                    AuthRouter(navigateToWorkspace)
-                                }
-                                composable<WorkspaceIntro> {
-                                    WorkspaceSurface()
-                                }
-                            }
-                            LaunchedEffect(isLoggedIn) {
-                                if (!isLoggedIn) {
-                                    navController.navigate(AuthIntro) {
-                                        popUpToRoute?.let { popUpTo(it) { inclusive = true } }
-                                    }
-                                }
-                            }
+                        getAuthViewModel().checkLoginStatus()
+                        AppNavGraph(
+                            navController = navController,
+                            authViewModel = authViewModel,
+                            workspaceViewModel = workspaceViewModel
+                        )
+                    }
+                }
+            }
+
+            DisposableEffect(navController) {
+                val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+                    if (destination.route == null) {
+                        // Invalid destination, reset to start
+                        navController.navigate(AuthIntro) {
+                            popUpTo(navController.graph.id) { inclusive = true }
                         }
                     }
+                }
+                navController.addOnDestinationChangedListener(listener)
+                onDispose {
+                    navController.removeOnDestinationChangedListener(listener)
                 }
             }
         }
@@ -163,8 +143,18 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         getWorkspaceViewModel().onMoveToBackground()
     }
-}
 
+
+    private fun init() {
+        viewModelProvider = ViewModelProvider(this)
+        appContext = applicationContext
+        getWorkspaceViewModel().apply {
+            if (!getIsInitialized()) {
+                init(this@MainActivity)
+            }
+        }
+    }
+}
 
 @Serializable
 object AuthIntro
