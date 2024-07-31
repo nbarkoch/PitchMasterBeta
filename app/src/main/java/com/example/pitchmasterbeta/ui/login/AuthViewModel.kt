@@ -19,6 +19,7 @@ import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.ForgotPas
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.GenericHandler
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.VerificationHandler
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.util.CognitoJWTParser
 import com.amazonaws.services.cognitoidentityprovider.model.PasswordResetRequiredException
 import com.amazonaws.services.cognitoidentityprovider.model.SignUpResult
 import com.amazonaws.services.cognitoidentityprovider.model.UsernameExistsException
@@ -27,6 +28,8 @@ import com.example.pitchmasterbeta.services.AWSKeys
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
+import java.util.Date
 import java.util.regex.Pattern
 
 
@@ -97,11 +100,27 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    private fun isJwtExpired(token: String): Boolean {
+        return try {
+            val payload: JSONObject = CognitoJWTParser.getPayload(token)
+            val expirationTime = payload.optLong("exp", 0)
+            if (expirationTime == 0L) {
+                true
+            } else {
+                Date(expirationTime * 1000) <= Date()
+            }
+        } catch (e: Exception) {
+            // If we can't decode the token, consider it expired
+            true
+        }
+    }
 
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
     fun checkLoginStatus(): Boolean {
-        _isLoggedIn.value = userSession?.isValid ?: false
+        val jwtToken = userSession?.idToken?.jwtToken
+        val isJwtValid = jwtToken != null && !isJwtExpired(jwtToken)
+        _isLoggedIn.value = isJwtValid
         return _isLoggedIn.value
     }
 

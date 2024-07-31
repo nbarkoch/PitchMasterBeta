@@ -1,12 +1,12 @@
 package com.example.pitchmasterbeta.ui.workspace
 
-import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.net.Uri
 import android.os.IBinder
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Constraints.Companion.Infinity
 import androidx.core.net.toFile
@@ -316,7 +316,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
                 { _, noteI, volume, similarity ->
                     if (
                         !goodForThisWindowWatch ||
-                        _similarity.value !=AudioProcessor.NotesSimilarity.Equal
+                        _similarity.value != AudioProcessor.NotesSimilarity.Equal
                     ) {
                         _similarityColor.value = getColor(similarity)
                         _similarity.value = similarity
@@ -348,39 +348,39 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         musicJob = CoroutineScope(Dispatchers.IO).launch {
             val handlePitch: (Double, Int, Int, Pair<List<Float>, List<Float>>) -> Unit =
                 { musicTimeStamp, noteI, volume, audioData ->
-                if (!_isProgressDragged.value) {
-                    _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
-                    val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
-                    val min: Int = (musicTimeStamp % 1000 / 60).toInt()
-                    _currentTime.value =
-                        "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
-                }
-                val currentWindowPosition: Int = (musicTimeStamp % 1000 % 60).toInt()
-                if (lastWindowPosition != currentWindowPosition) {
-                    if (goodForThisWindowWatch) {
-                        _score.value++
-                        goodForThisWindowWatch = false
+                    if (!_isProgressDragged.value) {
+                        _progress.value = (musicTimeStamp / mediaInfo.timeStampDuration).toFloat()
+                        val sec: Int = (musicTimeStamp % 1000 % 60).toInt()
+                        val min: Int = (musicTimeStamp % 1000 / 60).toInt()
+                        _currentTime.value =
+                            "${if (min / 10 == 0) "0$min" else min}:${if (sec / 10 == 0) "0$sec" else sec}"
                     }
-                    if (goodForOpinionWatch) {
-                        expectedScore++
-                        goodForOpinionWatch = false
+                    val currentWindowPosition: Int = (musicTimeStamp % 1000 % 60).toInt()
+                    if (lastWindowPosition != currentWindowPosition) {
+                        if (goodForThisWindowWatch) {
+                            _score.value++
+                            goodForThisWindowWatch = false
+                        }
+                        if (goodForOpinionWatch) {
+                            expectedScore++
+                            goodForOpinionWatch = false
+                        }
                     }
-                }
-                lastWindowPosition = currentWindowPosition
+                    lastWindowPosition = currentWindowPosition
 
-                if (noteI > 0) {
-                    _sinNote.value = NoteState(
-                        AudioProcessor.rangeIndex(noteI), AudioProcessor.shrinkVolume(volume)
-                    )
-                    _sinNoteActive.value = true
-                } else {
-                    _sinNoteActive.value = false
-                }
+                    if (noteI > 0) {
+                        _sinNote.value = NoteState(
+                            AudioProcessor.rangeIndex(noteI), AudioProcessor.shrinkVolume(volume)
+                        )
+                        _sinNoteActive.value = true
+                    } else {
+                        _sinNoteActive.value = false
+                    }
                     _audioData.value = audioData
-                updateActiveSegmentIndex(
-                    musicTimeStamp, _lyricsScrollToPosition.value, _lyricsActiveWordIndex.value
-                )
-            }
+                    updateActiveSegmentIndex(
+                        musicTimeStamp, _lyricsScrollToPosition.value, _lyricsActiveWordIndex.value
+                    )
+                }
             val onCompletion: () -> Unit = {
                 if (_playingState.value == PlayerState.PLAYING) {
                     setPlayingState(PlayerState.END)
@@ -643,13 +643,16 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
     }
 
     private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
-        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                return true
+        return try {
+            // Ensure we're checking a service from our own package
+            if (!serviceClass.name.startsWith(context.packageName)) {
+                return false
             }
+            val method = serviceClass.getMethod("isRunning")
+            method.invoke(null) as? Boolean ?: false
+        } catch (e: Exception) {
+            false
         }
-        return false
     }
 
     private fun setStudioData(
@@ -730,8 +733,24 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
+    data class SnackbarVisualEvent(
+        val message: String,
+        val actionLabel: String?,
+        val withDismissAction: Boolean,
+        val duration: SnackbarDuration
+    )
 
     override fun notifyFailed() {
+        viewModelScope.launch(Dispatchers.IO) {
+            snackbarEventChannel.trySend(
+                SnackbarVisualEvent(
+                    "Failed to generate Karaoke",
+                    null,
+                    false,
+                    SnackbarDuration.Short
+                )
+            )
+        }
         resetWorkspace()
     }
 
@@ -744,6 +763,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         _workspaceState.value = WorkspaceState.PICK
         _displaySingerVolume.value = false
         _displayPitchFactor.value = false
+        serviceConnection.unbindService()
     }
 
     fun stopLoadKaraoke() {
@@ -956,7 +976,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }"
     }
 
-    private val snackbarEventChannel = Channel<SnackbarEvent?>()
+    private val snackbarEventChannel = Channel<SnackbarVisualEvent>()
     val snackbarEvent = snackbarEventChannel.receiveAsFlow()
 
     fun saveRecording() {
@@ -966,13 +986,13 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             _recordSaved.value = true
             audioProcessor.saveRecording(fileName = recordName)
             snackbarEventChannel.trySend(
-                SnackbarEvent(
+                SnackbarVisualEvent(
                     "$recordName Saved Successfully!",
-                    7000,
                     null,
-                    null
+                    true,
+                    SnackbarDuration.Long
                 )
-            ).isSuccess
+            )
         }
     }
 

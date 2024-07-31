@@ -16,7 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.pitchmasterbeta.MainActivity.Companion.isPreview
@@ -44,7 +47,6 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        getAuthViewModel().checkLoginStatus()
                         AppNavGraph(
                             navController = navController,
                             authViewModel = authViewModel,
@@ -66,6 +68,19 @@ class MainActivity : ComponentActivity() {
                 navController.addOnDestinationChangedListener(listener)
                 onDispose {
                     navController.removeOnDestinationChangedListener(listener)
+                }
+            }
+
+            val lifecycle = LocalLifecycleOwner.current.lifecycle
+            DisposableEffect(lifecycle) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        authViewModel.checkLoginStatus()
+                    }
+                }
+                lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycle.removeObserver(observer)
                 }
             }
         }

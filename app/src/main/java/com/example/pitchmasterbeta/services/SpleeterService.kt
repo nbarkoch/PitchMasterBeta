@@ -89,6 +89,18 @@ class SpleeterService : Service() {
         const val JWT_TOKEN = "JWT_TOKEN"
     }
 
+    companion object {
+        private var isRunning = false
+
+        @JvmStatic
+        @Suppress("unused") // Do not remove this
+        fun isRunning() = isRunning
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        isRunning = true
+    }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (!isActive) {
@@ -130,6 +142,7 @@ class SpleeterService : Service() {
         sCredProvider.setLogins(logins)
         sCredProvider.refresh()
 
+        @Suppress("DEPRECATION")
         s3Client = AmazonS3Client(sCredProvider, clientConfiguration).apply {
             setRegion(AWSKeys.MY_REGION)
         }
@@ -230,7 +243,12 @@ class SpleeterService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopBackgroundThread()
+        isRunning = false
+        try {
+            stopBackgroundThread()
+        } catch (e: Exception) {
+            Log.e("SpleeterService", "Service destroyed before initialization", e)
+        }
     }
 
     private fun startBackgroundThread(
@@ -293,18 +311,22 @@ class SpleeterService : Service() {
         isActive = false
         spleeterNotification?.hideNotification()
         stopForeground(STOP_FOREGROUND_REMOVE)
-        s3Client.shutdown()
-        lambdaClient.shutdown()
+        if (::s3Client.isInitialized) s3Client.shutdown()
+        if (::lambdaClient.isInitialized) lambdaClient.shutdown()
     }
 
-    private fun notifyProgressChanged(progress: Int, message: String, duration: Double) {
-        spleeterNotification?.updateProgress(progress, message, duration * 1000.0)
-        serviceNotifier?.notifyProgressChanged(progress, message, duration)
-    }
-
-    private fun notifyProgressChanged(progress: Int, message: String) {
-        spleeterNotification?.updateProgress(progress, message)
-        serviceNotifier?.notifyProgressChanged(progress, message, 3.0)
+    private fun notifyProgressChanged(
+        progress: Int,
+        message: String,
+        duration: Double? = null
+    ) {
+        if (duration != null) {
+            spleeterNotification?.updateProgress(progress, message, duration * 1000.0)
+            serviceNotifier?.notifyProgressChanged(progress, message, duration)
+        } else {
+            spleeterNotification?.updateProgress(progress, message)
+            serviceNotifier?.notifyProgressChanged(progress, message, 3.0)
+        }
     }
 
     data class DownloadFilesResult(val vocalsFile: File, val accompanimentFile: File)
