@@ -625,7 +625,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         fun bindService() {
             val context = appContext ?: return
-            if (isServiceRunning(context, SpleeterService::class.java) && !isBound) {
+            if (!isBound) {
                 context.bindService(
                     Intent(context, SpleeterService::class.java), this, Context.BIND_AUTO_CREATE
                 )
@@ -635,17 +635,17 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
 
         fun unbindService() {
             val context = appContext ?: return
-            if (isServiceRunning(context, SpleeterService::class.java) && isBound) {
+            if (isServiceRunning(SpleeterService::class.java) && isBound) {
                 context.unbindService(this)
             }
             isBound = false
         }
     }
 
-    private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
         return try {
             // Ensure we're checking a service from our own package
-            if (!serviceClass.name.startsWith(context.packageName)) {
+            if (!serviceClass.name.startsWith("com.example.pitchmasterbeta")) {
                 return false
             }
             val method = serviceClass.getMethod("isRunning")
@@ -733,17 +733,10 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }
     }
 
-    data class SnackbarVisualEvent(
-        val message: String,
-        val actionLabel: String?,
-        val withDismissAction: Boolean,
-        val duration: SnackbarDuration
-    )
-
     override fun notifyFailed() {
         viewModelScope.launch(Dispatchers.IO) {
             snackbarEventChannel.trySend(
-                SnackbarVisualEvent(
+                SnackbarEvent(
                     "Failed to generate Karaoke",
                     null,
                     false,
@@ -976,7 +969,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
         }"
     }
 
-    private val snackbarEventChannel = Channel<SnackbarVisualEvent>()
+    private val snackbarEventChannel = Channel<SnackbarEvent>()
     val snackbarEvent = snackbarEventChannel.receiveAsFlow()
 
     fun saveRecording() {
@@ -986,7 +979,7 @@ class WorkspaceViewModel : ViewModel(), SpleeterService.ServiceNotifier {
             _recordSaved.value = true
             audioProcessor.saveRecording(fileName = recordName)
             snackbarEventChannel.trySend(
-                SnackbarVisualEvent(
+                SnackbarEvent(
                     "$recordName Saved Successfully!",
                     null,
                     true,
